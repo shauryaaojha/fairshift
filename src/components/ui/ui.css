@@ -1,0 +1,72 @@
+/* Muster Roll UI primitives. Tokens come from app/globals.css. */
+
+/* ── Stamp ─────────────────────────────────────────────────── */
+.stamp {
+  --stamp-rotation: -2deg;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border: 3px double currentColor;
+  border-radius: var(--radius-stamp);
+  font-weight: 700;
+  font-stretch: 125%;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  text-align: center;
+  overflow-wrap: break-word;
+  transform: rotate(var(--stamp-rotation));
+  /* The one allowed gradient: an ink-bleed opacity texture, not colour. */
+  background-image:
+    radial-gradient(circle at 28% 35%, color-mix(in srgb, currentColor 14%, transparent) 0, transparent 55%),
+    radial-gradient(circle at 78% 72%, color-mix(in srgb, currentColor 10%, transparent) 0, transparent 50%);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+/* Hold the first frame (invisible) during any animation-delay. */
+.stamp.stamp-animate { animation-fill-mode: both; }
+.stamp-ink { color: var(--ink); }
+.stamp-cleared { color: var(--cleared); }
+.stamp-escalated { color: var(--escalated); }
+.stamp-hivis {
+  color: var(--graphite);
+  border-color: var(--graphite);
+  background-color: var(--hivis);
+}
+.stamp-sub {
+  font-size: 0.824rem;
+  font-weight: 550;
+  font-stretch: 100%;
+  line-height: 1.5;
+}
+
+/* ── Pin pad ───────────────────────────────────────────────── */
+.pin-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 64px;
+  border-radius: var(--radius-pin);
+  background: var(--card);
+  color: var(--graphite);
+  border: 2px solid var(--graphite);
+  font-family: var(--font-mono-display), monospace;
+  font-size: 1.5rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+}
+.pin-key:active:not(:disabled) { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pin-key:disabled { opacity: 0.4; }
+.pin-key-action { background: var(--paper); }
+.pin-key-submit { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pin-key-submit:active:not(:disabled) { background: var(--ink-deep); }
+
+/* ── Draw-in utilities for the SVG timeline (CSS only) ─────── */
+@media (prefers-reduced-motion: reduce) {
+  .draw-path { stroke-dashoffset: 0; animation: none; }
+  .payslip-row { opacity: 1; animation: none; }
+  .stamp-animate { animation: none; opacity: 1; }
+}

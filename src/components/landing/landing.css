@@ -1,0 +1,139 @@
+/* FairShift landing page. Tokens come from app/globals.css. */
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--graphite);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 32px 24px;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+.intro-clock {
+  font-size: clamp(3rem, 12vw, 8rem);
+  line-height: 1;
+  font-weight: 600;
+}
+.intro-track {
+  height: 10px;
+  background: rgb(255 255 255 / 0.25);
+  overflow: hidden;
+}
+.intro-bar {
+  height: 100%;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.intro-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: rgb(255 255 255 / 0.8);
+}
+
+.landing {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 40px;
+}
+@media (min-width: 768px) {
+  .landing {
+    padding: 40px 32px 64px;
+    gap: 56px;
+  }
+}
+.landing-mark {
+  font-weight: 700;
+  font-stretch: 112%;
+  font-size: 1.25rem;
+  margin: 0;
+}
+.landing-h1 {
+  margin: 0;
+  max-width: 14ch;
+  font-size: clamp(2.8rem, 9vw, 6.5rem);
+  line-height: 1.02;
+  font-weight: 700;
+  font-stretch: 112%;
+}
+.landing-lede {
+  margin: 16px 0 0;
+  max-width: 44ch;
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+.role-pair {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .role-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.role {
+  display: grid;
+  gap: 8px;
+  padding: 24px;
+  min-height: 160px;
+  text-decoration: none;
+  color: var(--graphite);
+  background: var(--card);
+  border: 2px solid var(--graphite);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-paper);
+  align-content: end;
+}
+.role:hover {
+  border-color: var(--ink);
+}
+.role-worker {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.role-worker:hover {
+  background: var(--ink-deep);
+  border-color: var(--ink-deep);
+}
+.role-title {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 700;
+  font-stretch: 108%;
+  line-height: 1.1;
+}
+.role-sub {
+  font-size: 1rem;
+  max-width: 34ch;
+}
+.sector-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  padding-top: 24px;
+  border-top: 2px solid var(--graphite);
+}
+.sector-strip p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.sector-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-overlay {
+    display: none;
+  }
+}

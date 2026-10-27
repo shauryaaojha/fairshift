@@ -1,0 +1,232 @@
+/* ============================================================
+   FairShift — Global Styles & Design Tokens
+   From docs/design-system.md §3–4
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* ── Colour Tokens ─────────────────────────────────────────── */
+:root {
+  --paper: #F2F3EE;
+  --card: #FFFFFF;
+  --graphite: #1C1D1A;
+  --muted: #575A53;
+  --ink: #1F3FB5;
+  --ink-deep: #162D85;
+  --hivis: #FF5A1F;
+  --cleared: #1D7340;
+  --escalated: #B42318;
+  --rule: #D5D7CE;
+
+  /* Shadow — one elevation only */
+  --shadow-paper: 0 1px 0 var(--rule), 0 6px 16px -10px rgb(28 29 26 / .25);
+
+  /* Radii by purpose */
+  --radius-card: 6px;
+  --radius-button: 10px;
+  --radius-pin: 14px;
+  --radius-stamp: 4px;
+
+  /* Easings */
+  --ease-hop: cubic-bezier(0.9, 0, 0.1, 1);
+  --ease-glide: cubic-bezier(0.8, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-graphite: var(--graphite);
+  --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-ink-deep: var(--ink-deep);
+  --color-hivis: var(--hivis);
+  --color-cleared: var(--cleared);
+  --color-escalated: var(--escalated);
+  --color-rule: var(--rule);
+  --font-sans: var(--font-anek);
+  --font-mono: var(--font-mono-display);
+}
+
+/* ── Base Resets ───────────────────────────────────────────── */
+html {
+  font-size: 17px;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--graphite);
+  line-height: 1.53;
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* ── Indic Script Rules ────────────────────────────────────── */
+:lang(hi),
+:lang(ta) {
+  line-height: 1.6;
+}
+
+:lang(hi) *,
+:lang(ta) * {
+  overflow-wrap: break-word;
+}
+
+:lang(hi),
+:lang(ta) {
+  letter-spacing: 0 !important;
+}
+
+/* ── Typography Utilities ──────────────────────────────────── */
+.text-display {
+  font-size: 2.353rem;
+  line-height: 2.588rem;
+  font-weight: 700;
+  font-stretch: 112%;
+}
+
+.text-h1 {
+  font-size: 1.647rem;
+  line-height: 2rem;
+  font-weight: 650;
+  font-stretch: 108%;
+}
+
+.text-h2 {
+  font-size: 1.294rem;
+  line-height: 1.647rem;
+  font-weight: 600;
+}
+
+.text-body {
+  font-size: 1rem;
+  line-height: 1.529rem;
+  font-weight: 450;
+}
+
+.text-label {
+  font-size: 0.882rem;
+  line-height: 1.176rem;
+  font-weight: 550;
+}
+
+.text-small {
+  font-size: 0.824rem;
+  line-height: 1.176rem;
+  font-weight: 450;
+}
+
+.text-mono {
+  font-size: 0.882rem;
+  line-height: 1.176rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Focus Ring ────────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ── Skip Link ─────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--ink);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-button);
+}
+.skip-link:focus {
+  left: 16px;
+  top: 16px;
+}
+
+/* ── Reduced Motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Stamp Animation (CSS) ─────────────────────────────────── */
+@keyframes stamp-land {
+  0% {
+    opacity: 0;
+    transform: scale(1.35) rotate(var(--stamp-rotation, -2deg));
+    filter: blur(2px);
+  }
+  50% {
+    filter: blur(0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(var(--stamp-rotation, -2deg));
+    filter: blur(0);
+  }
+}
+
+.stamp-animate {
+  animation: stamp-land 320ms var(--ease-hop) forwards;
+}
+
+/* ── Payslip Row Reveal ────────────────────────────────────── */
+@keyframes row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payslip-row {
+  animation: row-rise 300ms var(--ease-glide) forwards;
+  animation-delay: calc(var(--i, 0) * 80ms);
+  opacity: 0;
+}
+
+/* ── SVG Path Draw ─────────────────────────────────────────── */
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.draw-path {
+  stroke-dasharray: var(--path-length, 200);
+  stroke-dashoffset: var(--path-length, 200);
+  animation: draw-line 600ms var(--ease-glide) forwards;
+}
+
+/* ── View Transition Names ─────────────────────────────────── */
+.tile-checkin { view-transition-name: tile-checkin; }
+.tile-pay { view-transition-name: tile-pay; }
+.tile-hazard { view-transition-name: tile-hazard; }
+.tile-feedback { view-transition-name: tile-feedback; }
+.tile-hours { view-transition-name: tile-hours; }
+.tile-skills { view-transition-name: tile-skills; }
+
+/* ── Utility: Card Surface ─────────────────────────────────── */
+.surface-card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-paper);
+}
+
+/* ── Utility: Hi-vis shapes need graphite outline ──────────── */
+.hivis-shape {
+  outline: 2px solid var(--graphite);
+}

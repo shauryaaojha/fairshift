@@ -1,5 +1,20 @@
 # Task: Build FairShift end to end (PromptWars 2026 × SRM ACM, SDG 8)
 
+> **RESUME NOTE (run 2):** A previous run stopped early, during P0. It hit a model quota limit.
+>
+> **State it left behind:**
+> - `package.json`, `next.config.ts`, `app/layout.tsx`, `app/globals.css`, `app/page.tsx`, `proxy.ts`, `src/shared/types.ts`, `src/shared/schemas.ts`, `tests/setup.ts`, `vitest.config.ts` and `docs/BUILD_PROGRESS.md` exist.
+> - **`node_modules` is empty.** The npm install never finished.
+>
+> **What to do:**
+> 1. Read `docs/BUILD_PROGRESS.md` and the existing files, and keep what is good.
+> 2. **Fix `package.json` to current versions** before installing:
+>     - `zod@^4`, `@google/genai@^2`, `vitest@^5`, `@vitest/coverage-v8@^5`, `@vitejs/plugin-react@^6`, `jsdom@^30`, `typescript@^5` (keep TS 5 for Next compatibility).
+>     - Replace the non-existent `@tailwindcss/turbopack` with **`@tailwindcss/postcss`** + a `postcss.config.mjs`.
+>     - Use the latest `gsap`, `next-transition-router`, `firebase-admin` and `qrcode`.
+> 3. Run **one** `npm install` (the network is slow; give it time, and do not start parallel installs).
+> 4. Continue from P0.
+
 You are working in **C:/Users/shaur/Documents/promptwars**. This folder is the repo root. Build the app **at the root** (`package.json` at the root, not in a subfolder). The folder currently contains only `docs/`.
 
 You are the lead engineer. **Use your subagents / parallel agents to split the work** (see section 6). You integrate and verify their output. Every decision below is already MADE. Do not re-open it. Where something is truly unspecified, choose the option that scores best on the six AI-evaluator criteria (section 1), and note it in `docs/BUILD_PROGRESS.md`.

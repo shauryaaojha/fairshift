@@ -1,0 +1,57 @@
+/* Worker app shell. Tokens come from app/globals.css. */
+
+/* The root layout prints an English "Demo data" footer. The worker shell
+   prints a localised one, so hide the root one on worker routes. */
+body:has(.worker-shell) > footer {
+  display: none;
+}
+
+.worker-shell {
+  font-family: var(--font-anek), var(--font-anek-deva), var(--font-anek-tamil), sans-serif;
+}
+
+/* Hazard timeline: the escalated node pulses once, never loops. */
+@keyframes node-pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.node-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-pulse 700ms var(--ease-glide) 700ms 1 both;
+}
+
+/* Small helpers used across worker screens */
+.field-textarea {
+  width: 100%;
+  min-height: 7.5rem;
+  padding: 12px;
+  border: 2px solid var(--graphite);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  color: var(--graphite);
+  font: inherit;
+  line-height: 1.6;
+}
+
+.choice {
+  border: 2px solid var(--graphite);
+  background: var(--card);
+  color: var(--graphite);
+}
+.choice[aria-checked="true"],
+.choice[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.choice-danger[aria-checked="true"] {
+  background: var(--hivis);
+  border-color: var(--graphite);
+  color: var(--graphite);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node-pulse { animation: none; opacity: 0; }
+}
+
