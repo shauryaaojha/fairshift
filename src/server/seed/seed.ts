@@ -26,14 +26,12 @@ import { calculateIsoWeek } from '../domain/anonymity';
 // The anchor is today's 08:00 IST (02:30 UTC) shift start, moved back a day if that is less
 // than two hours ago, so every seeded timestamp is safely in the past.
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEMO_ANCHOR_MS = (() => {
+/** Computed when the seed runs, never at import (Next.js prerendering forbids Date.now() there). */
+function demoAnchorMs(): number {
   const now = Date.now();
   const todayShiftStart = new Date(`${new Date(now).toISOString().slice(0, 10)}T02:30:00.000Z`).getTime(); // 08:00 IST
   return todayShiftStart > now - 2 * 60 * 60 * 1000 ? todayShiftStart - DAY_MS : todayShiftStart;
-})();
-/** ISO timestamp `minutes` after the demo anchor (negative = before). */
-const atAnchor = (minutes: number) => new Date(DEMO_ANCHOR_MS + minutes * 60 * 1000).toISOString();
-const DEMO_WEEK = calculateIsoWeek(new Date(DEMO_ANCHOR_MS));
+}
 /** Roster positions of the deliberately overworked demo workers (1 = Ramesh's first crew-mate, 35 = a campus worker). */
 const OVERWORKED_INDEXES = new Set([1, 4, 35]);
 
@@ -62,6 +60,11 @@ export interface SeedDataResult {
 }
 
 export async function generateSeedData(): Promise<SeedDataResult> {
+  const DEMO_ANCHOR_MS = demoAnchorMs();
+  /** ISO timestamp `minutes` after the demo anchor (negative = before). */
+  const atAnchor = (minutes: number) => new Date(DEMO_ANCHOR_MS + minutes * 60 * 1000).toISOString();
+  const DEMO_WEEK = calculateIsoWeek(new Date(DEMO_ANCHOR_MS));
+
   const rand = mulberry32(20261027);
 
   // ── 1. Organisations ──────────────────────────────────────────

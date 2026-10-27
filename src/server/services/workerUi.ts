@@ -5,6 +5,7 @@
 // ============================================================
 
 import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { redirect } from 'next/navigation';
 import { workerService } from './workerService';
 import { getDatabase } from '../repos';
@@ -183,6 +184,8 @@ export interface WorkerContext {
 /** The signed-in worker and their site, or null. */
 export async function getWorkerContext(): Promise<WorkerContext | null> {
   const jar = await cookies();
+  // Worker screens are per-request (live shifts, SLA timers): never prerender them.
+  await connection();
   const token = jar.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? verifySession(token) : null;
   if (!session || session.role !== 'worker') return null;

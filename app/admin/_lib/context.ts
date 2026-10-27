@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { verifySession, SESSION_COOKIE_NAME } from "@/src/server/auth/session";
 import { allowedOrgIds } from "@/src/server/auth/guard";
 import {
@@ -27,6 +28,8 @@ export interface AdminContext {
  */
 export async function getAdminContext(): Promise<AdminContext> {
   const jar = await cookies();
+  // Console data is live (SLA timers, on-site counts): render at request time.
+  await connection();
   const token = jar.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? verifySession(token) : null;
   if (!session || session.role !== "admin") redirect("/admin/login");
