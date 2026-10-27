@@ -55,7 +55,7 @@ type GlobalWithMongo = typeof globalThis & { __fairshiftMongo?: Promise<MongoCli
 function connect(uri: string): Promise<MongoClient> {
   const g = globalThis as GlobalWithMongo;
   if (!g.__fairshiftMongo) {
-    g.__fairshiftMongo = new MongoClient(uri, { maxPoolSize: 5 }).connect().catch((err) => {
+    g.__fairshiftMongo = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000 }).connect().catch((err) => {
       g.__fairshiftMongo = undefined;
       throw err;
     });
@@ -225,6 +225,14 @@ class MongoFairShiftDb implements FairShiftDatabase {
     listByWorker: (workerId: string) =>
       this.query<SkillRecord>(COLLECTIONS.skills, 'workerId', workerId),
   };
+}
+
+/** Connects and pings, so callers can tell a reachable cluster from a blocked one. */
+export async function pingMongo(): Promise<void> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error('MONGODB_URI is not set');
+  const client = await connect(uri);
+  await client.db(process.env.MONGODB_DB || 'fairshift').command({ ping: 1 });
 }
 
 let mongoInstance: FairShiftDatabase | null = null;
