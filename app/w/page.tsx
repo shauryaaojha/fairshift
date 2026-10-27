@@ -22,6 +22,7 @@ import {
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
 import { logoutAction } from './actions';
+import { InstallButton } from '@/src/components/pwa/InstallButton';
 
 export default async function WorkerHomePage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
@@ -126,6 +127,8 @@ export default async function WorkerHomePage() {
           </li>
         </ul>
       </nav>
+
+      <InstallButton label={t(locale, 'home.install')} iosHint={t(locale, 'home.installIos')} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link

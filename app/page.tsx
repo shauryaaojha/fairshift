@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ShiftIntro } from '@/src/components/motion/ShiftIntro';
 import { BroomIcon, HardHatIcon } from '@/src/components/icons';
+import { InstallButton } from '@/src/components/pwa/InstallButton';
 
 export default function LandingPage() {
   return (
@@ -29,6 +30,12 @@ export default function LandingPage() {
             <span className="role-sub">See who is on site, open hazards and who may leave.</span>
           </Link>
         </nav>
+
+        <InstallButton
+          label="Add FairShift to your home screen"
+          iosHint="On iPhone: tap Share, then Add to Home Screen."
+          className="landing-install"
+        />
 
         <section className="sector-strip" aria-label="Where it runs" data-fade="">
           <p>One app, two workplaces.</p>

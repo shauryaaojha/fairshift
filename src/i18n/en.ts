@@ -41,6 +41,8 @@ export const en = {
   'home.fatigueTitle': 'Please take care',
   'home.language': 'Change language',
   'home.logout': 'Log out',
+  'home.install': 'Add FairShift to home screen',
+  'home.installIos': 'On iPhone: tap Share, then "Add to Home Screen".',
   'home.speak': 'Hello {name}. Today is {date}. {status}',
 
   'tile.checkin': 'Check in',

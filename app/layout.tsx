@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Anek_Latin, Spline_Sans_Mono } from 'next/font/google';
 import './globals.css';
+import { ServiceWorkerRegister } from '@/src/components/pwa/ServiceWorkerRegister';
 
 const anekLatin = Anek_Latin({
   variable: '--font-anek',
@@ -19,6 +20,12 @@ export const metadata: Metadata = {
   title: 'FairShift — Fair pay. Safe sites. A voice that counts.',
   description:
     'Digital platform for fair wages, safe workplaces and worker voice across construction sites and college campuses. SDG 8.',
+  applicationName: 'FairShift',
+  appleWebApp: { capable: true, title: 'FairShift', statusBarStyle: 'default' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1F3FB5',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <footer className="text-small text-center py-4 text-muted">Demo data · FairShift</footer>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

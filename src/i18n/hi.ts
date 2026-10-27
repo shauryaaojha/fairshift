@@ -41,6 +41,8 @@ export const hi: Messages = {
   'home.fatigueTitle': 'अपना ध्यान रखें',
   'home.language': 'भाषा बदलें',
   'home.logout': 'लॉग आउट',
+  'home.install': 'FairShift को होम स्क्रीन पर जोड़ें',
+  'home.installIos': 'iPhone पर: शेयर बटन दबाएँ, फिर "Add to Home Screen" चुनें।',
   'home.speak': 'नमस्ते {name}। आज {date} है। {status}',
 
   'tile.checkin': 'हाज़िरी',

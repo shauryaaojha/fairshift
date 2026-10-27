@@ -199,3 +199,13 @@ export function FaceIcon({ level, ...p }: IconProps & { level: 1 | 2 | 3 | 4 | 5
     </Base>
   );
 }
+
+/** A phone with a downward arrow: "add to home screen". */
+export const InstallIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6" y="2" width="12" height="20" rx="2" />
+    <path d="M12 7v7" />
+    <path d="m9 11 3 3 3-3" />
+    <path d="M10 18h4" />
+  </Base>
+);

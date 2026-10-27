@@ -137,3 +137,9 @@
     display: none;
   }
 }
+
+/* Add-to-home-screen button on the landing page (only shown where the browser can install). */
+.landing-install {
+  max-width: 420px;
+  margin-top: 8px;
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>FairShift</title>
+  <rect width="512" height="512" fill="#1F3FB5"/>
+  <g transform="translate(256 256) scale(0.74) translate(-256 -256) rotate(-6 256 256)">
+    <rect x="112" y="112" width="288" height="288" rx="14" fill="none" stroke="#F2F3EE" stroke-width="14"/>
+    <rect x="136" y="136" width="240" height="240" rx="8" fill="none" stroke="#F2F3EE" stroke-width="6"/>
+    <rect x="190" y="170" width="40" height="172" fill="#F2F3EE"/>
+    <rect x="190" y="170" width="134" height="38" fill="#F2F3EE"/>
+    <rect x="190" y="242" width="102" height="34" fill="#F2F3EE"/>
+    <rect x="246" y="306" width="88" height="36" rx="4" fill="#FF5A1F"/>
+  </g>
+</svg>

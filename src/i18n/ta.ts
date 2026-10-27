@@ -41,6 +41,8 @@ export const ta: Messages = {
   'home.fatigueTitle': 'உங்களைக் கவனித்துக் கொள்ளுங்கள்',
   'home.language': 'மொழியை மாற்று',
   'home.logout': 'வெளியேறு',
+  'home.install': 'FairShift-ஐ முகப்புத் திரையில் சேர்',
+  'home.installIos': 'iPhone-இல்: பகிர் பொத்தானை அழுத்தி, "Add to Home Screen" தேர்வு செய்யுங்கள்.',
   'home.speak': 'வணக்கம் {name}. இன்று {date}. {status}',
 
   'tile.checkin': 'வருகை',
