@@ -187,4 +187,12 @@ export const ta: Messages = {
   'skills.copied': 'இணைப்பு நகலெடுக்கப்பட்டது',
   'skills.openVerify': 'சரிபார்ப்புப் பக்கத்தைத் திற',
   'skills.speak': 'உங்கள் சான்றிதழ்கள். மற்றவர்கள் சரிபார்க்க இணைப்பைப் பகிரலாம்.',
+
+  'offline.stamp': 'ஆஃப்லைனில் சேமிக்கப்பட்டது',
+  'offline.queuedNote': 'ஆன்லைனில் வந்ததும் அனுப்பப்படும்',
+  'offline.bannerOffline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். கடைசியாகப் பார்த்தது காட்டப்படுகிறது.',
+  'offline.bannerSaved': '{n} சேமிக்கப்பட்டது, ஆன்லைனில் வந்ததும் அனுப்பப்படும்',
+  'offline.bannerSyncing': 'அனுப்பப்படுகிறது…',
+  'offline.bannerAllSent': 'அனைத்தும் அனுப்பப்பட்டன',
+  'offline.bannerRejected': '{n} உள்ளீட்டை அனுப்ப முடியவில்லை: {reason}',
 };

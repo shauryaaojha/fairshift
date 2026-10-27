@@ -15,16 +15,22 @@ export const adminLoginSchema = z.object({
 export const checkinQrSchema = z.object({
   siteId: z.string().min(1),
   code: z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
+  capturedAt: z.string().optional(),
+  clientId: z.string().optional(),
 });
 
 export const checkinGpsSchema = z.object({
   siteId: z.string().min(1),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  capturedAt: z.string().optional(),
+  clientId: z.string().optional(),
 });
 
 export const checkoutSchema = z.object({
-  shiftId: z.string().min(1),
+  shiftId: z.string().min(1).optional(),
+  capturedAt: z.string().optional(),
+  clientId: z.string().optional(),
 });
 
 // ── Hazard Schemas ──────────────────────────────────────────
@@ -34,6 +40,8 @@ export const hazardReportSchema = z.object({
   description: z.string().min(1).max(2000),
   severity: z.enum(['critical', 'high', 'medium', 'low']),
   anonymous: z.boolean().default(false),
+  capturedAt: z.string().optional(),
+  clientId: z.string().optional(),
 });
 
 export const hazardActionSchema = z.object({
@@ -49,6 +57,8 @@ export const feedbackSchema = z.object({
   payFairness: z.number().int().min(1).max(5),
   workloadRating: z.number().int().min(1).max(5),
   comment: z.string().max(2000).nullable().default(null),
+  capturedAt: z.string().optional(),
+  clientId: z.string().optional(),
 });
 
 // ── Skill Schema ────────────────────────────────────────────

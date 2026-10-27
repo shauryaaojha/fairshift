@@ -75,3 +75,15 @@ export function verifySiteQrCode(
 
   return false;
 }
+
+/**
+ * Verifies a submitted 6-digit check-in code against the site secret at a given timestamp (with a ±1 window).
+ */
+export function verifySiteQrCodeAt(
+  submittedCode: string,
+  secret: string,
+  timestampMs: number,
+  intervalSeconds: number = QR_ROTATION_INTERVAL_SECONDS,
+): boolean {
+  return verifySiteQrCode(submittedCode, secret, timestampMs, intervalSeconds);
+}

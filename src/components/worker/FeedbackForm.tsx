@@ -6,6 +6,7 @@ import { Button, ButtonLink } from '@/src/components/ui/Button';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { speak, vibrate } from '@/src/components/ui/speech';
 import { useLocale, useT } from '@/src/i18n/client';
+import { generateUuid, getActiveWorkerId, getOutboxStore } from '@/src/lib/offline/outbox';
 import { submitFeedbackAction } from '@/app/w/actions';
 import { VoiceTextarea } from './VoiceTextarea';
 
@@ -19,13 +20,18 @@ type Field = (typeof QUESTIONS)[number]['field'];
 type Level = 1 | 2 | 3 | 4 | 5;
 const LEVELS: Level[] = [1, 2, 3, 4, 5];
 
-export function FeedbackForm() {
+type Props = {
+  workerId?: string;
+};
+
+export function FeedbackForm({ workerId }: Props = {}) {
   const t = useT();
   const locale = useLocale();
   const [answers, setAnswers] = useState<Partial<Record<Field, Level>>>({});
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const complete = QUESTIONS.every((q) => answers[q.field] !== undefined);
@@ -36,25 +42,80 @@ export function FeedbackForm() {
       return;
     }
     setError(null);
+    const effectiveWorkerId = workerId || getActiveWorkerId();
+    const payload = {
+      managerRespect: answers.managerRespect!,
+      safetyRating: answers.safetyRating!,
+      payFairness: answers.payFairness!,
+      workloadRating: answers.workloadRating!,
+      comment: comment.trim() || null,
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const clientId = generateUuid();
+      const capturedAt = new Date().toISOString();
+      getOutboxStore()
+        .put({
+          id: clientId,
+          workerId: effectiveWorkerId,
+          kind: 'feedback',
+          payload,
+          capturedAt,
+          attempts: 0,
+        })
+        .then(() => {
+          setDone(true);
+          setIsOffline(true);
+          vibrate(15);
+        });
+      return;
+    }
+
     startTransition(async () => {
-      const res = await submitFeedbackAction({
-        managerRespect: answers.managerRespect!,
-        safetyRating: answers.safetyRating!,
-        payFairness: answers.payFairness!,
-        workloadRating: answers.workloadRating!,
-        comment: comment.trim() || null,
-      });
-      if (res.ok) {
+      try {
+        const res = await submitFeedbackAction(payload);
+        if (res.ok) {
+          setDone(true);
+          setIsOffline(false);
+          vibrate(15);
+          speak(t('feedback.thanks'), locale);
+        } else {
+          setError(t('feedback.error'));
+        }
+      } catch {
+        const clientId = generateUuid();
+        const capturedAt = new Date().toISOString();
+        await getOutboxStore().put({
+          id: clientId,
+          workerId: effectiveWorkerId,
+          kind: 'feedback',
+          payload,
+          capturedAt,
+          attempts: 0,
+        });
         setDone(true);
+        setIsOffline(true);
         vibrate(15);
-        speak(t('feedback.thanks'), locale);
-      } else {
-        setError(t('feedback.error'));
       }
     });
   }
 
   if (done) {
+    if (isOffline) {
+      return (
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">
+            <Stamp announce variant="ink" id="feedback-offline" className="text-3xl">
+              {t('offline.stamp')}
+            </Stamp>
+            <p className="text-body text-center">{t('offline.queuedNote')}</p>
+          </div>
+          <div className="sticky bottom-0 bg-paper px-4 pb-3 pt-2">
+            <ButtonLink href="/w">{t('checkin.backHome')}</ButtonLink>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">

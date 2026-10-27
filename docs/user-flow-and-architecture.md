@@ -84,7 +84,33 @@ sequenceDiagram
     App-->>W: Timeline shows Resolved
 ```
 
-## 6. Architecture
+## 6. Offline check-in and automatic sync
+
+When a worker has poor or no cellular reception at the gate, check-in and other critical actions run entirely offline. Actions are queued in IndexedDB and replayed to the server with their original timestamp as soon as connectivity returns:
+
+```mermaid
+sequenceDiagram
+    actor W as Worker (offline)
+    participant UI as Phone UI (Worker App)
+    participant IDB as IndexedDB Outbox
+    participant App as FairShift Server Action
+    participant DB as MongoDB Atlas
+
+    W->>UI: Captures QR check-in (no connection)
+    UI->>IDB: Save in IndexedDB outbox (capturedAt, clientId)
+    UI-->>W: Shows "SAVED OFFLINE" stamp ("Will send when online")
+    Note over UI,IDB: Worker proceeds to site; action stays local
+    Note over UI: Network returns (online event / visibility change)
+    UI->>App: flushOutbox replays check-in (code, capturedAt, clientId)
+    App->>App: validateCapturedAt (<= 24h, clock skew <= 2m)
+    App->>App: verifyRotatingCodeAt(code, siteSecret, capturedAt)
+    App->>DB: Shift created with checkIn = capturedAt (idempotent clientId)
+    App-->>UI: Replay accepted (success)
+    UI->>IDB: Outbox item removed
+    UI-->>W: Banner shows "All sent" (auto-hides after 4 s)
+```
+
+## 7. Architecture
 
 ```mermaid
 flowchart TB

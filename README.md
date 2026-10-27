@@ -52,6 +52,17 @@ Measured on 2026-10-27 with `npm test -- --coverage`, `npm run typecheck`, `npm 
 
 The full user flows, the end-to-end hazard sequence and the architecture diagram are in **[docs/user-flow-and-architecture.md](docs/user-flow-and-architecture.md)**. What sets the design apart is in **[docs/novelty.md](docs/novelty.md)**.
 
+## Offline mode
+
+FairShift works offline-first so workers on remote sites, in basements, or with intermittent mobile connectivity are never blocked:
+
+- **How offline works:** Core actions—check-in (via gate QR code or GPS), check-out, hazard reports, and anonymous feedback—are stored locally in an IndexedDB outbox on the worker's device when offline. As soon as the network returns, an automatic background flush replays queued actions in chronological order (`capturedAt`).
+- **What is cached:** Last-seen worker pages under `/w` are cached in a dedicated `fairshift-pages` cache using a network-first strategy (HTML responses cloned on 200). Static JavaScript bundles, fonts, and icons are cached in `fairshift-v2` (cache-first). For worker security and privacy, `/w/login` and supervisor console pages (`/admin/*`) are **never cached**.
+- **24-hour limit & clock skew:** The server validates action timestamps with `validateCapturedAt`. Actions captured more than 24 hours ago are rejected as `too_old`. Future clock skew beyond 2 minutes is rejected as `future`.
+- **Original timestamp preserved:** The server saves the exact time the worker performed the action (`capturedAt`). Shift check-in/check-out times, overtime calculations, fatigue rules, and hazard SLA escalation timers reflect the real capture moment, keeping compensation and deadlines fair.
+- **Idempotent sync:** Every queued action carries a unique client ID (`clientId`, a random UUID). On sync replay, the server checks for existing records with the same client ID and returns the existing entity without duplicating records. Feedback submissions remain strictly anonymous because client IDs are generated client-side from random UUIDs without worker identifiers.
+- **Logout clearing:** When a worker logs out, the client explicitly deletes the `fairshift-pages` cache to protect personal data (shifts, pay) on shared devices. Outbox items are safely preserved across sessions because items are worker-scoped and will only be synced when that worker signs in again.
+
 ## Assumptions made
 
 - **Location and time:** workers and sites are in India, and a "day" is an IST calendar day.
@@ -63,6 +74,11 @@ The full user flows, the end-to-end hazard sequence and the architecture diagram
 - **Anonymity:** feedback needs at least 3 answers per team-week before results are shown.
 - **Devices:** workers use Chrome on Android for voice input and read-aloud. Both hide themselves gracefully when unsupported.
 - **Admins:** one admin may manage several organisations.
+- **Offline mode:**
+  - 24-hour max offline age, 2-minute clock skew allowance (`MAX_OFFLINE_AGE_MS = 24h`, `MAX_CLOCK_SKEW_MS = 2m`).
+  - Shift and hazard actions record original capture time (`capturedAt`).
+  - Idempotent replay using client IDs (`clientId`).
+  - Outbox items are worker-scoped and sync only for the matching authenticated worker.
 - **Demo data:** the data is seeded, anchored to the current day and labelled "Demo data". Without `MONGODB_URI`, or if MongoDB is unreachable, the app runs on this seeded in-memory store.
 
 ## Screenshots

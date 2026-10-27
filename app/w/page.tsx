@@ -21,7 +21,7 @@ import {
   loadHome,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
-import { logoutAction } from './actions';
+import { LogoutButton } from '@/src/components/worker/LogoutButton';
 import { InstallButton } from '@/src/components/pwa/InstallButton';
 
 export default async function WorkerHomePage() {
@@ -137,14 +137,7 @@ export default async function WorkerHomePage() {
         >
           {t(locale, 'home.language')}
         </Link>
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="inline-flex min-h-12 items-center text-label font-semibold text-ink underline underline-offset-4"
-          >
-            {t(locale, 'home.logout')}
-          </button>
-        </form>
+        <LogoutButton label={t(locale, 'home.logout')} />
       </div>
     </Screen>
   );

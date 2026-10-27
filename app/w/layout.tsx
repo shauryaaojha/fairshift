@@ -2,8 +2,9 @@ import { Suspense } from 'react';
 import { Anek_Devanagari, Anek_Tamil } from 'next/font/google';
 import { I18nProvider } from '@/src/i18n/client';
 import { DEFAULT_LOCALE, dictionaries, t } from '@/src/i18n';
-import { getLocale } from '@/src/server/services/workerViews';
+import { getLocale, getWorkerContext } from '@/src/server/services/workerViews';
 import { HtmlLang } from '@/src/components/worker/HtmlLang';
+import { OfflineSync } from '@/src/components/worker/OfflineSync';
 import '@/src/components/ui/ui.css';
 import '@/src/components/worker/worker.css';
 
@@ -25,7 +26,9 @@ const anekTamil = Anek_Tamil({
 });
 
 async function Shell({ children }: { children: React.ReactNode }) {
-  const locale = (await getLocale()) ?? DEFAULT_LOCALE;
+  const [cookieLocale, ctx] = await Promise.all([getLocale(), getWorkerContext()]);
+  const locale = cookieLocale ?? DEFAULT_LOCALE;
+  const workerId = ctx?.worker.id ?? null;
   const fontClass =
     locale === 'hi' ? anekDevanagari.variable : locale === 'ta' ? anekTamil.variable : '';
   return (
@@ -35,6 +38,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
         lang={locale}
         className={`worker-shell mx-auto flex w-full max-w-[480px] flex-1 flex-col ${fontClass}`}
       >
+        <OfflineSync workerId={workerId} />
         {children}
         <p className="text-small py-4 text-center text-muted">{t(locale, 'common.demoData')}</p>
       </div>

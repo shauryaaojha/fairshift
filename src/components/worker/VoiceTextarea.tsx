@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MicIcon } from '@/src/components/icons';
 import { SPEECH_LANG } from '@/src/i18n';
 import { useLocale, useT } from '@/src/i18n/client';
@@ -28,8 +28,22 @@ function getCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-const subscribe = () => () => {};
-const supportsRecognition = () => getCtor() !== null;
+function subscribeOnline(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
+function getCanListen(): boolean {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return false;
+  }
+  return getCtor() !== null;
+}
 
 type Props = {
   id: string;
@@ -54,10 +68,16 @@ export function VoiceTextarea({
 }: Props) {
   const t = useT();
   const locale = useLocale();
-  const canListen = useSyncExternalStore(subscribe, supportsRecognition, () => false);
+  const canListen = useSyncExternalStore(subscribeOnline, getCanListen, () => false);
   const [listening, setListening] = useState(false);
   const recRef = useRef<Recognition | null>(null);
   const baseRef = useRef('');
+
+  useEffect(() => {
+    if (!canListen && listening) {
+      recRef.current?.stop();
+    }
+  }, [canListen, listening]);
 
   function toggle() {
     if (listening) {

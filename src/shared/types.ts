@@ -98,6 +98,8 @@ export interface Shift {
   checkOut: string | null;
   /** 'qr' | 'gps' | 'manual' */
   method: 'qr' | 'gps' | 'manual';
+  clientId?: string;
+  checkOutClientId?: string;
 }
 
 // ── Overtime ────────────────────────────────────────────────
@@ -233,6 +235,7 @@ export interface HazardReport {
   /** AI-suggested severity */
   aiSuggestedSeverity: HazardSeverity | null;
   anonymous: boolean;
+  clientId?: string;
 }
 
 // ── Feedback ────────────────────────────────────────────────
@@ -249,6 +252,7 @@ export interface FeedbackSubmission {
   payFairness: number; // 1-5
   workloadRating: number; // 1-5
   comment: string | null;
+  clientId?: string;
 }
 
 export interface AggregatedFeedback {

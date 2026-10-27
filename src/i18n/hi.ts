@@ -181,4 +181,12 @@ export const hi: Messages = {
   'skills.copied': 'लिंक कॉपी हो गया',
   'skills.openVerify': 'जाँच पेज खोलें',
   'skills.speak': 'आपके प्रमाणपत्र। आप लिंक भेज सकते हैं ताकि दूसरे उन्हें जाँच सकें।',
+
+  'offline.stamp': 'ऑफ़लाइन सहेजा गया',
+  'offline.queuedNote': 'ऑनलाइन आने पर अपने आप भेजा जाएगा',
+  'offline.bannerOffline': 'आप ऑफ़लाइन हैं। पिछली बार देखी गई जानकारी दिखाई जा रही है।',
+  'offline.bannerSaved': '{n} सहेजे गए, ऑनलाइन आने पर भेजे जाएँगे',
+  'offline.bannerSyncing': 'भेजा जा रहा है…',
+  'offline.bannerAllSent': 'सभी भेज दिए गए',
+  'offline.bannerRejected': '{n} प्रविष्टि नहीं भेजी जा सकी: {reason}',
 };

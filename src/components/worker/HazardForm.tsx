@@ -14,6 +14,7 @@ import { Stamp } from '@/src/components/ui/Stamp';
 import { speak, vibrate } from '@/src/components/ui/speech';
 import { useLocale, useT } from '@/src/i18n/client';
 import { en } from '@/src/i18n/en';
+import { generateUuid, getActiveWorkerId, getOutboxStore } from '@/src/lib/offline/outbox';
 import { reportHazardAction } from '@/app/w/actions';
 import { VoiceTextarea } from './VoiceTextarea';
 
@@ -28,7 +29,11 @@ const CATEGORIES = [
 const SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
 type Severity = (typeof SEVERITIES)[number];
 
-export function HazardForm() {
+type Props = {
+  workerId?: string;
+};
+
+export function HazardForm({ workerId }: Props = {}) {
   const t = useT();
   const locale = useLocale();
   const [category, setCategory] = useState<string | null>(null);
@@ -37,6 +42,7 @@ export function HazardForm() {
   const [anonymous, setAnonymous] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const ready = category !== null && text.trim().length > 0;
@@ -47,25 +53,80 @@ export function HazardForm() {
       return;
     }
     setError(null);
+    const effectiveWorkerId = workerId || getActiveWorkerId();
+    const payload = {
+      // Stored in English so supervisors and the admin console read one vocabulary.
+      category: (en as Record<string, string>)[`hazard.cat.${category}`] ?? category,
+      description: text.trim(),
+      severity,
+      anonymous,
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const clientId = generateUuid();
+      const capturedAt = new Date().toISOString();
+      getOutboxStore()
+        .put({
+          id: clientId,
+          workerId: effectiveWorkerId,
+          kind: 'hazard',
+          payload,
+          capturedAt,
+          attempts: 0,
+        })
+        .then(() => {
+          setSentId(clientId);
+          setIsOffline(true);
+          vibrate(15);
+        });
+      return;
+    }
+
     startTransition(async () => {
-      const res = await reportHazardAction({
-        // Stored in English so supervisors and the admin console read one vocabulary.
-        category: (en as Record<string, string>)[`hazard.cat.${category}`] ?? category,
-        description: text.trim(),
-        severity,
-        anonymous,
-      });
-      if (res.ok) {
-        setSentId(res.id);
+      try {
+        const res = await reportHazardAction(payload);
+        if (res.ok) {
+          setSentId(res.id);
+          setIsOffline(false);
+          vibrate(15);
+          speak(t('hazard.thanks'), locale);
+        } else {
+          setError(t('hazard.error'));
+        }
+      } catch {
+        const clientId = generateUuid();
+        const capturedAt = new Date().toISOString();
+        await getOutboxStore().put({
+          id: clientId,
+          workerId: effectiveWorkerId,
+          kind: 'hazard',
+          payload,
+          capturedAt,
+          attempts: 0,
+        });
+        setSentId(clientId);
+        setIsOffline(true);
         vibrate(15);
-        speak(t('hazard.thanks'), locale);
-      } else {
-        setError(t('hazard.error'));
       }
     });
   }
 
   if (sentId) {
+    if (isOffline) {
+      return (
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">
+            <Stamp announce variant="ink" id={sentId} className="text-3xl">
+              {t('offline.stamp')}
+            </Stamp>
+            <p className="text-body text-center">{t('offline.queuedNote')}</p>
+          </div>
+          <div className="sticky bottom-0 flex flex-col gap-2 bg-paper px-4 pb-3 pt-2">
+            <ButtonLink href="/w">{t('checkin.backHome')}</ButtonLink>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">

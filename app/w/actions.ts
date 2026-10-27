@@ -14,7 +14,14 @@ import {
 } from '@/src/server/services/workerViews';
 import { checkLoginLimit, checkRateLimit, recordLoginFailure } from '@/src/server/auth/rateLimit';
 import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/src/server/auth/session';
-import { feedbackSchema, hazardReportSchema, workerLoginSchema } from '@/src/shared/schemas';
+import {
+  checkinGpsSchema,
+  checkinQrSchema,
+  checkoutSchema,
+  feedbackSchema,
+  hazardReportSchema,
+  workerLoginSchema,
+} from '@/src/shared/schemas';
 import { LOCALE_COOKIE, parseLocale } from '@/src/i18n';
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
@@ -67,28 +74,112 @@ export async function logoutAction(): Promise<void> {
   redirect('/w/login');
 }
 
+export type CheckInErrorOrAuth = CheckinErrorCode | 'auth';
+
 export type CheckinResult =
   | { ok: true; time: string; already: boolean; shiftId: string }
-  | { ok: false; code: CheckInErrorOrAuth };
-type CheckInErrorOrAuth = CheckinErrorCode | 'auth';
+  | {
+      ok: false;
+      code: CheckInErrorOrAuth;
+      permanent: boolean;
+      retryable: boolean;
+      reason?: string;
+    };
 
-export async function checkInAction(input: {
+export type CheckinInput = {
   code?: string;
   lat?: number;
   lng?: number;
-}): Promise<CheckinResult> {
+  capturedAt?: string;
+  clientId?: string;
+};
+
+function isPermanentError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('invalid capture time') ||
+    m.includes('invalid or expired') ||
+    m.includes('outside site geofence') ||
+    m.includes('check-out time must be after check-in time') ||
+    m.includes('shift record not found') ||
+    m.includes('not found') ||
+    m.includes('provide a valid qr code')
+  );
+}
+
+export async function checkInAction(input: CheckinInput): Promise<CheckinResult> {
   const ctx = await getWorkerContext();
-  if (!ctx) return { ok: false, code: 'auth' };
+  if (!ctx) {
+    return {
+      ok: false,
+      code: 'auth',
+      permanent: true,
+      retryable: false,
+      reason: 'Not authenticated',
+    };
+  }
   // 6 tries a minute: enough for a fumbled scan, far too few to guess a 6-digit code.
   if (!checkRateLimit(`checkin:${ctx.worker.id}`, 6, 60 * 1000).allowed) {
-    return { ok: false, code: 'generic' };
+    return {
+      ok: false,
+      code: 'generic',
+      permanent: false,
+      retryable: true,
+      reason: 'Rate limit exceeded',
+    };
   }
+
+  if (input.code !== undefined) {
+    const parsed = checkinQrSchema.safeParse({
+      siteId: ctx.site.id,
+      code: input.code,
+      capturedAt: input.capturedAt,
+      clientId: input.clientId,
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        code: 'invalid_code',
+        permanent: true,
+        retryable: false,
+        reason: parsed.error.issues[0]?.message,
+      };
+    }
+  } else if (input.lat !== undefined && input.lng !== undefined) {
+    const parsed = checkinGpsSchema.safeParse({
+      siteId: ctx.site.id,
+      lat: input.lat,
+      lng: input.lng,
+      capturedAt: input.capturedAt,
+      clientId: input.clientId,
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        code: 'outside',
+        permanent: true,
+        retryable: false,
+        reason: parsed.error.issues[0]?.message,
+      };
+    }
+  } else {
+    return {
+      ok: false,
+      code: 'generic',
+      permanent: true,
+      retryable: false,
+      reason: 'Provide a valid QR code or GPS location to check in',
+    };
+  }
+
   try {
     const { shift, message } = await workerService.checkIn(ctx.worker.id, {
       siteId: ctx.site.id,
       code: input.code,
       lat: input.lat,
       lng: input.lng,
+      capturedAt: input.capturedAt,
+      clientId: input.clientId,
     });
     return {
       ok: true,
@@ -97,26 +188,70 @@ export async function checkInAction(input: {
       shiftId: shift.id,
     };
   } catch (err) {
-    return { ok: false, code: checkinErrorCode(err instanceof Error ? err.message : '') };
+    const message = err instanceof Error ? err.message : String(err);
+    const permanent = isPermanentError(message);
+    return {
+      ok: false,
+      code: checkinErrorCode(message),
+      permanent,
+      retryable: !permanent,
+      reason: message,
+    };
   }
 }
 
-export type CheckoutResult = { ok: true; time: string; shiftId: string } | { ok: false };
+export type CheckoutInput = {
+  shiftId?: string;
+  capturedAt?: string;
+  clientId?: string;
+};
 
-export async function checkOutAction(): Promise<CheckoutResult> {
+export type CheckoutResult =
+  | { ok: true; time: string; shiftId: string }
+  | { ok: false; permanent: boolean; retryable: boolean; reason?: string };
+
+export async function checkOutAction(input?: CheckoutInput): Promise<CheckoutResult> {
   const ctx = await getWorkerContext();
-  if (!ctx) return { ok: false };
+  if (!ctx) {
+    return { ok: false, permanent: true, retryable: false, reason: 'Not authenticated' };
+  }
+  if (!checkRateLimit(`checkout:${ctx.worker.id}`, 6, 60 * 1000).allowed) {
+    return { ok: false, permanent: false, retryable: true, reason: 'Rate limit exceeded' };
+  }
+
+  let shiftId = input?.shiftId;
+  let capturedAt = input?.capturedAt;
+  let clientId = input?.clientId;
+
+  if (input) {
+    const parsed = checkoutSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        permanent: true,
+        retryable: false,
+        reason: parsed.error.issues[0]?.message,
+      };
+    }
+    shiftId = parsed.data.shiftId;
+    capturedAt = parsed.data.capturedAt;
+    clientId = parsed.data.clientId;
+  }
+
   try {
-    const status = await workerService.getTodayStatus(ctx.worker.id);
-    if (!status.activeShift) return { ok: false };
-    const shift = await workerService.checkOut(ctx.worker.id, status.activeShift.id);
+    const shift = await workerService.checkOut(ctx.worker.id, shiftId, {
+      capturedAt,
+      clientId,
+    });
     return {
       ok: true,
       time: formatClock(shift.checkOut ?? new Date().toISOString()),
       shiftId: shift.id,
     };
-  } catch {
-    return { ok: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const permanent = isPermanentError(message);
+    return { ok: false, permanent, retryable: !permanent, reason: message };
   }
 }
 
@@ -125,20 +260,36 @@ export type HazardInput = {
   description: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
   anonymous: boolean;
+  capturedAt?: string;
+  clientId?: string;
 };
-export type HazardResult = { ok: true; id: string } | { ok: false };
+export type HazardResult =
+  { ok: true; id: string } | { ok: false; permanent: boolean; retryable: boolean; reason?: string };
 
 export async function reportHazardAction(input: HazardInput): Promise<HazardResult> {
   const ctx = await getWorkerContext();
-  if (!ctx) return { ok: false };
-  if (!checkRateLimit(`hazard:${ctx.worker.id}`, 5, 60 * 1000).allowed) return { ok: false };
+  if (!ctx) {
+    return { ok: false, permanent: true, retryable: false, reason: 'Not authenticated' };
+  }
+  if (!checkRateLimit(`hazard:${ctx.worker.id}`, 5, 60 * 1000).allowed) {
+    return { ok: false, permanent: false, retryable: true, reason: 'Rate limit exceeded' };
+  }
   const parsed = hazardReportSchema.safeParse({ ...input, siteId: ctx.site.id });
-  if (!parsed.success) return { ok: false };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      permanent: true,
+      retryable: false,
+      reason: parsed.error.issues[0]?.message,
+    };
+  }
   try {
     const hazard = await workerService.reportHazard(ctx.worker.id, parsed.data);
     return { ok: true, id: hazard.id };
-  } catch {
-    return { ok: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const permanent = isPermanentError(message);
+    return { ok: false, permanent, retryable: !permanent, reason: message };
   }
 }
 
@@ -148,23 +299,41 @@ export type FeedbackInput = {
   payFairness: number;
   workloadRating: number;
   comment: string | null;
+  capturedAt?: string;
+  clientId?: string;
 };
 
-export async function submitFeedbackAction(input: FeedbackInput): Promise<{ ok: boolean }> {
+export type FeedbackResult =
+  { ok: true } | { ok: false; permanent: boolean; retryable: boolean; reason?: string };
+
+export async function submitFeedbackAction(input: FeedbackInput): Promise<FeedbackResult> {
   const ctx = await getWorkerContext();
-  if (!ctx) return { ok: false };
-  if (!checkRateLimit(`feedback:${ctx.worker.id}`, 3, 60 * 60 * 1000).allowed) return { ok: false };
+  if (!ctx) {
+    return { ok: false, permanent: true, retryable: false, reason: 'Not authenticated' };
+  }
+  if (!checkRateLimit(`feedback:${ctx.worker.id}`, 3, 60 * 60 * 1000).allowed) {
+    return { ok: false, permanent: false, retryable: true, reason: 'Rate limit exceeded' };
+  }
   const parsed = feedbackSchema.safeParse({
     ...input,
     comment: input.comment?.trim() ? input.comment.trim() : null,
     siteId: ctx.site.id,
   });
-  if (!parsed.success) return { ok: false };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      permanent: true,
+      retryable: false,
+      reason: parsed.error.issues[0]?.message,
+    };
+  }
   try {
     await workerService.submitFeedback(ctx.worker.id, parsed.data);
     return { ok: true };
-  } catch {
-    return { ok: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const permanent = isPermanentError(message);
+    return { ok: false, permanent, retryable: !permanent, reason: message };
   }
 }
 

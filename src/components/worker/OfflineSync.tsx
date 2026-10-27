@@ -1,0 +1,339 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useT } from '@/src/i18n/client';
+import {
+  getActiveWorkerId,
+  getOutboxStore,
+  setActiveWorkerId,
+  type OutboxItem,
+} from '@/src/lib/offline/outbox';
+import { flushOutbox, type SyncHandlers } from '@/src/lib/offline/sync';
+import {
+  checkInAction,
+  checkOutAction,
+  reportHazardAction,
+  submitFeedbackAction,
+  type FeedbackInput,
+  type HazardInput,
+} from '@/app/w/actions';
+
+interface Props {
+  workerId: string | null;
+}
+
+type SyncState = 'idle' | 'syncing' | 'all-sent' | 'rejected';
+
+export function OfflineSync({ workerId }: Props) {
+  const t = useT();
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
+  const [outboxCount, setOutboxCount] = useState<number>(0);
+  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [rejectedInfo, setRejectedInfo] = useState<{ count: number; reason: string } | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const effectiveWorkerId = workerId || getActiveWorkerId();
+
+  // Keep active worker id in local storage for forms
+  useEffect(() => {
+    if (workerId) {
+      setActiveWorkerId(workerId);
+    }
+  }, [workerId]);
+
+  const refreshCount = useCallback(async () => {
+    if (!effectiveWorkerId) return;
+    try {
+      const items = await getOutboxStore().list(effectiveWorkerId);
+      setOutboxCount(items.length);
+    } catch {
+      // ignore
+    }
+  }, [effectiveWorkerId]);
+
+  const runFlush = useCallback(async () => {
+    if (!effectiveWorkerId || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      await refreshCount();
+      return;
+    }
+
+    const store = getOutboxStore();
+    const items = await store.list(effectiveWorkerId);
+    if (items.length === 0) {
+      setOutboxCount(0);
+      return;
+    }
+
+    setSyncState('syncing');
+
+    const handlers: SyncHandlers = {
+      checkin: async (item: OutboxItem) => {
+        try {
+          const payload = item.payload as { code?: string; lat?: number; lng?: number };
+          const res = await checkInAction({
+            ...payload,
+            capturedAt: item.capturedAt,
+            clientId: item.id,
+          } as unknown as { code?: string; lat?: number; lng?: number });
+
+          if (res.ok) return { ok: true };
+
+          const anyRes = res as unknown as {
+            permanent?: boolean;
+            retryable?: boolean;
+            reason?: string;
+            code?: string;
+          };
+          if (anyRes.permanent !== undefined) {
+            return {
+              ok: false,
+              permanent: anyRes.permanent,
+              retryable: anyRes.retryable,
+              reason: anyRes.reason || anyRes.code,
+            };
+          }
+          const isPerm =
+            anyRes.code === 'invalid_code' ||
+            anyRes.code === 'outside' ||
+            anyRes.code === 'stale' ||
+            anyRes.code === 'too_old' ||
+            anyRes.code === 'future';
+          return {
+            ok: false,
+            permanent: isPerm,
+            retryable: !isPerm,
+            reason: anyRes.code || 'Check-in failed',
+          };
+        } catch (err) {
+          return {
+            ok: false,
+            retryable: true,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+        }
+      },
+      checkout: async () => {
+        try {
+          const res = await checkOutAction();
+          if (res.ok) return { ok: true };
+
+          const anyRes = res as unknown as {
+            permanent?: boolean;
+            retryable?: boolean;
+            reason?: string;
+          };
+          if (anyRes.permanent !== undefined) {
+            return {
+              ok: false,
+              permanent: anyRes.permanent,
+              retryable: anyRes.retryable,
+              reason: anyRes.reason,
+            };
+          }
+          return { ok: false, permanent: true, reason: anyRes.reason || 'Check-out rejected' };
+        } catch (err) {
+          return {
+            ok: false,
+            retryable: true,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+        }
+      },
+      hazard: async (item: OutboxItem) => {
+        try {
+          const payload = item.payload as HazardInput;
+          const res = await reportHazardAction({
+            ...payload,
+            capturedAt: item.capturedAt,
+            clientId: item.id,
+          } as unknown as HazardInput);
+
+          if (res.ok) return { ok: true };
+
+          const anyRes = res as unknown as {
+            permanent?: boolean;
+            retryable?: boolean;
+            reason?: string;
+          };
+          if (anyRes.permanent !== undefined) {
+            return {
+              ok: false,
+              permanent: anyRes.permanent,
+              retryable: anyRes.retryable,
+              reason: anyRes.reason,
+            };
+          }
+          return { ok: false, permanent: true, reason: anyRes.reason || 'Report rejected' };
+        } catch (err) {
+          return {
+            ok: false,
+            retryable: true,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+        }
+      },
+      feedback: async (item: OutboxItem) => {
+        try {
+          const payload = item.payload as FeedbackInput;
+          const res = await submitFeedbackAction({
+            ...payload,
+            capturedAt: item.capturedAt,
+            clientId: item.id,
+          } as unknown as FeedbackInput);
+
+          if (res.ok) return { ok: true };
+
+          const anyRes = res as unknown as {
+            permanent?: boolean;
+            retryable?: boolean;
+            reason?: string;
+          };
+          if (anyRes.permanent !== undefined) {
+            return {
+              ok: false,
+              permanent: anyRes.permanent,
+              retryable: anyRes.retryable,
+              reason: anyRes.reason,
+            };
+          }
+          return { ok: false, permanent: true, reason: anyRes.reason || 'Feedback rejected' };
+        } catch (err) {
+          return {
+            ok: false,
+            retryable: true,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+        }
+      },
+    };
+
+    try {
+      const result = await flushOutbox(store, effectiveWorkerId, handlers);
+      await refreshCount();
+
+      if (result.permanentFailures.length > 0) {
+        setRejectedInfo({
+          count: result.permanentFailures.length,
+          reason: result.permanentFailures[0].reason || 'Rejected by server',
+        });
+        setSyncState('rejected');
+      } else if (result.succeeded > 0) {
+        setSyncState('all-sent');
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = setTimeout(() => {
+          setSyncState('idle');
+        }, 4000);
+      } else {
+        setSyncState('idle');
+      }
+    } catch {
+      setSyncState('idle');
+      await refreshCount();
+    }
+  }, [effectiveWorkerId, refreshCount]);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      await refreshCount();
+      if (active) {
+        await runFlush();
+      }
+    })();
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      runFlush();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncState('idle');
+      refreshCount();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCount();
+        runFlush();
+      }
+    };
+
+    const handleOutboxChange = () => {
+      refreshCount();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('fairshift:outbox-change', handleOutboxChange);
+
+    return () => {
+      active = false;
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('fairshift:outbox-change', handleOutboxChange);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [refreshCount, runFlush]);
+
+  // Determine what to display
+  let bannerMessage: string | null = null;
+  let dotColor = 'bg-cleared';
+
+  if (!isOnline) {
+    const offlineNote = t('offline.bannerOffline');
+    if (outboxCount > 0) {
+      bannerMessage = `${offlineNote} ${t('offline.bannerSaved', { n: String(outboxCount) })}`;
+    } else {
+      bannerMessage = offlineNote;
+    }
+    dotColor = 'bg-hivis';
+  } else if (syncState === 'syncing') {
+    bannerMessage = t('offline.bannerSyncing');
+    dotColor = 'bg-ink';
+  } else if (syncState === 'all-sent') {
+    bannerMessage = t('offline.bannerAllSent');
+    dotColor = 'bg-cleared';
+  } else if (syncState === 'rejected' && rejectedInfo) {
+    bannerMessage = t('offline.bannerRejected', {
+      n: String(rejectedInfo.count),
+      reason: rejectedInfo.reason,
+    });
+    dotColor = 'bg-escalated';
+  }
+
+  if (!bannerMessage) {
+    return null;
+  }
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="sticky top-0 z-50 flex min-h-12 w-full items-center justify-between gap-3 border-b-2 border-graphite bg-paper px-4 py-2 text-label font-semibold text-graphite"
+    >
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className={`h-3 w-3 shrink-0 rounded-full border-2 border-graphite ${dotColor}`}
+        />
+        <span className="leading-snug">{bannerMessage}</span>
+      </div>
+      {syncState === 'rejected' ? (
+        <button
+          type="button"
+          onClick={() => setSyncState('idle')}
+          className="inline-flex min-h-12 min-w-12 items-center justify-center text-label text-graphite underline underline-offset-4"
+          aria-label={t('common.close')}
+        >
+          {t('common.close')}
+        </button>
+      ) : null}
+    </div>
+  );
+}

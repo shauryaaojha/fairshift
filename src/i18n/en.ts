@@ -181,6 +181,14 @@ export const en = {
   'skills.copied': 'Link copied',
   'skills.openVerify': 'Open verify page',
   'skills.speak': 'Your certificates. You can share a link so others can check them.',
+
+  'offline.stamp': 'SAVED OFFLINE',
+  'offline.queuedNote': "Will send when you're back online",
+  'offline.bannerOffline': 'You are offline. Showing what you saw last time.',
+  'offline.bannerSaved': '{n} saved, will send when online',
+  'offline.bannerSyncing': 'Sending…',
+  'offline.bannerAllSent': 'All sent',
+  'offline.bannerRejected': '{n} entry could not be sent: {reason}',
 } as const;
 
 export type MessageKey = keyof typeof en;

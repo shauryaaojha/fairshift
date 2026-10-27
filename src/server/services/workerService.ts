@@ -7,7 +7,8 @@
 import { getDatabase } from '../repos';
 import { verifySecret } from '../auth/password';
 import { signSession } from '../auth/session';
-import { verifySiteQrCode } from '../domain/qrCode';
+import { verifySiteQrCode, verifySiteQrCodeAt } from '../domain/qrCode';
+import { validateCapturedAt } from '../domain/offline';
 import { verifyGeofence } from '../domain/geofence';
 import { calculatePayslip } from '../domain/payslip';
 import { calculateShiftsOvertime } from '../domain/overtime';
@@ -75,14 +76,36 @@ export class WorkerService {
    */
   async checkIn(
     workerId: string,
-    params: { siteId: string; code?: string; lat?: number; lng?: number },
+    params: {
+      siteId: string;
+      code?: string;
+      lat?: number;
+      lng?: number;
+      capturedAt?: string;
+      clientId?: string;
+    },
   ): Promise<{ shift: Shift; message: string }> {
     const worker = await this.db.workers.getById(workerId);
     if (!worker) throw new Error('Worker not found');
 
+    if (params.clientId) {
+      const workerShifts = await this.db.shifts.listByWorker(workerId);
+      const existing = workerShifts.find((s) => s.clientId === params.clientId);
+      if (existing) {
+        return { shift: existing, message: 'Already checked in' };
+      }
+    }
+
     const site = await this.db.sites.get(params.siteId);
     // A worker can only check in at a site of their own organisation.
     if (!site || site.orgId !== worker.orgId) throw new Error('Site not found');
+
+    if (params.capturedAt) {
+      const val = validateCapturedAt(params.capturedAt);
+      if (!val.valid) {
+        throw new Error(`Invalid capture time: ${val.reason}`);
+      }
+    }
 
     // An open shift from an earlier day means a missed check-out. Close it at its
     // own start (0 hours, so it cannot inflate pay or overtime) and let the worker
@@ -99,7 +122,9 @@ export class WorkerService {
     let verifiedMethod: 'qr' | 'gps' = 'qr';
 
     if (params.code) {
-      const isQrValid = verifySiteQrCode(params.code, site.qrSecret);
+      const isQrValid = params.capturedAt
+        ? verifySiteQrCodeAt(params.code, site.qrSecret, Date.parse(params.capturedAt))
+        : verifySiteQrCode(params.code, site.qrSecret);
       if (!isQrValid) {
         throw new Error('Invalid or expired 6-digit site check-in code');
       }
@@ -119,9 +144,10 @@ export class WorkerService {
       workerId,
       siteId: site.id,
       orgId: worker.orgId,
-      checkIn: new Date().toISOString(),
+      checkIn: params.capturedAt ?? new Date().toISOString(),
       checkOut: null,
       method: verifiedMethod,
+      ...(params.clientId ? { clientId: params.clientId } : {}),
     };
 
     const saved = await this.db.shifts.create(newShift);
@@ -131,16 +157,69 @@ export class WorkerService {
   /**
    * Check out from active shift.
    */
-  async checkOut(workerId: string, shiftId: string): Promise<Shift> {
-    const shift = await this.db.shifts.getById(shiftId);
-    if (!shift || shift.workerId !== workerId) {
-      throw new Error('Shift record not found');
+  async checkOut(
+    workerId: string,
+    shiftIdOrOptions?: string | { shiftId?: string; capturedAt?: string; clientId?: string },
+    optionsParam?: { capturedAt?: string; clientId?: string },
+  ): Promise<Shift> {
+    let shiftId: string | undefined;
+    let options: { capturedAt?: string; clientId?: string } | undefined;
+
+    if (typeof shiftIdOrOptions === 'string') {
+      shiftId = shiftIdOrOptions;
+      options = optionsParam;
+    } else if (shiftIdOrOptions && typeof shiftIdOrOptions === 'object') {
+      shiftId = shiftIdOrOptions.shiftId;
+      options = shiftIdOrOptions;
+    } else {
+      shiftId = undefined;
+      options = optionsParam;
     }
+
+    if (options?.clientId) {
+      const workerShifts = await this.db.shifts.listByWorker(workerId);
+      const existing = workerShifts.find(
+        (s) =>
+          s.checkOutClientId === options!.clientId ||
+          (s.clientId === options!.clientId && s.checkOut !== null),
+      );
+      if (existing) {
+        return existing;
+      }
+    }
+
+    let shift: Shift | null = null;
+    if (shiftId) {
+      shift = await this.db.shifts.getById(shiftId);
+      if (!shift || shift.workerId !== workerId) {
+        throw new Error('Shift record not found');
+      }
+    } else {
+      shift = await this.db.shifts.getActiveForWorker(workerId);
+      if (!shift) {
+        throw new Error('Shift record not found');
+      }
+    }
+
+    if (options?.capturedAt) {
+      const val = validateCapturedAt(options.capturedAt);
+      if (!val.valid) {
+        throw new Error(`Invalid capture time: ${val.reason}`);
+      }
+      if (Date.parse(options.capturedAt) < Date.parse(shift.checkIn)) {
+        throw new Error('Check-out time must be after check-in time');
+      }
+    }
+
     if (shift.checkOut !== null) {
       return shift;
     }
 
-    shift.checkOut = new Date().toISOString();
+    shift.checkOut = options?.capturedAt ?? new Date().toISOString();
+    if (options?.clientId) {
+      shift.checkOutClientId = options.clientId;
+    }
+
     return await this.db.shifts.update(shift);
   }
 
@@ -214,6 +293,8 @@ export class WorkerService {
       description: string;
       severity: HazardSeverity;
       anonymous: boolean;
+      capturedAt?: string;
+      clientId?: string;
     },
   ): Promise<HazardReport> {
     // The reporter is always authenticated; anonymity only drops the id from the stored record.
@@ -221,6 +302,23 @@ export class WorkerService {
     if (!worker) throw new Error('Worker not found');
     const site = await this.db.sites.get(input.siteId);
     if (!site || site.orgId !== worker.orgId) throw new Error('Site not found');
+
+    if (input.clientId) {
+      const existingHazards = await this.db.hazards.listBySite(input.siteId);
+      const existing = existingHazards.find((h) => h.clientId === input.clientId);
+      if (existing) {
+        return existing;
+      }
+    }
+
+    let reportedAt = new Date().toISOString();
+    if (input.capturedAt) {
+      const val = validateCapturedAt(input.capturedAt);
+      if (!val.valid) {
+        throw new Error(`Invalid capture time: ${val.reason}`);
+      }
+      reportedAt = input.capturedAt;
+    }
 
     const summaryResult = await summarizeHazard(input.category, input.description, input.severity);
 
@@ -233,12 +331,13 @@ export class WorkerService {
       description: input.description,
       severity: input.severity,
       status: 'reported',
-      reportedAt: new Date().toISOString(),
+      reportedAt,
       acknowledgedAt: null,
       resolvedAt: null,
       aiSummary: summaryResult.summary,
       aiSuggestedSeverity: summaryResult.suggestedSeverity,
       anonymous: input.anonymous,
+      ...(input.clientId ? { clientId: input.clientId } : {}),
     };
 
     return await this.db.hazards.create(hazard);
@@ -256,6 +355,8 @@ export class WorkerService {
       payFairness: number;
       workloadRating: number;
       comment: string | null;
+      capturedAt?: string;
+      clientId?: string;
     },
   ): Promise<FeedbackSubmission> {
     const worker = await this.db.workers.getById(workerId);
@@ -264,12 +365,28 @@ export class WorkerService {
     const site = await this.db.sites.get(input.siteId);
     if (!site || site.orgId !== worker.orgId) throw new Error('Site not found');
 
+    if (input.clientId) {
+      const existingFeedback = await this.db.feedback.listBySite(input.siteId);
+      const existing = existingFeedback.find((f) => f.clientId === input.clientId);
+      if (existing) {
+        return existing;
+      }
+    }
+
+    let isoWeek = calculateIsoWeek(new Date());
+    if (input.capturedAt) {
+      const val = validateCapturedAt(input.capturedAt);
+      if (!val.valid) {
+        throw new Error(`Invalid capture time: ${val.reason}`);
+      }
+      isoWeek = calculateIsoWeek(new Date(input.capturedAt));
+    }
+
     // Fetch team roster names for scrubbing
     const siteWorkers = await this.db.workers.listBySite(input.siteId);
     const rosterNames = siteWorkers.map((w) => w.name);
 
     const scrubbedComment = input.comment ? scrubPii(input.comment, rosterNames) : null;
-    const isoWeek = calculateIsoWeek(new Date());
 
     const feedback: FeedbackSubmission = {
       id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -282,6 +399,7 @@ export class WorkerService {
       payFairness: input.payFairness,
       workloadRating: input.workloadRating,
       comment: scrubbedComment,
+      ...(input.clientId ? { clientId: input.clientId } : {}),
     };
 
     return await this.db.feedback.create(feedback);

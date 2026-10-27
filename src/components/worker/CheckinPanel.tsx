@@ -7,6 +7,7 @@ import { PinPad } from '@/src/components/ui/PinPad';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { speak, vibrate } from '@/src/components/ui/speech';
 import { useLocale, useT } from '@/src/i18n/client';
+import { generateUuid, getActiveWorkerId, getOutboxStore } from '@/src/lib/offline/outbox';
 import { checkInAction, checkOutAction } from '@/app/w/actions';
 
 type Props = {
@@ -15,12 +16,16 @@ type Props = {
   activeShiftId: string | null;
   /** 6-digit code from a QR scan, if the page was opened from one. */
   initialCode: string | null;
+  workerId?: string;
 };
 
 type Outcome =
-  { kind: 'in'; time: string; id: string } | { kind: 'out'; time: string; id: string } | null;
+  | { kind: 'in'; time: string; id: string }
+  | { kind: 'out'; time: string; id: string }
+  | { kind: 'offline'; id: string }
+  | null;
 
-export function CheckinPanel({ activeSince, activeShiftId, initialCode }: Props) {
+export function CheckinPanel({ activeSince, activeShiftId, initialCode, workerId }: Props) {
   const t = useT();
   const locale = useLocale();
   const [code, setCode] = useState(initialCode ?? '');
@@ -38,14 +43,43 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode }: Props)
     speak(t('checkin.spoken', { time }), locale);
   }
 
+  async function saveOffline(kind: 'checkin' | 'checkout', payload: unknown) {
+    const effectiveWorkerId = workerId || getActiveWorkerId();
+    const clientId = generateUuid();
+    const capturedAt = new Date().toISOString();
+    await getOutboxStore().put({
+      id: clientId,
+      workerId: effectiveWorkerId,
+      kind,
+      payload,
+      capturedAt,
+      attempts: 0,
+    });
+    setOutcome({ kind: 'offline', id: clientId });
+    vibrate(15);
+  }
+
   function runCode(value: string) {
     setError(null);
     setBusy('code');
-    startTransition(async () => {
-      const res = await checkInAction({ code: value });
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
       setBusy(null);
-      if (res.ok) confirmIn(res.time, res.shiftId);
-      else setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+      saveOffline('checkin', { code: value });
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = await checkInAction({ code: value });
+        setBusy(null);
+        if (res.ok) {
+          confirmIn(res.time, res.shiftId);
+        } else {
+          setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+        }
+      } catch {
+        setBusy(null);
+        await saveOffline('checkin', { code: value });
+      }
     });
   }
 
@@ -66,11 +100,26 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode }: Props)
     setBusy('gps');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        startTransition(async () => {
-          const res = await checkInAction({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
           setBusy(null);
-          if (res.ok) confirmIn(res.time, res.shiftId);
-          else setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+          saveOffline('checkin', { lat, lng });
+          return;
+        }
+        startTransition(async () => {
+          try {
+            const res = await checkInAction({ lat, lng });
+            setBusy(null);
+            if (res.ok) {
+              confirmIn(res.time, res.shiftId);
+            } else {
+              setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+            }
+          } catch {
+            setBusy(null);
+            await saveOffline('checkin', { lat, lng });
+          }
         });
       },
       () => {
@@ -84,21 +133,44 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode }: Props)
   function runCheckout() {
     setError(null);
     setBusy('out');
-    startTransition(async () => {
-      const res = await checkOutAction();
+    const payload = { shiftId: activeShiftId ?? undefined };
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
       setBusy(null);
-      if (res.ok) {
-        setOutcome({ kind: 'out', time: res.time, id: res.shiftId });
-        vibrate(15);
-        speak(t('checkin.checkOutSpoken', { time: res.time }), locale);
-      } else {
-        setError(t('checkin.err.generic'));
+      saveOffline('checkout', payload);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = await checkOutAction();
+        setBusy(null);
+        if (res.ok) {
+          setOutcome({ kind: 'out', time: res.time, id: res.shiftId });
+          vibrate(15);
+          speak(t('checkin.checkOutSpoken', { time: res.time }), locale);
+        } else {
+          setError(t('checkin.err.generic'));
+        }
+      } catch {
+        setBusy(null);
+        await saveOffline('checkout', payload);
       }
     });
   }
 
   // Confirmed just now: stamp it.
   if (outcome) {
+    if (outcome.kind === 'offline') {
+      return (
+        <Frame action={<ButtonLink href="/w">{t('checkin.backHome')}</ButtonLink>}>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10">
+            <Stamp announce variant="ink" id={outcome.id} className="text-3xl">
+              {t('offline.stamp')}
+            </Stamp>
+            <p className="text-body text-center">{t('offline.queuedNote')}</p>
+          </div>
+        </Frame>
+      );
+    }
     return (
       <Frame action={<ButtonLink href="/w">{t('checkin.backHome')}</ButtonLink>}>
         <div className="flex flex-1 items-center justify-center py-10">
