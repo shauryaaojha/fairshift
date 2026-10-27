@@ -3,6 +3,7 @@ import {
   buildAttendanceRows,
   buildHeatmapRows,
   buildStateSegments,
+  confirmHazardSeverity,
   filterHazards,
   filterRiskRows,
   isSeverity,
@@ -11,6 +12,7 @@ import {
   toHazardRows,
   type RiskRow,
 } from "@/src/server/services/adminUi";
+import { getDatabase } from "@/src/server/repos";
 import type { HazardReport, Shift, Worker } from "@/src/shared/types";
 
 const hazard = (over: Partial<HazardReport>): HazardReport => ({
@@ -155,5 +157,56 @@ describe("filterRiskRows", () => {
     expect(filterRiskRows(rows, "fatigue").map((r) => r.id)).toEqual(["1"]);
     expect(filterRiskRows(rows, "all", "B").map((r) => r.id)).toEqual(["2"]);
     expect(filterRiskRows(rows, undefined)).toHaveLength(2);
+  });
+});
+
+describe("confirmHazardSeverity", () => {
+  it("lowering an escalated hazard throws 'Cannot lower the severity of an escalated hazard'", async () => {
+    const db = getDatabase();
+    const testHazard = hazard({
+      id: "h-esc-lower",
+      orgId: "org-construction",
+      severity: "high",
+      status: "reported",
+      reportedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+      acknowledgedAt: null,
+    });
+    await db.hazards.create(testHazard);
+
+    await expect(confirmHazardSeverity("h-esc-lower", "org-construction", "low")).rejects.toThrow(
+      "Cannot lower the severity of an escalated hazard",
+    );
+  });
+
+  it("raising an escalated hazard works (e.g. from high to critical)", async () => {
+    const db = getDatabase();
+    const testHazard = hazard({
+      id: "h-esc-raise",
+      orgId: "org-construction",
+      severity: "high",
+      status: "reported",
+      reportedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+      acknowledgedAt: null,
+    });
+    await db.hazards.create(testHazard);
+
+    const updated = await confirmHazardSeverity("h-esc-raise", "org-construction", "critical");
+    expect(updated.severity).toBe("critical");
+  });
+
+  it("lowering a non-escalated hazard works (e.g. from high to low when not escalated)", async () => {
+    const db = getDatabase();
+    const testHazard = hazard({
+      id: "h-non-esc-lower",
+      orgId: "org-construction",
+      severity: "high",
+      status: "reported",
+      reportedAt: new Date(Date.now() - 60 * 1000).toISOString(),
+      acknowledgedAt: null,
+    });
+    await db.hazards.create(testHazard);
+
+    const updated = await confirmHazardSeverity("h-non-esc-lower", "org-construction", "low");
+    expect(updated.severity).toBe("low");
   });
 });

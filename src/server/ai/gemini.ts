@@ -14,7 +14,9 @@ import {
 
 export const AI_EXPLANATION_DISCLAIMER = 'Explained by AI · check with your supervisor';
 
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 12000;
+/** Short explanations need no extended reasoning; skipping it roughly halves latency. */
+const FAST_CONFIG = { thinkingConfig: { thinkingBudget: 0 } };
 
 function getGeminiClient(): { client: GoogleGenAI; model: string } | null {
   // Server-only key from a Vercel environment variable; never exposed to the browser.
@@ -77,6 +79,7 @@ Do not invent any numbers. Only use the numbers provided above.`;
       vertex.client.models.generateContent({
         model: vertex.model,
         contents: prompt,
+        config: FAST_CONFIG,
       })
     );
 
@@ -119,6 +122,7 @@ Respond with a single English summary sentence.`;
       vertex.client.models.generateContent({
         model: vertex.model,
         contents: prompt,
+        config: FAST_CONFIG,
       })
     );
 
@@ -168,6 +172,7 @@ Use professional, proactive tone. Highlight immediate action points.`;
       vertex.client.models.generateContent({
         model: vertex.model,
         contents: prompt,
+        config: FAST_CONFIG,
       })
     );
 

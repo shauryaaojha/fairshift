@@ -7,12 +7,13 @@ import { getLocale } from "@/src/server/services/workerUi";
 export default async function WorkerLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lang?: string }>;
+  searchParams: Promise<{ lang?: string; next?: string }>;
 }) {
-  const [{ lang }, locale] = await Promise.all([searchParams, getLocale()]);
+  const [{ lang, next }, locale] = await Promise.all([searchParams, getLocale()]);
   // First visit (no language cookie) or "Change language": show the gate.
   if (!locale || lang === "1") {
-    return <LanguageGate current={locale ?? DEFAULT_LOCALE} next="/w/login" />;
+    const gateNext = next ? `/w/login?next=${encodeURIComponent(next)}` : "/w/login";
+    return <LanguageGate current={locale ?? DEFAULT_LOCALE} next={gateNext} />;
   }
   return (
     <div className="flex flex-1 flex-col">
@@ -20,9 +21,9 @@ export default async function WorkerLoginPage({
         title={t(locale, "login.title")}
         speakText={t(locale, "login.speak")}
         backLabel={t(locale, "common.back")}
-        backHref="/w/login?lang=1"
+        backHref={next ? `/w/login?lang=1&next=${encodeURIComponent(next)}` : "/w/login?lang=1"}
       />
-      <LoginForm />
+      <LoginForm next={next} />
     </div>
   );
 }

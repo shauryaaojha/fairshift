@@ -55,3 +55,12 @@ body:has(.worker-shell) > footer {
   .node-pulse { animation: none; opacity: 0; }
 }
 
+
+/* Tamil words are long; at the default h1 size a screen title like "ஆபத்தைச் சொல்"
+   broke mid-word next to the back and speaker buttons. Smaller, whole-word wrapping. */
+[lang="ta"] .text-h1 {
+  font-size: 1.375rem;
+  line-height: 1.5;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}

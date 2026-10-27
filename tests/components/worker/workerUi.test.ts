@@ -14,6 +14,7 @@ import {
   formatDay,
   hazardTimeline,
   summarizeWeek,
+  validateWorkerNext,
 } from "@/src/server/services/workerUi";
 import type { FatigueFlag, PayslipResult, Shift } from "@/src/shared/types";
 
@@ -146,5 +147,38 @@ describe("summarizeWeek", () => {
     const week = summarizeWeek([shift("old", "2026-09-01T03:00:00Z", "2026-09-01T11:00:00Z")], now);
     expect(week.rows).toEqual([]);
     expect(week.totalHours).toBe(0);
+  });
+});
+
+describe("validateWorkerNext", () => {
+  it("allows valid /w/ paths", () => {
+    expect(validateWorkerNext("/w/checkin?site=123&code=456")).toBe("/w/checkin?site=123&code=456");
+    expect(validateWorkerNext("/w/hours")).toBe("/w/hours");
+  });
+
+  it("rejects // evil redirects", () => {
+    expect(validateWorkerNext("//evil.com")).toBe("/w");
+    expect(validateWorkerNext("//w/checkin")).toBe("/w");
+  });
+
+  it("rejects external URLs like https://example.com", () => {
+    expect(validateWorkerNext("https://example.com")).toBe("/w");
+    expect(validateWorkerNext("http://example.com/w/checkin")).toBe("/w");
+  });
+
+  it("rejects non-worker routes like /admin", () => {
+    expect(validateWorkerNext("/admin")).toBe("/w");
+    expect(validateWorkerNext("/admin/login")).toBe("/w");
+    expect(validateWorkerNext("/")).toBe("/w");
+  });
+
+  it("handles null / undefined / empty string", () => {
+    expect(validateWorkerNext(null)).toBe("/w");
+    expect(validateWorkerNext(undefined)).toBe("/w");
+    expect(validateWorkerNext("")).toBe("/w");
+  });
+
+  it("rejects /w itself (must start with /w/ to go to subpaths, or falls back to /w)", () => {
+    expect(validateWorkerNext("/w")).toBe("/w");
   });
 });

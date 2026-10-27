@@ -35,6 +35,41 @@ describe('Domain: Anonymity & PII Scrubbing Engine', () => {
       expect(output).not.toContain('Murugan');
       expect(output).toContain('[REDACTED_NAME]');
     });
+
+    it('redacts first name alone when roster contains full name', () => {
+      const input = 'Ramesh shouts at us';
+      const output = scrubPii(input, ['Ramesh Kumar']);
+      expect(output).toBe('[REDACTED_NAME] shouts at us');
+      expect(output).not.toContain('Ramesh');
+    });
+
+    it('redacts Devanagari names', () => {
+      const input = 'रमेश हमें डांटता है';
+      const output = scrubPii(input, ['रमेश कुमार']);
+      expect(output).toBe('[REDACTED_NAME] हमें डांटता है');
+      expect(output).not.toContain('रमेश');
+    });
+
+    it('redacts Tamil names', () => {
+      const input = 'முருகன் வேலை செய்கிறார்';
+      const output = scrubPii(input, ['முருகன்']);
+      expect(output).toBe('[REDACTED_NAME] வேலை செய்கிறார்');
+      expect(output).not.toContain('முருகன்');
+    });
+
+    it('redacts Devanagari-digit phone numbers', () => {
+      const input = '९८७६५४३२१०';
+      const output = scrubPii(input);
+      expect(output).toBe('[REDACTED_PHONE]');
+      expect(output).not.toContain('९८७६५४३२१०');
+    });
+
+    it('does not redact words that merely contain a name inside them', () => {
+      const input = 'Rameshwaram is a city';
+      const output = scrubPii(input, ['Ramesh Kumar']);
+      expect(output).toBe('Rameshwaram is a city');
+      expect(output).not.toContain('[REDACTED_NAME]');
+    });
   });
 
   describe('calculateIsoWeek', () => {

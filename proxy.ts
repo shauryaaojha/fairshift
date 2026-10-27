@@ -30,7 +30,9 @@ export function proxy(request: NextRequest) {
   // Worker routes require a valid worker session
   if (pathname.startsWith("/w")) {
     if (!session || session.role !== "worker") {
+      const target = `${pathname}${request.nextUrl.search}`;
       const loginUrl = new URL("/w/login", request.url);
+      loginUrl.searchParams.set("next", target);
       return NextResponse.redirect(loginUrl);
     }
     return NextResponse.next();

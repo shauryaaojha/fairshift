@@ -355,6 +355,13 @@ export function isSeverity(value: unknown): value is HazardSeverity {
   return typeof value === 'string' && (SEVERITIES as string[]).includes(value);
 }
 
+export const SEVERITY_RANK: Record<HazardSeverity, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
 /** The admin confirms (or overrides) the severity; AI only suggests. */
 export async function confirmHazardSeverity(
   hazardId: string,
@@ -362,6 +369,10 @@ export async function confirmHazardSeverity(
   severity: HazardSeverity,
 ): Promise<HazardReport> {
   const hazard = await hazardInOrg(hazardId, orgId);
+  const liveStatus = computeHazardStatus(hazard);
+  if (liveStatus === 'escalated' && SEVERITY_RANK[severity] < SEVERITY_RANK[hazard.severity]) {
+    throw new Error('Cannot lower the severity of an escalated hazard');
+  }
   return getDatabase().hazards.update({ ...hazard, severity });
 }
 

@@ -169,6 +169,13 @@ export function summarizeWeek(
   return { rows, totalHours, overtime };
 }
 
+export function validateWorkerNext(next?: string | null): string {
+  if (typeof next === 'string' && next.startsWith('/w/') && !next.startsWith('//')) {
+    return next;
+  }
+  return '/w';
+}
+
 // ── Reads (server only) ─────────────────────────────────────
 
 export async function getLocale(): Promise<Locale | null> {

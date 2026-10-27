@@ -38,6 +38,41 @@ function toPublicSite(site: Site): PublicSite {
   return rest;
 }
 
+/**
+ * Pure helper to compute team feedback heatmap adhering to k >= 3 anonymity.
+ * Submissions are grouped by team and only the most recent ISO week with data
+ * for each team is aggregated.
+ */
+export function computeFeedbackHeatmap(
+  feedbackList: FeedbackSubmission[],
+  rosterNames: string[] = []
+): AggregatedFeedback[] {
+  // Group by team
+  const byTeam = new Map<string, FeedbackSubmission[]>();
+  for (const f of feedbackList) {
+    const list = byTeam.get(f.team) ?? [];
+    list.push(f);
+    byTeam.set(f.team, list);
+  }
+
+  const result: AggregatedFeedback[] = [];
+
+  for (const [team, subs] of byTeam.entries()) {
+    // Find all unique isoWeeks and sort descending so [0] is the most recent
+    const uniqueWeeks = Array.from(new Set(subs.map((s) => s.isoWeek).filter(Boolean))).sort(
+      (a, b) => b.localeCompare(a)
+    );
+    const mostRecentWeek = uniqueWeeks[0];
+    if (!mostRecentWeek) continue;
+
+    const recentSubs = subs.filter((s) => s.isoWeek === mostRecentWeek);
+    const agg = aggregateFeedback(recentSubs, team, mostRecentWeek, 3, rosterNames);
+    result.push(agg);
+  }
+
+  return result;
+}
+
 export class AdminService {
   private db = getDatabase();
 
@@ -266,23 +301,7 @@ export class AdminService {
 
     const rosterNames = workers.map((w) => w.name);
 
-    // Group by team
-    const byTeam = new Map<string, typeof feedbackList>();
-    for (const f of feedbackList) {
-      const list = byTeam.get(f.team) ?? [];
-      list.push(f);
-      byTeam.set(f.team, list);
-    }
-
-    const currentWeek = feedbackList[0]?.isoWeek || '2026-W43';
-    const result: AggregatedFeedback[] = [];
-
-    for (const [team, subs] of byTeam.entries()) {
-      const agg = aggregateFeedback(subs, team, currentWeek, 3, rosterNames);
-      result.push(agg);
-    }
-
-    return result;
+    return computeFeedbackHeatmap(feedbackList, rosterNames);
   }
 
   /**

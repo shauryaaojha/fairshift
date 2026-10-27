@@ -9,6 +9,7 @@ import {
   formatClock,
   getLocale,
   getWorkerContext,
+  validateWorkerNext,
   type CheckinErrorCode,
 } from "@/src/server/services/workerUi";
 import { checkLoginLimit, checkRateLimit, recordLoginFailure } from "@/src/server/auth/rateLimit";
@@ -30,9 +31,9 @@ export async function setLanguageAction(formData: FormData): Promise<void> {
   redirect(signedIn ? "/w" : "/w/login");
 }
 
-export type LoginResult = { ok: true } | { ok: false; error: "wrong" | "too_many" };
+export type LoginResult = { ok: true; redirectTo: string } | { ok: false; error: "wrong" | "too_many" };
 
-export async function loginAction(phone: string, pin: string): Promise<LoginResult> {
+export async function loginAction(phone: string, pin: string, next?: string): Promise<LoginResult> {
   const parsed = workerLoginSchema.safeParse({ phone, pin });
   if (!parsed.success) return { ok: false, error: "wrong" };
   if (!checkLoginLimit("worker", await headers(), parsed.data.phone).allowed) {
@@ -50,7 +51,7 @@ export async function loginAction(phone: string, pin: string): Promise<LoginResu
       path: "/",
       maxAge: SESSION_TTL_SECONDS,
     });
-    return { ok: true };
+    return { ok: true, redirectTo: validateWorkerNext(next) };
   } catch {
     recordLoginFailure("worker", parsed.data.phone);
     return { ok: false, error: "wrong" };

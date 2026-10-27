@@ -8,7 +8,7 @@ import { useT } from "@/src/i18n/client";
 import { loginAction } from "@/app/w/actions";
 
 /** Two steps on one pad: mobile number (10 digits), then PIN (4 digits). */
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string } = {}) {
   const t = useT();
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "pin">("phone");
@@ -20,9 +20,10 @@ export function LoginForm() {
   function submit(withPin: string) {
     setError(null);
     startTransition(async () => {
-      const res = await loginAction(phone, withPin);
+      const res = await loginAction(phone, withPin, next);
       if (res.ok) {
-        router.replace("/w");
+        const destination = (res as { redirectTo?: string }).redirectTo || (next && next.startsWith('/w/') && !next.startsWith('//') ? next : '/w');
+        router.replace(destination);
         router.refresh();
       } else {
         setError(t("login.wrong"));

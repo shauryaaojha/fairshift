@@ -11,7 +11,8 @@ import type { FeedbackSubmission, AggregatedFeedback } from '../../shared/types'
 export const DEFAULT_ANONYMITY_K = 3;
 
 // Regular expressions for PII detection
-const PHONE_REGEX = /(\+?91[\-\s]?)?[6-9]\d{9}|\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g;
+const PHONE_REGEX =
+  /(?:(?<![\p{L}\p{M}\p{N}])(?:\+?(?:91|[०-९]{2}|[௦-௯]{2})[\-\s]?)?[6-9६-९௬-௯][0-9०-९௦-௯]{9}(?![\p{L}\p{M}\p{N}]))|(?<![\p{L}\p{M}\p{N}])[0-9०-९௦-௯]{3}[-.\s]?[0-9०-९௦-௯]{3}[-.\s]?[0-9०-९௦-௯]{4}(?![\p{L}\p{M}\p{N}])/giu;
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const AADHAAR_REGEX = /\b\d{4}\s\d{4}\s\d{4}\b|\b\d{12}\b/g;
 
@@ -27,11 +28,31 @@ export function scrubPii(text: string, knownWorkerNames: string[] = []): string 
     .replace(PHONE_REGEX, '[REDACTED_PHONE]')
     .replace(AADHAAR_REGEX, '[REDACTED_ID]');
 
-  // Scrub known worker names (case-insensitive whole words)
-  for (const name of knownWorkerNames) {
-    if (!name || name.trim().length < 2) continue;
-    const escaped = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const nameRegex = new RegExp(`\\b${escaped}\\b`, 'gi');
+  // Collect full names (length >= 2) and tokens (length >= 3)
+  const targets = new Set<string>();
+  for (const rawName of knownWorkerNames) {
+    if (!rawName || typeof rawName !== 'string') continue;
+    const trimmed = rawName.trim();
+    if (trimmed.length >= 2) {
+      targets.add(trimmed);
+    }
+    const tokens = trimmed.split(/\s+/);
+    for (const token of tokens) {
+      if (token.length >= 3) {
+        targets.add(token);
+      }
+    }
+  }
+
+  // Sort descending by length so longer phrases are replaced first
+  const sortedTargets = Array.from(targets).sort((a, b) => b.length - a.length);
+
+  for (const target of sortedTargets) {
+    const escaped = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nameRegex = new RegExp(
+      '(?<![\\p{L}\\p{M}\\p{N}])' + escaped + '(?![\\p{L}\\p{M}\\p{N}])',
+      'giu'
+    );
     scrubbed = scrubbed.replace(nameRegex, '[REDACTED_NAME]');
   }
 

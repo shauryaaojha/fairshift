@@ -11,12 +11,20 @@ Measured on 2026-10-27 with `npm test -- --coverage`, `npm run typecheck`, `npm 
 
 | Check | Result |
 | --- | --- |
-| Tests | **121 passed**, 0 failed (20 files: domain, server, UI components, admin, i18n) |
-| Rule-engine coverage (`src/server/domain`) | **99.39%** statements · **96.7%** branches · **100%** functions · **99.66%** lines |
+| Tests | **149 passed**, 0 failed (22 files: domain, server, UI components, admin, i18n) |
+| Rule-engine coverage (`src/server/domain`) | **99.42%** statements · **96.79%** branches · **100%** functions |
 | TypeScript (`tsc --noEmit`, strict) | 0 errors |
 | ESLint (`--max-warnings 0`) | 0 errors, 0 warnings |
 | Production build (`next build`) | Passes, 40 routes |
 | Credentials in the repo | None: `MONGODB_URI`, `GEMINI_API_KEY` and `SESSION_SECRET` live only in Vercel environment variables |
+
+## Screenshots
+
+| Worker home (Hindi) | Payslip (Hindi) | Supervisor console |
+| --- | --- | --- |
+| ![Worker home in Hindi](docs/screenshots/02-worker-hindi-home.png) | ![Payslip in Hindi](docs/screenshots/02-worker-hindi-payslip.png) | ![Supervisor overview](docs/screenshots/05-admin-overview.png) |
+
+More in [docs/screenshots](docs/screenshots).
 
 ## How the problem statement is met
 
@@ -150,3 +158,14 @@ docs/                plan, design system, use cases, LinkedIn draft
 ```
 
 Design rules (tokens, type, motion, ban list) are in [DESIGN.md](DESIGN.md).
+
+## Credits
+
+- Typefaces: [Anek](https://github.com/EkType/Anek) by Ek Type and Spline Sans Mono, both under the SIL Open Font License, served through Google Fonts.
+- Motion: written with [GSAP](https://gsap.com). The two easing curves ("hop" and "glide") and the line-mask reveal technique are adapted from public GSAP landing-page demos; the components themselves are original to FairShift.
+- Labour rules: overtime defaults follow the Occupational Safety, Health and Working Conditions Code, 2020 (8 h/day, 48 h/week, 2× rate).
+- Low-literacy design guidance: Medhi et al., Microsoft Research India, and the sources listed in `docs/design-system.md`.
+
+## License
+
+[MIT](LICENSE)
