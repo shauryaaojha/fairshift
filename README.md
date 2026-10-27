@@ -19,6 +19,52 @@ Measured on 2026-10-27 with `npm test -- --coverage`, `npm run typecheck`, `npm 
 | Production build (`next build`)            | Passes, 40 routes                                                                                    |
 | Credentials in the repo                    | None: `MONGODB_URI`, `GEMINI_API_KEY` and `SESSION_SECRET` live only in Vercel environment variables |
 
+## Chosen vertical
+
+**PromptWars 2026 × SRM ACM Student Chapter: "FairShift: Decent Work Platform", UN SDG 8 (Decent Work and Economic Growth).**
+
+- **Personas:** shift workers (construction masons and helpers, campus housekeeping and security staff) and their supervisors, plus a regional HR lead who manages more than one organisation.
+- **Sectors running live:** a construction site (Skyline Towers, Chennai) and a college campus (Campus Facilities), both on one data model.
+
+## Approach and logic
+
+- **Every number comes from tested rules, not from AI.** Pure functions in `src/server/domain` compute:
+  - overtime: OSH Code 2020, 8 h/day and 48 h/week per ISO week, paid at 2×
+  - payslips: PF 12% of basic up to ₹15,000, ESI 0.75% when gross ≤ ₹21,000
+  - fatigue: > 48 h in 7 days, a shift > 10 h, < 10 h rest, 7 days without a break
+  - hazard deadlines: 1 h / 4 h / 24 h / 72 h, with escalation computed on read
+  - quit-risk: 0–100 with its top 3 reasons
+  - anonymity: k ≥ 3 and PII scrubbing, including Hindi and Tamil names
+- **Decisions use the user's context.**
+  - The worker's own shifts drive their overtime, payslip and fatigue warnings.
+  - Their reports drive their status timeline.
+  - The supervisor sees escalations, fatigue and quit-risk ranked for the sector they are allowed to view.
+- **Gemini only explains.** It explains a payslip in plain words, turns a spoken Hindi or Tamil hazard report into an English summary with a suggested severity (a human confirms it), and summarises the week. Every AI call has a timeout and a rule-based fallback.
+- **Designed for the real user.** The app is voice-first, uses icons with one word, works in three languages, has a light high-contrast theme for sunlight, and keeps the worker routes free of animation libraries for basic phones. See [docs/design-system.md](docs/design-system.md).
+
+## How the solution works
+
+1. **Check in.** A worker scans the rotating QR at the site gate with the phone camera, or uses GPS. If signed out, they enter phone + PIN, and the scanned code is kept through login.
+2. **Shift record.** The check-in and check-out create a shift record. The rule engines turn those shifts into hours, overtime, fatigue flags and a line-by-line payslip that can be read aloud.
+3. **Hazard report.** A hazard is spoken in the worker's language, optionally anonymous. It lands in the supervisor's safety queue with a deadline, and escalates by itself if nobody acknowledges it.
+4. **Feedback.** Anonymous feedback feeds a team heatmap that stays hidden until 3 people answer.
+5. **Supervisor console.** The console shows on-site counts, a 14-day attendance chart, escalated hazards and an explainable quit-risk list, for every sector the admin may access.
+
+The full user flows, the end-to-end hazard sequence and the architecture diagram are in **[docs/user-flow-and-architecture.md](docs/user-flow-and-architecture.md)**. What sets the design apart is in **[docs/novelty.md](docs/novelty.md)**.
+
+## Assumptions made
+
+- **Location and time:** workers and sites are in India, and a "day" is an IST calendar day.
+- **Pay rules:**
+  - Overtime defaults are 8 h/day and 48 h/week at 2× (editable per organisation policy).
+  - PF is 12% of basic, capped at a ₹15,000 wage. ESI is 0.75% when gross is ≤ ₹21,000.
+  - A daily-wage worker's hourly rate is base ÷ 8.
+- **Check-in:** the gate QR code rotates every 60 s and accepts ±1 window. An open shift older than 16 h is treated as a missed check-out.
+- **Anonymity:** feedback needs at least 3 answers per team-week before results are shown.
+- **Devices:** workers use Chrome on Android for voice input and read-aloud. Both hide themselves gracefully when unsupported.
+- **Admins:** one admin may manage several organisations.
+- **Demo data:** the data is seeded, anchored to the current day and labelled "Demo data". Without `MONGODB_URI`, or if MongoDB is unreachable, the app runs on this seeded in-memory store.
+
 ## Screenshots
 
 | Worker home (Hindi)                                                | Payslip (Hindi)                                                   | Supervisor console                                             |
