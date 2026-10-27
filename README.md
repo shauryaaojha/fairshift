@@ -16,7 +16,7 @@ Measured on 2026-10-27 with `npm test -- --coverage`, `npm run typecheck`, `npm 
 | TypeScript (`tsc --noEmit`, strict) | 0 errors |
 | ESLint (`--max-warnings 0`) | 0 errors, 0 warnings |
 | Production build (`next build`) | Passes, 40 routes |
-| Credentials in the repo | None: Firestore and Vertex AI use the Cloud Run service account; `SESSION_SECRET` comes from Secret Manager |
+| Credentials in the repo | None: `MONGODB_URI`, `GEMINI_API_KEY` and `SESSION_SECRET` live only in Vercel environment variables |
 
 ## How the problem statement is met
 
@@ -41,7 +41,7 @@ Measured on 2026-10-27 with `npm test -- --coverage`, `npm run typecheck`, `npm 
 
 | Criterion | What we did and where |
 | --- | --- |
-| Code quality | Three layers with one direction of dependency: pure rule engines in `src/server/domain`, repositories in `src/server/repos` (memory and Firestore behind one interface), services in `src/server/services`. Shared types in `src/shared`. Strict TypeScript and ESLint with zero warnings allowed (`npm run lint`). |
+| Code quality | Three layers with one direction of dependency: pure rule engines in `src/server/domain`, repositories in `src/server/repos` (in-memory and MongoDB behind one interface), services in `src/server/services`. Shared types in `src/shared`. Strict TypeScript and ESLint with zero warnings allowed (`npm run lint`). |
 | Security | No secrets in the repo (`.env.example` has names only). Sessions are HMAC-signed `httpOnly` cookies (`src/server/auth/session.ts`). PINs and passwords are scrypt-hashed. Inputs are validated with zod (`src/shared/schemas.ts`). Login is rate-limited. `proxy.ts` guards `/w` and `/admin`. Security headers and a CSP are set in `next.config.ts`. Admin mutations re-check that the hazard belongs to the organisation. Feedback has no worker id and is hidden below k = 3. |
 | Efficiency | Next.js `output: "standalone"` image on `node:22-alpine`. The worker app ships no animation library; GSAP is loaded only on `/` and `/admin`. Only the Latin and one Indic font script load. Server Components do the data work. The in-memory backend needs no network. |
 | Testing | Unit tests for every rule engine (`tests/domain`), services and routes (`tests/server`), and components (`tests/components`). CI runs `vitest run --coverage` on every push (`.github/workflows/ci.yml`). |
@@ -58,7 +58,7 @@ Rules come from code, not from AI. Gemini only explains and summarises, and ever
         |                                         |
         +------------------+----------------------+
                            |
-              Next.js 16 App Router (Cloud Run)
+              Next.js 16 App Router (Vercel)  
         Server Components + Server Actions + route handlers
                            |
                   proxy.ts  (session guard)
@@ -66,7 +66,7 @@ Rules come from code, not from AI. Gemini only explains and summarises, and ever
         +------------------+-------------------+
         |                  |                   |
    src/server/auth    src/server/services   src/server/ai
-   signed cookies     workerService         Vertex AI Gemini
+   signed cookies     workerService         Gemini API (key) 
    scrypt, limits     adminService          (8 s timeout,
                       adminUi / workerUi     rule-based fallback)
                            |
@@ -77,8 +77,8 @@ Rules come from code, not from AI. Gemini only explains and summarises, and ever
                   src/server/repos  (one interface)
               +------------+-------------+
               |                          |
-        memory (seeded)             Firestore
-        DATA_BACKEND=memory         DATA_BACKEND=firestore
+        memory (seeded)             MongoDB Atlas
+        no MONGODB_URI              MONGODB_URI set
 ```
 
 ## Run locally without credentials
@@ -108,9 +108,10 @@ In the admin console the sector switcher lets either demo supervisor view both s
 
 | Name | Purpose | Default |
 | --- | --- | --- |
-| `DATA_BACKEND` | `memory` (seeded, no credentials) or `firestore` | `memory` |
-| `GOOGLE_CLOUD_PROJECT` | Enables Vertex AI Gemini. Leave empty for rule-based fallbacks | empty |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI region | `asia-south1` |
+| `MONGODB_URI` | MongoDB Atlas connection string. Leave empty for seeded in-memory data | empty |
+| `MONGODB_DB` | Database name | `fairshift` |
+| `DATA_BACKEND` | Set to `memory` to force in-memory data even when `MONGODB_URI` is set | empty |
+| `GEMINI_API_KEY` | Enables Gemini explanations (server-only). Leave empty for rule-based fallbacks | empty |
 | `GEMINI_MODEL` | Model name | `gemini-2.5-flash` |
 | `SESSION_SECRET` | Key for signing session cookies. Required in production | random per process in dev |
 
@@ -125,32 +126,17 @@ npm test                 # vitest, all suites
 npm run test:coverage    # vitest run --coverage
 ```
 
-## Deploy to Cloud Run
-
-The repo has a multi-stage `Dockerfile` (`node:22-alpine`, Next standalone output, non-root user, `PORT=8080`).
+## Deploy to Vercel
 
 ```bash
-# One-time: a service account for the app
-gcloud iam service-accounts create fairshift-run
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:fairshift-run@PROJECT_ID.iam.gserviceaccount.com" --role="roles/datastore.user"
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:fairshift-run@PROJECT_ID.iam.gserviceaccount.com" --role="roles/aiplatform.user"
-
-# Session secret in Secret Manager
-printf '%s' "$(openssl rand -hex 32)" | gcloud secrets create fairshift-session-secret --data-file=-
-gcloud secrets add-iam-policy-binding fairshift-session-secret \
-  --member="serviceAccount:fairshift-run@PROJECT_ID.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
-
-# Build and deploy from source
-gcloud run deploy fairshift --source . --region asia-south1 \
-  --service-account fairshift-run@PROJECT_ID.iam.gserviceaccount.com \
-  --allow-unauthenticated \
-  --set-env-vars DATA_BACKEND=firestore,GOOGLE_CLOUD_PROJECT=PROJECT_ID,GOOGLE_CLOUD_LOCATION=asia-south1,GEMINI_MODEL=gemini-2.5-flash \
-  --set-secrets SESSION_SECRET=fairshift-session-secret:latest
+vercel link
+printf '%s' "$(openssl rand -hex 32)" | vercel env add SESSION_SECRET production
+vercel env add MONGODB_URI production      # MongoDB Atlas connection string (allow 0.0.0.0/0 in Atlas Network Access)
+vercel env add GEMINI_API_KEY production   # optional: Gemini explanations
+vercel deploy --prod
 ```
 
-Replace `PROJECT_ID` with your Google Cloud project. The service account uses application default credentials, so no key file is ever created.
+On first request the app creates its indexes and seeds an empty database with the demo data. Without `MONGODB_URI` it runs on seeded in-memory data, which is fine for a demo but resets between serverless instances.
 
 ## Repo layout
 

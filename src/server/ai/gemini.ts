@@ -1,6 +1,6 @@
 // ============================================================
 // FairShift — AI: Vertex AI Gemini Integration
-// Uses @google/genai with vertexai: true (Service Account ADC auth)
+// Uses @google/genai with a server-side GEMINI_API_KEY; rule-based fallbacks when unset
 // Zero API keys required; 8-second timeout with deterministic fallback
 // ============================================================
 
@@ -17,23 +17,18 @@ export const AI_EXPLANATION_DISCLAIMER = 'Explained by AI · check with your sup
 const TIMEOUT_MS = 8000;
 
 function getGeminiClient(): { client: GoogleGenAI; model: string } | null {
-  const project = process.env.GOOGLE_CLOUD_PROJECT;
-  if (!project) {
+  // Server-only key from a Vercel environment variable; never exposed to the browser.
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
     return null;
   }
 
-  const location = process.env.GOOGLE_CLOUD_LOCATION || 'asia-south1';
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const client = new GoogleGenAI({
-      vertexai: true,
-      project,
-      location,
-    });
-    return { client, model };
+    return { client: new GoogleGenAI({ apiKey }), model };
   } catch (err) {
-    console.warn('⚠️ [FairShift AI] Failed to initialize Vertex AI client:', err);
+    console.warn('[FairShift AI] Failed to initialise the Gemini client:', err);
     return null;
   }
 }

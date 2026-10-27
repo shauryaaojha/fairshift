@@ -75,7 +75,7 @@ Every number a worker or employer sees is calculated by tested, rule-based code.
 
 ### AI explains, it does not decide
 
-Google Gemini (through Vertex AI) has three jobs:
+Google Gemini has three jobs:
 
 - Explain a payslip in simple words in the worker's language.
 - Turn a spoken hazard report in Hindi or Tamil into an English summary with a suggested category and severity, which a supervisor confirms.
@@ -122,9 +122,9 @@ The problem statement requires at least two industries. FairShift uses one data 
 | Layer | Choice |
 | --- | --- |
 | App | Next.js 16 full-stack (React 19, TypeScript), one container |
-| Hosting | Google Cloud Run (`asia-south1`, Mumbai) |
-| Database | Firestore, accessed through the Cloud Run service account (no keys in the code) |
-| AI | Gemini on Vertex AI, with rule-based fallbacks |
+| Hosting | Vercel |
+| Database | MongoDB Atlas (connection string in a Vercel environment variable, never in the code) |
+| AI | Google Gemini API, with rule-based fallbacks |
 | Voice | Browser Web Speech API for speech-to-text and read-aloud |
 | Quality | Unit and component tests (Vitest), CI on GitHub Actions, accessibility and security checks |
 

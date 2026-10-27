@@ -1,14 +1,11 @@
 // ============================================================
-// FairShift — Repositories: Cloud Firestore Adapter
-// Application Default Credentials (ADC) ONLY — zero keys in repo.
-// On Cloud Run, ADC resolves to the service account.
-// One top-level collection per repo; document id = entity id.
-// All queries are single-field equality, so NO composite indexes are
-// required; secondary filters/sorts happen in memory.
+// FairShift — Repositories: MongoDB Adapter (Atlas / Vercel Marketplace)
+// Connection string comes from MONGODB_URI (a Vercel environment variable),
+// never from the repo. One collection per repo, keyed by the entity `id`.
+// The client is cached on globalThis so serverless invocations reuse it.
 // ============================================================
 
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { MongoClient, type Db, type Document } from 'mongodb';
 import type { FairShiftDatabase } from './types';
 import type {
   Org,
@@ -23,8 +20,6 @@ import type {
 import { generateSeedData } from '../seed/seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
 
-const MAX_BATCH = 500;
-
 const COLLECTIONS = {
   orgs: 'orgs',
   sites: 'sites',
@@ -36,75 +31,67 @@ const COLLECTIONS = {
   skills: 'skills',
 } as const;
 
-/** Firestore rejects `undefined`; strip it recursively. */
-function clean<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((v) => clean(v)) as unknown as T;
-  if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v !== undefined) out[k] = clean(v);
-    }
-    return out as T;
-  }
-  return value;
-}
+/** Never return Mongo's internal _id to callers. */
+const NO_ID = { projection: { _id: 0 } } as const;
+
+/** Indexes for every lookup the repos make (all single-field). */
+const INDEXES: Record<string, string[]> = {
+  orgs: ['id'],
+  sites: ['id', 'orgId'],
+  workers: ['id', 'phone', 'siteId', 'orgId'],
+  admins: ['id', 'email', 'orgId'],
+  shifts: ['id', 'workerId', 'siteId', 'orgId'],
+  hazards: ['id', 'siteId', 'orgId'],
+  feedback: ['id', 'siteId', 'orgId'],
+  skills: ['id', 'workerId', 'verifyToken'],
+};
 
 function byCheckInDesc(a: Shift, b: Shift): number {
   return new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime();
 }
 
-function initFirestore(): Firestore {
-  try {
-    if (getApps().length === 0) {
-      initializeApp(); // Application Default Credentials only
-    }
-    return getFirestore();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(
-      `[FairShift Data] DATA_BACKEND=firestore but Firestore initialisation failed ` +
-        `(Application Default Credentials required): ${msg}`
-    );
+type GlobalWithMongo = typeof globalThis & { __fairshiftMongo?: Promise<MongoClient> };
+
+function connect(uri: string): Promise<MongoClient> {
+  const g = globalThis as GlobalWithMongo;
+  if (!g.__fairshiftMongo) {
+    g.__fairshiftMongo = new MongoClient(uri, { maxPoolSize: 5 }).connect().catch((err) => {
+      g.__fairshiftMongo = undefined;
+      throw err;
+    });
   }
+  return g.__fairshiftMongo;
 }
 
-/**
- * Seeds Firestore from the deterministic seed data if the `orgs`
- * collection is empty. Returns true when seed data was written.
- */
-export async function seedFirestoreIfEmpty(db: Firestore): Promise<boolean> {
-  const existing = await db.collection(COLLECTIONS.orgs).limit(1).get();
-  if (!existing.empty) return false;
+/** Seeds the database from the demo seed if `orgs` is empty. Returns true when it wrote data. */
+export async function seedMongoIfEmpty(db: Db): Promise<boolean> {
+  for (const [col, fields] of Object.entries(INDEXES)) {
+    await Promise.all(
+      fields.map((field) => db.collection(col).createIndex({ [field]: 1 }, { unique: field === 'id' }))
+    );
+  }
+  if ((await db.collection(COLLECTIONS.orgs).countDocuments({}, { limit: 1 })) > 0) return false;
 
   const data = await generateSeedData();
-  const writes: Array<{ col: string; id: string; doc: object }> = [];
   for (const key of Object.keys(COLLECTIONS) as Array<keyof typeof COLLECTIONS>) {
-    for (const item of data[key] as Array<{ id: string }>) {
-      writes.push({ col: COLLECTIONS[key], id: item.id, doc: item });
-    }
-  }
-
-  for (let i = 0; i < writes.length; i += MAX_BATCH) {
-    const batch = db.batch();
-    for (const w of writes.slice(i, i + MAX_BATCH)) {
-      batch.set(db.collection(w.col).doc(w.id), clean(w.doc));
-    }
-    await batch.commit();
+    const items = data[key] as Document[];
+    if (items.length > 0) await db.collection(COLLECTIONS[key]).insertMany(items.map((i) => ({ ...i })));
   }
   return true;
 }
 
-class FirestoreFairShiftDb implements FairShiftDatabase {
+class MongoFairShiftDb implements FairShiftDatabase {
   private seedPromise: Promise<void> | null = null;
 
-  constructor(private readonly db: Firestore) {}
+  constructor(private readonly getDb: () => Promise<Db>) {}
 
-  /** Seeds once per process (cached promise); retried if it failed. */
+  /** Seeds once per instance (cached promise); retried if it failed. */
   private ensureSeeded(): Promise<void> {
     if (!this.seedPromise) {
-      this.seedPromise = seedFirestoreIfEmpty(this.db)
+      this.seedPromise = this.getDb()
+        .then((db) => seedMongoIfEmpty(db))
         .then((seeded) => {
-          if (seeded) console.log('[FairShift Data] Seeded empty Firestore database');
+          if (seeded) console.log('[FairShift Data] Seeded empty MongoDB database');
         })
         .catch((err) => {
           this.seedPromise = null;
@@ -116,26 +103,23 @@ class FirestoreFairShiftDb implements FairShiftDatabase {
 
   private async getDoc<T>(col: string, id: string): Promise<T | null> {
     await this.ensureSeeded();
-    const snap = await this.db.collection(col).doc(id).get();
-    return snap.exists ? (snap.data() as T) : null;
+    return ((await this.getDb()).collection(col).findOne({ id }, NO_ID)) as Promise<T | null>;
   }
 
   private async query<T>(col: string, field: string, value: unknown): Promise<T[]> {
     await this.ensureSeeded();
-    const snap = await this.db.collection(col).where(field, '==', value).get();
-    return snap.docs.map((d) => d.data() as T);
+    return ((await this.getDb()).collection(col).find({ [field]: value }, NO_ID).toArray()) as Promise<T[]>;
   }
 
   private async put<T extends { id: string }>(col: string, item: T): Promise<T> {
     await this.ensureSeeded();
-    await this.db.collection(col).doc(item.id).set(clean(item));
+    await (await this.getDb()).collection(col).replaceOne({ id: item.id }, { ...item }, { upsert: true });
     return item;
   }
 
   private async listAll<T>(col: string): Promise<T[]> {
     await this.ensureSeeded();
-    const snap = await this.db.collection(col).get();
-    return snap.docs.map((d) => d.data() as T);
+    return ((await this.getDb()).collection(col).find({}, NO_ID).toArray()) as Promise<T[]>;
   }
 
   orgs = {
@@ -190,12 +174,7 @@ class FirestoreFairShiftDb implements FairShiftDatabase {
     getById: (id: string) => this.getDoc<Shift>(COLLECTIONS.shifts, id),
     getActiveForWorker: async (workerId: string) => {
       await this.ensureSeeded();
-      const snap = await this.db
-        .collection(COLLECTIONS.shifts)
-        .where('workerId', '==', workerId)
-        .where('checkOut', '==', null)
-        .get();
-      return snap.docs.length > 0 ? (snap.docs[0].data() as Shift) : null;
+      return ((await this.getDb()).collection(COLLECTIONS.shifts).findOne({ workerId, checkOut: null }, NO_ID)) as Promise<Shift | null>;
     },
     listByWorker: async (workerId: string) =>
       (await this.query<Shift>(COLLECTIONS.shifts, 'workerId', workerId)).sort(byCheckInDesc),
@@ -248,21 +227,18 @@ class FirestoreFairShiftDb implements FairShiftDatabase {
   };
 }
 
-let firestoreInstance: FairShiftDatabase | null = null;
+let mongoInstance: FairShiftDatabase | null = null;
 
 /**
- * Returns the Firestore-backed database. Throws a clear error if
- * initialisation fails — never silently falls back to memory.
+ * Returns the MongoDB-backed database. Requires MONGODB_URI; throws a clear
+ * error instead of silently falling back to memory.
  */
-export function getFirestoreDb(): FairShiftDatabase {
-  if (firestoreInstance) return firestoreInstance;
-  const db = initFirestore();
-  firestoreInstance = new FirestoreFairShiftDb(db);
-  console.log('[FairShift Data] Backend in use: Cloud Firestore (ADC)');
-  return firestoreInstance;
-}
-
-/** Test hook: drop the cached instance. */
-export function resetFirestoreDbForTests(): void {
-  firestoreInstance = null;
+export function getMongoDb(): FairShiftDatabase {
+  if (mongoInstance) return mongoInstance;
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error('[FairShift Data] MONGODB_URI is not set.');
+  const dbName = process.env.MONGODB_DB || 'fairshift';
+  mongoInstance = new MongoFairShiftDb(async () => (await connect(uri)).db(dbName));
+  console.log('[FairShift Data] Backend in use: MongoDB');
+  return mongoInstance;
 }

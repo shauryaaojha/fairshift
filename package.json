@@ -15,8 +15,8 @@
   "dependencies": {
     "@google/genai": "^2",
     "@gsap/react": "^2.1.1",
-    "firebase-admin": "^14.5.0",
     "gsap": "^3.15.0",
+    "mongodb": "^7.7.0",
     "next": "16.4.3",
     "next-transition-router": "^0.2.11",
     "qrcode": "^1.5.4",

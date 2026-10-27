@@ -1,18 +1,19 @@
 // ============================================================
 // FairShift — Repositories: Factory & Singleton Access
-// Selects adapter based on DATA_BACKEND=memory|firestore (default memory)
+// MongoDB when MONGODB_URI is set (production on Vercel), otherwise the
+// seeded in-memory store (local development and tests, no credentials needed).
 // ============================================================
 
 import type { FairShiftDatabase } from './types';
 import { inMemoryDb } from './memory';
-import { getFirestoreDb } from './firestore';
+import { getMongoDb } from './mongo';
 
 export * from './types';
 export * from './memory';
 
 export function getDatabase(): FairShiftDatabase {
-  if (process.env.DATA_BACKEND === 'firestore') {
-    return getFirestoreDb();
+  if (process.env.DATA_BACKEND !== 'memory' && process.env.MONGODB_URI) {
+    return getMongoDb();
   }
   return inMemoryDb;
 }
