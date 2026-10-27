@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Auth: Scrypt Password & PIN Hashing
-// Uses Node built-in crypto.scrypt with timingSafeEqual
-// ============================================================
+// Auth: Scrypt Password & PIN Hashing
 
 import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';

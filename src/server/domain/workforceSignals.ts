@@ -1,13 +1,8 @@
-// ============================================================
-// FairShift — Domain: Workforce signals for quit-risk
-// Attendance drop and team sentiment, derived from real records
-// ============================================================
+// Domain: Workforce signals for quit-risk
 
-import { istDateKey } from './time';
+import { istDateKey, DAY_MS } from './time';
 import type { FeedbackSubmission, Shift } from '../../shared/types';
 import { DEFAULT_ANONYMITY_K } from './anonymity';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Percentage drop in days attended: the last `windowDays` versus the
@@ -17,7 +12,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function calculateAttendanceDrop(
   shifts: Shift[],
   now: Date,
-  windowDays: number = 7
+  windowDays: number = 7,
 ): number {
   const recentStart = now.getTime() - windowDays * DAY_MS;
   const previousStart = recentStart - windowDays * DAY_MS;
@@ -45,14 +40,14 @@ export function calculateAttendanceDrop(
 export function teamSentimentAverage(
   submissions: FeedbackSubmission[],
   team: string,
-  minK: number = DEFAULT_ANONYMITY_K
+  minK: number = DEFAULT_ANONYMITY_K,
 ): number {
   const teamSubs = submissions.filter((s) => s.team === team);
   if (teamSubs.length < minK) return 0;
 
   const total = teamSubs.reduce(
     (sum, s) => sum + s.managerRespect + s.safetyRating + s.payFairness + s.workloadRating,
-    0
+    0,
   );
   return Math.round((total / (teamSubs.length * 4)) * 10) / 10;
 }

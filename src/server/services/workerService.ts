@@ -1,7 +1,8 @@
-// ============================================================
-// FairShift — Services: Worker Service
-// Orchestrates worker use cases: auth, check-in, payslips, hazards, feedback
-// ============================================================
+/**
+ * Worker service: orchestrates business use-cases, check-ins, reports, and calculations for workers.
+ * Services handle business use-cases and domain rules; views shape and compose data specifically
+ * for presentation and page rendering.
+ */
 
 import { getDatabase } from '../repos';
 import { verifySecret } from '../auth/password';
@@ -10,7 +11,7 @@ import { verifySiteQrCode } from '../domain/qrCode';
 import { verifyGeofence } from '../domain/geofence';
 import { calculatePayslip } from '../domain/payslip';
 import { calculateShiftsOvertime } from '../domain/overtime';
-import { istDateKey, istMonthStart } from '../domain/time';
+import { istDateKey, istMonthStart, WEEK_MS } from '../domain/time';
 import { evaluateFatigue } from '../domain/fatigue';
 import { scrubPii, calculateIsoWeek } from '../domain/anonymity';
 import { summarizeHazard } from '../ai/gemini';
@@ -26,8 +27,8 @@ import type {
   OvertimeResult,
 } from '../../shared/types';
 
-/** An open shift older than this is treated as a missed check-out. */
-const STALE_OPEN_SHIFT_MS = 16 * 60 * 60 * 1000;
+/** An open shift older than 16 hours is treated as a missed check-out. */
+export const STALE_OPEN_SHIFT_MS = 16 * 60 * 60 * 1000;
 
 export class WorkerService {
   private db = getDatabase();
@@ -35,7 +36,10 @@ export class WorkerService {
   /**
    * Worker login with phone + 4-digit PIN.
    */
-  async login(phone: string, pin: string): Promise<{ worker: Omit<Worker, 'pinHash'>; token: string }> {
+  async login(
+    phone: string,
+    pin: string,
+  ): Promise<{ worker: Omit<Worker, 'pinHash'>; token: string }> {
     const worker = await this.db.workers.getByPhone(phone);
     if (!worker || !worker.active) {
       throw new Error('Invalid phone number or inactive account');
@@ -71,7 +75,7 @@ export class WorkerService {
    */
   async checkIn(
     workerId: string,
-    params: { siteId: string; code?: string; lat?: number; lng?: number }
+    params: { siteId: string; code?: string; lat?: number; lng?: number },
   ): Promise<{ shift: Shift; message: string }> {
     const worker = await this.db.workers.getById(workerId);
     if (!worker) throw new Error('Worker not found');
@@ -153,7 +157,7 @@ export class WorkerService {
 
     // Past 7 days window for fatigue check
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - WEEK_MS);
     const fatigueFlags = evaluateFatigue({
       shifts: allShifts,
       windowStart: weekAgo.toISOString(),
@@ -210,7 +214,7 @@ export class WorkerService {
       description: string;
       severity: HazardSeverity;
       anonymous: boolean;
-    }
+    },
   ): Promise<HazardReport> {
     // The reporter is always authenticated; anonymity only drops the id from the stored record.
     const worker = await this.db.workers.getById(workerId);
@@ -218,11 +222,7 @@ export class WorkerService {
     const site = await this.db.sites.get(input.siteId);
     if (!site || site.orgId !== worker.orgId) throw new Error('Site not found');
 
-    const summaryResult = await summarizeHazard(
-      input.category,
-      input.description,
-      input.severity
-    );
+    const summaryResult = await summarizeHazard(input.category, input.description, input.severity);
 
     const hazard: HazardReport = {
       id: `hazard-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -256,7 +256,7 @@ export class WorkerService {
       payFairness: number;
       workloadRating: number;
       comment: string | null;
-    }
+    },
   ): Promise<FeedbackSubmission> {
     const worker = await this.db.workers.getById(workerId);
     if (!worker) throw new Error('Worker not found');
@@ -302,16 +302,16 @@ export class WorkerService {
     const allShifts = await this.db.shifts.listByWorker(workerId);
 
     const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 2 * WEEK_MS);
     const recentShifts = allShifts.filter(
-      (s) => new Date(s.checkIn).getTime() >= twoWeeksAgo.getTime()
+      (s) => new Date(s.checkIn).getTime() >= twoWeeksAgo.getTime(),
     );
 
     const hourlyRate = worker.payType === 'daily' ? worker.basePay / 8 : worker.basePay / 208;
     const otSummary = calculateShiftsOvertime(recentShifts, hourlyRate, org?.policy);
 
     // Fatigue limits are defined per 7 days, so evaluate the same window as Home does.
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - WEEK_MS);
     const fatigueFlags = evaluateFatigue({
       shifts: recentShifts,
       windowStart: weekAgo.toISOString(),

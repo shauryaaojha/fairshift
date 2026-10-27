@@ -88,12 +88,7 @@ describe('Domain: Overtime Engine', () => {
     it('returns 0 if checkout is null or invalid', () => {
       expect(calculateShiftHours('2026-10-27T08:00:00.000Z', null)).toBe(0);
       expect(calculateShiftHours('invalid', 'invalid')).toBe(0);
-      expect(
-        calculateShiftHours(
-          '2026-10-27T17:00:00.000Z',
-          '2026-10-27T08:00:00.000Z'
-        )
-      ).toBe(0);
+      expect(calculateShiftHours('2026-10-27T17:00:00.000Z', '2026-10-27T08:00:00.000Z')).toBe(0);
     });
   });
 

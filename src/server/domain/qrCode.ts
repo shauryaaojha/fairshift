@@ -1,11 +1,9 @@
-// ============================================================
-// FairShift — Domain: Rotating QR Code Engine (Pure)
-// TOTP-like 6-digit code per site, rotating every 60 seconds, ±1 window acceptance
-// ============================================================
+// Domain: Rotating QR Code Engine (Pure)
 
 import { createHmac } from 'crypto';
 import type { QrCodeResult } from '../../shared/types';
 
+/** Rotation period in seconds for dynamic TOTP site QR codes (accepted within ±1 window). */
 export const QR_ROTATION_INTERVAL_SECONDS = 60;
 
 /**
@@ -37,7 +35,7 @@ export function computeStepCode(secret: string, timeStep: number): string {
 export function generateSiteQrCode(
   secret: string,
   timestampMs: number = Date.now(),
-  intervalSeconds: number = QR_ROTATION_INTERVAL_SECONDS
+  intervalSeconds: number = QR_ROTATION_INTERVAL_SECONDS,
 ): QrCodeResult {
   const step = Math.floor(timestampMs / (intervalSeconds * 1000));
   const code = computeStepCode(secret, step);
@@ -59,7 +57,7 @@ export function verifySiteQrCode(
   submittedCode: string,
   secret: string,
   timestampMs: number = Date.now(),
-  intervalSeconds: number = QR_ROTATION_INTERVAL_SECONDS
+  intervalSeconds: number = QR_ROTATION_INTERVAL_SECONDS,
 ): boolean {
   if (!submittedCode || submittedCode.length !== 6) {
     return false;

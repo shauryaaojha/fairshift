@@ -20,8 +20,29 @@ function shift(date: string, hours: number): Shift {
 describe('calculateShiftsOvertime over a pay period', () => {
   it('pays no overtime for a month of normal 8 h days (regression: 88 h bug)', () => {
     // 17 working days across October 2026, 8 h each = 136 h, never > 48 in one week
-    const days = ['01', '02', '03', '05', '06', '07', '08', '09', '12', '13', '14', '15', '16', '19', '20', '21', '22'];
-    const result = calculateShiftsOvertime(days.map((d) => shift(`2026-10-${d}`, 8)), 100);
+    const days = [
+      '01',
+      '02',
+      '03',
+      '05',
+      '06',
+      '07',
+      '08',
+      '09',
+      '12',
+      '13',
+      '14',
+      '15',
+      '16',
+      '19',
+      '20',
+      '21',
+      '22',
+    ];
+    const result = calculateShiftsOvertime(
+      days.map((d) => shift(`2026-10-${d}`, 8)),
+      100,
+    );
     expect(result.overtimeHours).toBe(0);
     expect(result.regularHours).toBe(136);
     expect(result.overtimePay).toBe(0);

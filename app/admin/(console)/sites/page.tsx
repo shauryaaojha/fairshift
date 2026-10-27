@@ -1,8 +1,8 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { getAdminContext } from "../../_lib/context";
-import { SECTORS, getSitesData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { getAdminContext } from '../../_lib/context';
+import { SECTORS, getSitesData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
 
 async function Sites() {
   const ctx = await getAdminContext();
@@ -16,8 +16,8 @@ async function Sites() {
           Sites and gate kiosks
         </LineReveal>
         <p className="page-sub">
-          Open a kiosk on a tablet or screen at the gate. Its QR code changes every 60 seconds, so a photo of it
-          cannot be used later.
+          Open a kiosk on a tablet or screen at the gate. Its QR code changes every 60 seconds, so a
+          photo of it cannot be used later.
         </p>
       </header>
 
@@ -26,7 +26,7 @@ async function Sites() {
           <LineReveal as="h2" className="section-title">
             <span id={`sites-${g.sector}`}>
               {SECTORS[g.sector].label} · {SECTORS[g.sector].place}
-              {g.sector === ctx.sector.key ? " (viewing)" : ""}
+              {g.sector === ctx.sector.key ? ' (viewing)' : ''}
             </span>
           </LineReveal>
           {g.sites.map((s) => (
@@ -39,7 +39,11 @@ async function Sites() {
                   Geofence <span className="mono">{s.radiusMetres} m</span>
                 </p>
               </div>
-              <Link href={`/admin/sites/${encodeURIComponent(s.id)}/kiosk`} className="btn-primary btn-small" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
+              <Link
+                href={`/admin/sites/${encodeURIComponent(s.id)}/kiosk`}
+                className="btn-primary btn-small"
+                style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+              >
                 Open gate kiosk
               </Link>
             </div>

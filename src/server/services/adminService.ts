@@ -1,18 +1,17 @@
-// ============================================================
-// FairShift — Services: Admin Service
-// Overview KPIs, SVG attendance charts, SLA queue, quit risk, feedback heatmap, kiosk QR
-// ============================================================
+/**
+ * Admin service: orchestrates business use-cases, operations, and policy rules for admins.
+ * Services handle business use-cases and domain rules; views shape and compose data specifically
+ * for presentation and page rendering.
+ */
 
-import QRCode from 'qrcode';
 import { getDatabase } from '../repos';
 import { verifySecret } from '../auth/password';
 import { signSession } from '../auth/session';
-import { generateSiteQrCode } from '../domain/qrCode';
 import { evaluateFatigue } from '../domain/fatigue';
 import { calculateQuitRisk } from '../domain/quitRisk';
 import { aggregateFeedback } from '../domain/anonymity';
 import { calculateAttendanceDrop, teamSentimentAverage } from '../domain/workforceSignals';
-import { istDateKey } from '../domain/time';
+import { istDateKey, DAY_MS, WEEK_MS } from '../domain/time';
 import { getRemainingSlaSeconds, formatSlaRemaining } from '../domain/hazardSla';
 import { generateWeeklySafetySummary } from '../ai/gemini';
 import type {
@@ -45,7 +44,7 @@ function toPublicSite(site: Site): PublicSite {
  */
 export function computeFeedbackHeatmap(
   feedbackList: FeedbackSubmission[],
-  rosterNames: string[] = []
+  rosterNames: string[] = [],
 ): AggregatedFeedback[] {
   // Group by team
   const byTeam = new Map<string, FeedbackSubmission[]>();
@@ -60,7 +59,7 @@ export function computeFeedbackHeatmap(
   for (const [team, subs] of byTeam.entries()) {
     // Find all unique isoWeeks and sort descending so [0] is the most recent
     const uniqueWeeks = Array.from(new Set(subs.map((s) => s.isoWeek).filter(Boolean))).sort(
-      (a, b) => b.localeCompare(a)
+      (a, b) => b.localeCompare(a),
     );
     const mostRecentWeek = uniqueWeeks[0];
     if (!mostRecentWeek) continue;
@@ -86,9 +85,9 @@ export class AdminService {
     shifts: Shift[],
     hazards: HazardReport[],
     feedback: FeedbackSubmission[],
-    now: Date
+    now: Date,
   ) {
-    const weekAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    const weekAgoMs = now.getTime() - WEEK_MS;
     const workerShifts = shifts.filter((s) => s.workerId === worker.id);
     const flags = evaluateFatigue({
       shifts: workerShifts,
@@ -99,12 +98,13 @@ export class AdminService {
     const weeklyHours = workerShifts
       .filter((s) => s.checkOut && new Date(s.checkIn).getTime() >= weekAgoMs)
       .reduce(
-        (sum, s) => sum + (new Date(s.checkOut!).getTime() - new Date(s.checkIn).getTime()) / 3600000,
-        0
+        (sum, s) =>
+          sum + (new Date(s.checkOut!).getTime() - new Date(s.checkIn).getTime()) / 3600000,
+        0,
       );
 
     const unresolvedComplaints = hazards.filter(
-      (h) => h.reporterId === worker.id && h.status !== 'resolved'
+      (h) => h.reporterId === worker.id && h.status !== 'resolved',
     ).length;
 
     const risk = calculateQuitRisk({
@@ -121,7 +121,10 @@ export class AdminService {
   /**
    * Admin login with email + password.
    */
-  async login(email: string, password: string): Promise<{ admin: Omit<Admin, 'passwordHash'>; token: string }> {
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ admin: Omit<Admin, 'passwordHash'>; token: string }> {
     const admin = await this.db.admins.getByEmail(email);
     if (!admin) {
       throw new Error('Invalid email or password');
@@ -208,7 +211,11 @@ export class AdminService {
   /**
    * Hand-built SVG attendance trend for past N days (default 14 days).
    */
-  async getAttendanceTrend(orgId: string, siteId?: string, days: number = 14): Promise<DailyAttendance[]> {
+  async getAttendanceTrend(
+    orgId: string,
+    siteId?: string,
+    days: number = 14,
+  ): Promise<DailyAttendance[]> {
     const workers = siteId
       ? await this.db.workers.listBySite(siteId)
       : await this.db.workers.listByOrg(orgId);
@@ -223,14 +230,12 @@ export class AdminService {
     const now = new Date();
 
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const d = new Date(now.getTime() - i * DAY_MS);
       const dateStr = istDateKey(d);
 
       // Count unique workers present on this day
       const presentWorkers = new Set(
-        shifts
-          .filter((s) => istDateKey(s.checkIn) === dateStr)
-          .map((s) => s.workerId)
+        shifts.filter((s) => istDateKey(s.checkIn) === dateStr).map((s) => s.workerId),
       );
 
       result.push({
@@ -246,9 +251,10 @@ export class AdminService {
   /**
    * Safety hazard triage queue with live SLA deadlines.
    */
-  async getSafetyQueue(orgId: string, siteId?: string): Promise<
-    (HazardReport & { remainingSeconds: number; slaFormatted: string })[]
-  > {
+  async getSafetyQueue(
+    orgId: string,
+    siteId?: string,
+  ): Promise<(HazardReport & { remainingSeconds: number; slaFormatted: string })[]> {
     const hazards = siteId
       ? await this.db.hazards.listBySite(siteId)
       : await this.db.hazards.listByOrg(orgId);
@@ -309,7 +315,7 @@ export class AdminService {
    */
   async getWorkforceRisk(
     orgId: string,
-    siteId?: string
+    siteId?: string,
   ): Promise<(PublicWorker & { risk: QuitRiskResult })[]> {
     const workers = siteId
       ? await this.db.workers.listBySite(siteId)
@@ -352,55 +358,10 @@ export class AdminService {
   }
 
   /**
-   * Retrieve all sites across sectors.
-   */
-  async getAllSites(): Promise<PublicSite[]> {
-    return (await this.db.sites.list()).map(toPublicSite);
-  }
-
-  /**
    * Retrieve site by id.
    */
   async getSiteById(siteId: string): Promise<Site | null> {
     return await this.db.sites.get(siteId);
-  }
-
-  /**
-   * Kiosk display data: rotating QR code + SVG string.
-   */
-  async getKioskData(siteId: string, allowedOrgIds: string[], origin: string = ''): Promise<{
-    site: PublicSite;
-    code: string;
-    validFrom: number;
-    validUntil: number;
-    qrSvg: string;
-    checkInUrl: string;
-  }> {
-    const site = await this.db.sites.get(siteId);
-    if (!site || !allowedOrgIds.includes(site.orgId)) throw new Error('Site not found');
-
-    const qrResult = generateSiteQrCode(site.qrSecret);
-    // Absolute when an origin is given, so a phone camera can open the scanned link.
-    const checkInUrl = `${origin}/w/checkin?site=${encodeURIComponent(site.id)}&code=${qrResult.code}`;
-
-    // Render clean server-side SVG
-    const qrSvg = await QRCode.toString(checkInUrl, {
-      type: 'svg',
-      margin: 1,
-      color: {
-        dark: '#1C1D1A', // graphite
-        light: '#FFFFFF',
-      },
-    });
-
-    return {
-      site: toPublicSite(site),
-      code: qrResult.code,
-      validFrom: qrResult.validFrom,
-      validUntil: qrResult.validUntil,
-      qrSvg,
-      checkInUrl,
-    };
   }
 }
 

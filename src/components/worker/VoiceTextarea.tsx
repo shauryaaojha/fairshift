@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useRef, useState, useSyncExternalStore } from "react";
-import { MicIcon } from "@/src/components/icons";
-import { SPEECH_LANG } from "@/src/i18n";
-import { useLocale, useT } from "@/src/i18n/client";
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { MicIcon } from '@/src/components/icons';
+import { SPEECH_LANG } from '@/src/i18n';
+import { useLocale, useT } from '@/src/i18n/client';
 
 type RecognitionResult = { 0: { transcript: string }; isFinal: boolean; length: number };
 type RecognitionEvent = { resultIndex: number; results: ArrayLike<RecognitionResult> };
@@ -20,7 +20,7 @@ interface Recognition {
 type RecognitionCtor = new () => Recognition;
 
 function getCtor(): RecognitionCtor | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   const w = window as unknown as {
     SpeechRecognition?: RecognitionCtor;
     webkitSpeechRecognition?: RecognitionCtor;
@@ -44,13 +44,20 @@ type Props = {
  * A text box with a mic. Voice uses the Web Speech API in the worker's
  * language (hi-IN, ta-IN, en-IN). The mic is hidden where it is unsupported.
  */
-export function VoiceTextarea({ id, label, value, onChange, placeholder, maxLength = 2000 }: Props) {
+export function VoiceTextarea({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength = 2000,
+}: Props) {
   const t = useT();
   const locale = useLocale();
   const canListen = useSyncExternalStore(subscribe, supportsRecognition, () => false);
   const [listening, setListening] = useState(false);
   const recRef = useRef<Recognition | null>(null);
-  const baseRef = useRef("");
+  const baseRef = useRef('');
 
   function toggle() {
     if (listening) {
@@ -63,9 +70,9 @@ export function VoiceTextarea({ id, label, value, onChange, placeholder, maxLeng
     rec.lang = SPEECH_LANG[locale];
     rec.interimResults = true;
     rec.continuous = false;
-    baseRef.current = value ? value.replace(/\s+$/, "") + " " : "";
+    baseRef.current = value ? value.replace(/\s+$/, '') + ' ' : '';
     rec.onresult = (e) => {
-      let text = "";
+      let text = '';
       for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
       onChange((baseRef.current + text).slice(0, maxLength));
     };
@@ -99,11 +106,11 @@ export function VoiceTextarea({ id, label, value, onChange, placeholder, maxLeng
           onClick={toggle}
           aria-pressed={listening}
           className={
-            "choice inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] px-4 font-semibold"
+            'choice inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] px-4 font-semibold'
           }
         >
           <MicIcon />
-          {listening ? t("hazard.listening") : t("hazard.mic")}
+          {listening ? t('hazard.listening') : t('hazard.mic')}
         </button>
       ) : null}
     </div>

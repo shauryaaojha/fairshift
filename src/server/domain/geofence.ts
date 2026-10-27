@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Domain: Geofence Verification Engine (Pure)
-// Compliance: Haversine distance calculation to verify worker on-site
-// ============================================================
+// Domain: Geofence Verification Engine (Pure)
 
 import type { GeofenceResult, Site } from '../../shared/types';
 
@@ -15,7 +12,7 @@ export function calculateHaversineDistance(
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number
+  lng2: number,
 ): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -24,10 +21,7 @@ export function calculateHaversineDistance(
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = EARTH_RADIUS_METRES * c;
@@ -41,14 +35,9 @@ export function calculateHaversineDistance(
 export function verifyGeofence(
   workerLat: number,
   workerLng: number,
-  site: Pick<Site, 'id' | 'lat' | 'lng' | 'radiusMetres'>
+  site: Pick<Site, 'id' | 'lat' | 'lng' | 'radiusMetres'>,
 ): GeofenceResult {
-  const distanceMetres = calculateHaversineDistance(
-    workerLat,
-    workerLng,
-    site.lat,
-    site.lng
-  );
+  const distanceMetres = calculateHaversineDistance(workerLat, workerLng, site.lat, site.lng);
 
   const withinRadius = distanceMetres <= site.radiusMetres;
 

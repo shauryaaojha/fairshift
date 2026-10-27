@@ -3,23 +3,23 @@
    From docs/design-system.md §3–4
    ============================================================ */
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ── Colour Tokens ─────────────────────────────────────────── */
 :root {
-  --paper: #F2F3EE;
-  --card: #FFFFFF;
-  --graphite: #1C1D1A;
-  --muted: #575A53;
-  --ink: #1F3FB5;
-  --ink-deep: #162D85;
-  --hivis: #FF5A1F;
-  --cleared: #1D7340;
-  --escalated: #B42318;
-  --rule: #D5D7CE;
+  --paper: #f2f3ee;
+  --card: #ffffff;
+  --graphite: #1c1d1a;
+  --muted: #575a53;
+  --ink: #1f3fb5;
+  --ink-deep: #162d85;
+  --hivis: #ff5a1f;
+  --cleared: #1d7340;
+  --escalated: #b42318;
+  --rule: #d5d7ce;
 
   /* Shadow — one elevation only */
-  --shadow-paper: 0 1px 0 var(--rule), 0 6px 16px -10px rgb(28 29 26 / .25);
+  --shadow-paper: 0 1px 0 var(--rule), 0 6px 16px -10px rgb(28 29 26 / 0.25);
 
   /* Radii by purpose */
   --radius-card: 6px;
@@ -212,12 +212,24 @@ body {
 }
 
 /* ── View Transition Names ─────────────────────────────────── */
-.tile-checkin { view-transition-name: tile-checkin; }
-.tile-pay { view-transition-name: tile-pay; }
-.tile-hazard { view-transition-name: tile-hazard; }
-.tile-feedback { view-transition-name: tile-feedback; }
-.tile-hours { view-transition-name: tile-hours; }
-.tile-skills { view-transition-name: tile-skills; }
+.tile-checkin {
+  view-transition-name: tile-checkin;
+}
+.tile-pay {
+  view-transition-name: tile-pay;
+}
+.tile-hazard {
+  view-transition-name: tile-hazard;
+}
+.tile-feedback {
+  view-transition-name: tile-feedback;
+}
+.tile-hours {
+  view-transition-name: tile-hours;
+}
+.tile-skills {
+  view-transition-name: tile-skills;
+}
 
 /* ── Utility: Card Surface ─────────────────────────────────── */
 .surface-card {

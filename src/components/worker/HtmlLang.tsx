@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import type { Locale } from "@/src/shared/types";
+import { useEffect } from 'react';
+import type { Locale } from '@/src/shared/types';
 
 /** The root layout fixes lang="en"; keep <html lang> in step with the chosen language. */
 export function HtmlLang({ locale }: { locale: Locale }) {

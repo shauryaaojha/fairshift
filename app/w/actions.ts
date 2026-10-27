@@ -1,8 +1,8 @@
-"use server";
+'use server';
 
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { workerService } from "@/src/server/services/workerService";
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { workerService } from '@/src/server/services/workerService';
 import {
   checkinErrorCode,
   explainMyPayslip,
@@ -11,33 +11,36 @@ import {
   getWorkerContext,
   validateWorkerNext,
   type CheckinErrorCode,
-} from "@/src/server/services/workerUi";
-import { checkLoginLimit, checkRateLimit, recordLoginFailure } from "@/src/server/auth/rateLimit";
-import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "@/src/server/auth/session";
-import { feedbackSchema, hazardReportSchema, workerLoginSchema } from "@/src/shared/schemas";
-import { LOCALE_COOKIE, parseLocale } from "@/src/i18n";
+} from '@/src/server/services/workerViews';
+import { checkLoginLimit, checkRateLimit, recordLoginFailure } from '@/src/server/auth/rateLimit';
+import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/src/server/auth/session';
+import { feedbackSchema, hazardReportSchema, workerLoginSchema } from '@/src/shared/schemas';
+import { LOCALE_COOKIE, parseLocale } from '@/src/i18n';
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /** Form action: remember the language, then go on. Works without JavaScript. */
 export async function setLanguageAction(formData: FormData): Promise<void> {
-  const locale = parseLocale(String(formData.get("locale") ?? ""));
+  const locale = parseLocale(String(formData.get('locale') ?? ''));
   if (!locale) return;
   const jar = await cookies();
-  jar.set({ name: LOCALE_COOKIE, value: locale, path: "/", maxAge: ONE_YEAR, sameSite: "lax" });
-  const next = String(formData.get("next") ?? "");
+  jar.set({ name: LOCALE_COOKIE, value: locale, path: '/', maxAge: ONE_YEAR, sameSite: 'lax' });
+  const next = String(formData.get('next') ?? '');
   const signedIn = await getWorkerContext();
-  if (next.startsWith("/w") && !next.startsWith("//")) redirect(signedIn && next === "/w/login" ? "/w" : next);
-  redirect(signedIn ? "/w" : "/w/login");
+  if (next.startsWith('/w') && !next.startsWith('//')) {
+    redirect(signedIn && next === '/w/login' ? '/w' : next);
+  }
+  redirect(signedIn ? '/w' : '/w/login');
 }
 
-export type LoginResult = { ok: true; redirectTo: string } | { ok: false; error: "wrong" | "too_many" };
+export type LoginResult =
+  { ok: true; redirectTo: string } | { ok: false; error: 'wrong' | 'too_many' };
 
 export async function loginAction(phone: string, pin: string, next?: string): Promise<LoginResult> {
   const parsed = workerLoginSchema.safeParse({ phone, pin });
-  if (!parsed.success) return { ok: false, error: "wrong" };
-  if (!checkLoginLimit("worker", await headers(), parsed.data.phone).allowed) {
-    return { ok: false, error: "too_many" };
+  if (!parsed.success) return { ok: false, error: 'wrong' };
+  if (!checkLoginLimit('worker', await headers(), parsed.data.phone).allowed) {
+    return { ok: false, error: 'too_many' };
   }
   try {
     const { token } = await workerService.login(parsed.data.phone, parsed.data.pin);
@@ -46,28 +49,28 @@ export async function loginAction(phone: string, pin: string, next?: string): Pr
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
       maxAge: SESSION_TTL_SECONDS,
     });
     return { ok: true, redirectTo: validateWorkerNext(next) };
   } catch {
-    recordLoginFailure("worker", parsed.data.phone);
-    return { ok: false, error: "wrong" };
+    recordLoginFailure('worker', parsed.data.phone);
+    return { ok: false, error: 'wrong' };
   }
 }
 
 export async function logoutAction(): Promise<void> {
   const jar = await cookies();
   jar.delete(SESSION_COOKIE_NAME);
-  redirect("/w/login");
+  redirect('/w/login');
 }
 
 export type CheckinResult =
   | { ok: true; time: string; already: boolean; shiftId: string }
   | { ok: false; code: CheckInErrorOrAuth };
-type CheckInErrorOrAuth = CheckinErrorCode | "auth";
+type CheckInErrorOrAuth = CheckinErrorCode | 'auth';
 
 export async function checkInAction(input: {
   code?: string;
@@ -75,9 +78,11 @@ export async function checkInAction(input: {
   lng?: number;
 }): Promise<CheckinResult> {
   const ctx = await getWorkerContext();
-  if (!ctx) return { ok: false, code: "auth" };
+  if (!ctx) return { ok: false, code: 'auth' };
   // 6 tries a minute: enough for a fumbled scan, far too few to guess a 6-digit code.
-  if (!checkRateLimit(`checkin:${ctx.worker.id}`, 6, 60 * 1000).allowed) return { ok: false, code: "generic" };
+  if (!checkRateLimit(`checkin:${ctx.worker.id}`, 6, 60 * 1000).allowed) {
+    return { ok: false, code: 'generic' };
+  }
   try {
     const { shift, message } = await workerService.checkIn(ctx.worker.id, {
       siteId: ctx.site.id,
@@ -88,11 +93,11 @@ export async function checkInAction(input: {
     return {
       ok: true,
       time: formatClock(shift.checkIn),
-      already: message === "Already checked in",
+      already: message === 'Already checked in',
       shiftId: shift.id,
     };
   } catch (err) {
-    return { ok: false, code: checkinErrorCode(err instanceof Error ? err.message : "") };
+    return { ok: false, code: checkinErrorCode(err instanceof Error ? err.message : '') };
   }
 }
 
@@ -105,7 +110,11 @@ export async function checkOutAction(): Promise<CheckoutResult> {
     const status = await workerService.getTodayStatus(ctx.worker.id);
     if (!status.activeShift) return { ok: false };
     const shift = await workerService.checkOut(ctx.worker.id, status.activeShift.id);
-    return { ok: true, time: formatClock(shift.checkOut ?? new Date().toISOString()), shiftId: shift.id };
+    return {
+      ok: true,
+      time: formatClock(shift.checkOut ?? new Date().toISOString()),
+      shiftId: shift.id,
+    };
   } catch {
     return { ok: false };
   }
@@ -114,7 +123,7 @@ export async function checkOutAction(): Promise<CheckoutResult> {
 export type HazardInput = {
   category: string;
   description: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: 'critical' | 'high' | 'medium' | 'low';
   anonymous: boolean;
 };
 export type HazardResult = { ok: true; id: string } | { ok: false };

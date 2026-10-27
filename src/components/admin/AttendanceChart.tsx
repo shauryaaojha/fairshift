@@ -1,4 +1,4 @@
-import type { DailyAttendance } from "@/src/shared/types";
+import type { DailyAttendance } from '@/src/shared/types';
 
 export interface Bar {
   date: string;
@@ -20,11 +20,11 @@ export interface ChartGeometry {
   bars: Bar[];
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function formatDay(iso: string): string {
-  const [, m, d] = iso.split("-");
-  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? ""}`;
+  const [, m, d] = iso.split('-');
+  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? ''}`;
 }
 
 /** Pure layout: the same numbers drive the SVG, the table fallback and the tests. */
@@ -53,7 +53,9 @@ export function computeChart(days: DailyAttendance[], width = 640, height = 240)
   });
 
   const ticks: { value: number; y: number }[] = [];
-  for (let v = 0; v <= max; v += step) ticks.push({ value: v, y: plot.bottom - (v / max) * innerH });
+  for (let v = 0; v <= max; v += step) {
+    ticks.push({ value: v, y: plot.bottom - (v / max) * innerH });
+  }
 
   return { width, height, plot, max, ticks, bars };
 }
@@ -81,12 +83,19 @@ export function AttendanceChart({ days }: { days: DailyAttendance[] }) {
         <desc id="att-desc">
           {days.length > 0
             ? `From ${formatDay(days[0].date)} to ${formatDay(days[days.length - 1].date)}. Roster of ${roster}. Latest day: ${last?.present ?? 0} present.`
-            : "No attendance recorded."}
+            : 'No attendance recorded.'}
         </desc>
 
         {g.ticks.map((t) => (
           <g key={t.value}>
-            <line x1={g.plot.left} x2={g.plot.right} y1={t.y} y2={t.y} stroke="var(--rule)" strokeWidth={1} />
+            <line
+              x1={g.plot.left}
+              x2={g.plot.right}
+              y1={t.y}
+              y2={t.y}
+              stroke="var(--rule)"
+              strokeWidth={1}
+            />
             <text x={g.plot.left - 8} y={t.y + 4} textAnchor="end" className="chart-axis">
               {t.value}
             </text>
@@ -120,7 +129,12 @@ export function AttendanceChart({ days }: { days: DailyAttendance[] }) {
               <title>{`${b.label}: ${b.present} of ${b.total} present`}</title>
             </rect>
             {i % 2 === (g.bars.length - 1) % 2 && (
-              <text x={b.x + b.width / 2} y={g.plot.bottom + 18} textAnchor="middle" className="chart-axis">
+              <text
+                x={b.x + b.width / 2}
+                y={g.plot.bottom + 18}
+                textAnchor="middle"
+                className="chart-axis"
+              >
                 {b.label}
               </text>
             )}
@@ -128,7 +142,12 @@ export function AttendanceChart({ days }: { days: DailyAttendance[] }) {
         ))}
 
         {last && (
-          <text x={last.x + last.width / 2} y={Math.max(12, last.y - 6)} textAnchor="middle" className="chart-value">
+          <text
+            x={last.x + last.width / 2}
+            y={Math.max(12, last.y - 6)}
+            textAnchor="middle"
+            className="chart-value"
+          >
             {last.present}
           </text>
         )}

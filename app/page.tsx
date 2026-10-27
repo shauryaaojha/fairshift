@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { ShiftIntro } from "@/src/components/motion/ShiftIntro";
-import { BroomIcon, HardHatIcon } from "@/src/components/icons";
+import Link from 'next/link';
+import { ShiftIntro } from '@/src/components/motion/ShiftIntro';
+import { BroomIcon, HardHatIcon } from '@/src/components/icons';
 
 export default function LandingPage() {
   return (
@@ -13,9 +13,9 @@ export default function LandingPage() {
             Fair pay. Safe sites. A voice that counts.
           </h1>
           <p className="landing-lede" data-fade="">
-            FairShift is the honest version of the paper muster roll: a phone-first record of
-            hours, pay and safety, in the worker&apos;s own language, with an early warning for
-            the employer.
+            FairShift is the honest version of the paper muster roll: a phone-first record of hours,
+            pay and safety, in the worker&apos;s own language, with an early warning for the
+            employer.
           </p>
         </section>
 

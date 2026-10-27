@@ -1,31 +1,31 @@
-import { en, type MessageKey, type Messages } from "./en";
-import { hi } from "./hi";
-import { ta } from "./ta";
-import type { Locale } from "../shared/types";
+import { en, type MessageKey, type Messages } from './en';
+import { hi } from './hi';
+import { ta } from './ta';
+import type { Locale } from '../shared/types';
 
 export type { MessageKey, Messages, Locale };
 
-export const LOCALE_COOKIE = "fs_lang";
-export const LOCALES: readonly Locale[] = ["en", "hi", "ta"] as const;
-export const DEFAULT_LOCALE: Locale = "en";
+export const LOCALE_COOKIE = 'fs_lang';
+export const LOCALES: readonly Locale[] = ['en', 'hi', 'ta'] as const;
+export const DEFAULT_LOCALE: Locale = 'en';
 
 export const dictionaries: Record<Locale, Messages> = { en, hi, ta };
 
 /** BCP-47 tags used for speech synthesis, speech recognition and Intl. */
 export const SPEECH_LANG: Record<Locale, string> = {
-  en: "en-IN",
-  hi: "hi-IN",
-  ta: "ta-IN",
+  en: 'en-IN',
+  hi: 'hi-IN',
+  ta: 'ta-IN',
 };
 
 export const NATIVE_NAME: Record<Locale, string> = {
-  en: "English",
-  hi: "हिंदी",
-  ta: "தமிழ்",
+  en: 'English',
+  hi: 'हिंदी',
+  ta: 'தமிழ்',
 };
 
 export function isLocale(value: unknown): value is Locale {
-  return value === "en" || value === "hi" || value === "ta";
+  return value === 'en' || value === 'hi' || value === 'ta';
 }
 
 export function parseLocale(value: string | undefined | null): Locale | null {

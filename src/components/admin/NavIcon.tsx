@@ -6,23 +6,29 @@ import {
   SpeechLockIcon,
   FlameIcon,
   PinIcon,
-} from "@/src/components/icons";
-import type { NavIconKey } from "./nav";
+} from '@/src/components/icons';
+import type { NavIconKey } from './nav';
 
-export function NavIcon({ icon, sector }: { icon: NavIconKey; sector: "construction" | "college" }) {
+export function NavIcon({
+  icon,
+  sector,
+}: {
+  icon: NavIconKey;
+  sector: 'construction' | 'college';
+}) {
   const props = { size: 20 };
   switch (icon) {
-    case "overview":
-      return sector === "college" ? <BroomIcon {...props} /> : <HardHatIcon {...props} />;
-    case "attendance":
+    case 'overview':
+      return sector === 'college' ? <BroomIcon {...props} /> : <HardHatIcon {...props} />;
+    case 'attendance':
       return <ClockCardIcon {...props} />;
-    case "safety":
+    case 'safety':
       return <ConeIcon {...props} />;
-    case "feedback":
+    case 'feedback':
       return <SpeechLockIcon {...props} />;
-    case "risk":
+    case 'risk':
       return <FlameIcon {...props} />;
-    case "sites":
+    case 'sites':
       return <PinIcon {...props} />;
   }
 }

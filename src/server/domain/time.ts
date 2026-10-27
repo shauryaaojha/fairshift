@@ -1,7 +1,10 @@
-// ============================================================
-// FairShift — Domain: Calendar helpers (Pure)
-// Workers and sites are in India, so a "day" is an IST calendar day.
-// ============================================================
+// Domain: Calendar helpers (Pure)
+
+/** Standard time duration constants in milliseconds. */
+export const MINUTE_MS = 60 * 1000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * 60 * 60 * 1000;
+export const WEEK_MS = 7 * DAY_MS;
 
 /** India Standard Time offset from UTC, in minutes (no daylight saving). */
 export const IST_OFFSET_MINUTES = 330;

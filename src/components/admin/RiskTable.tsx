@@ -1,11 +1,11 @@
-import type { RiskRow } from "@/src/server/services/adminUi";
-import { RiskStamp } from "./StatusStamp";
+import type { RiskRow } from '@/src/server/services/adminViews';
+import { RiskStamp } from './StatusStamp';
 
 /** Quit-risk table: score, status stamp and the top reasons behind it. */
 export function RiskTable({ rows, caption }: { rows: RiskRow[]; caption: string }) {
   if (rows.length === 0) return <p className="text-body">No workers match this filter.</p>;
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" tabIndex={0} role="region" aria-label={caption}>
       <table className="data-table">
         <caption className="sr-only">{caption}</caption>
         <thead>

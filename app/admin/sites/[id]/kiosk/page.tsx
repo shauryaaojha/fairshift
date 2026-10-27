@@ -1,17 +1,17 @@
-import { Suspense } from "react";
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getAdminContext } from "../../../_lib/context";
-import { SECTORS, getKioskView } from "@/src/server/services/adminUi";
-import { KioskRefresher } from "@/src/components/admin/KioskRefresher";
+import { Suspense } from 'react';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { getAdminContext } from '../../../_lib/context';
+import { SECTORS, getKioskView } from '@/src/server/services/adminViews';
+import { KioskRefresher } from '@/src/components/admin/KioskRefresher';
 
 async function Kiosk({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAdminContext();
   const { id } = await params;
   const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
   const view = await getKioskView(
     decodeURIComponent(id),
     `${proto}://${host}`,
@@ -29,7 +29,7 @@ async function Kiosk({ params }: { params: Promise<{ id: string }> }) {
         // Server-generated SVG from the qrcode package, not user input.
         dangerouslySetInnerHTML={{ __html: view.qrSvg }}
       />
-      <p className="mono" style={{ fontSize: "1.6rem", margin: 0 }}>
+      <p className="mono" style={{ fontSize: '1.6rem', margin: 0 }}>
         {view.code}
       </p>
       <KioskRefresher validUntil={view.validUntil} />

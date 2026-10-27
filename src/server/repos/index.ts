@@ -1,11 +1,4 @@
-// ============================================================
-// FairShift — Repositories: Factory & Singleton Access
-// MongoDB when MONGODB_URI is set (production on Vercel), otherwise the
-// seeded in-memory store (local development and tests, no credentials needed).
-// If MongoDB is configured but unreachable (e.g. the Atlas IP allowlist blocks
-// the host), the app keeps serving from memory and logs why, instead of failing
-// every request.
-// ============================================================
+// Repositories: Factory & Singleton Access
 
 import type { FairShiftDatabase } from './types';
 import { inMemoryDb } from './memory';
@@ -23,7 +16,7 @@ function resolveBackend(): Promise<FairShiftDatabase> {
       .catch((err) => {
         console.error(
           '[FairShift Data] MongoDB unreachable, serving seeded in-memory data instead:',
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : err,
         );
         return inMemoryDb;
       });
@@ -39,12 +32,16 @@ function lazyDatabase(): FairShiftDatabase {
     db[repo] = new Proxy(
       {},
       {
-        get: (_target, method: string) =>
+        get:
+          (_target, method: string) =>
           async (...args: unknown[]) => {
-            const target = (await resolveBackend())[repo] as unknown as Record<string, (...a: unknown[]) => unknown>;
+            const target = (await resolveBackend())[repo] as unknown as Record<
+              string,
+              (...a: unknown[]) => unknown
+            >;
             return target[method](...args);
           },
-      }
+      },
     );
   }
   return db as unknown as FairShiftDatabase;

@@ -1,8 +1,8 @@
-import { Suspense } from "react";
-import { getAdminContext } from "../../_lib/context";
-import { getFeedbackData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
-import { FeedbackHeatmap } from "@/src/components/admin/FeedbackHeatmap";
+import { Suspense } from 'react';
+import { getAdminContext } from '../../_lib/context';
+import { getFeedbackData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
+import { FeedbackHeatmap } from '@/src/components/admin/FeedbackHeatmap';
 
 async function Feedback() {
   const ctx = await getAdminContext();
@@ -18,7 +18,8 @@ async function Feedback() {
           Anonymous feedback
         </LineReveal>
         <p className="page-sub">
-          Answers carry no worker id. A team with fewer than 3 answers stays hidden so nobody can be picked out.
+          Answers carry no worker id. A team with fewer than 3 answers stays hidden so nobody can be
+          picked out.
         </p>
       </header>
 

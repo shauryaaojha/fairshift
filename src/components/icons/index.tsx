@@ -1,9 +1,9 @@
 // Custom line icons for FairShift. 24 px grid, 2 px stroke, round joins.
 // No icon library. Every icon is decorative (aria-hidden) and is always
 // paired with a visible word, as the design system requires.
-import type { SVGProps } from "react";
+import type { SVGProps } from 'react';
 
-export type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
+export type IconProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
   size?: number;
 };
 
@@ -185,11 +185,11 @@ export const BackspaceIcon = (p: IconProps) => (
 /** Face scale, 1 (very unhappy) to 5 (very happy). Mouth curve changes. */
 export function FaceIcon({ level, ...p }: IconProps & { level: 1 | 2 | 3 | 4 | 5 }) {
   const mouths: Record<number, string> = {
-    1: "M8 17c1-2.2 7-2.2 8 0",
-    2: "M8.5 16.2c1.2-1.2 5.8-1.2 7 0",
-    3: "M8.5 16h7",
-    4: "M8.5 14.8c1.2 1.4 5.8 1.4 7 0",
-    5: "M7.8 14c1 3.4 7.4 3.4 8.4 0z",
+    1: 'M8 17c1-2.2 7-2.2 8 0',
+    2: 'M8.5 16.2c1.2-1.2 5.8-1.2 7 0',
+    3: 'M8.5 16h7',
+    4: 'M8.5 14.8c1.2 1.4 5.8 1.4 7 0',
+    5: 'M7.8 14c1 3.4 7.4 3.4 8.4 0z',
   };
   return (
     <Base {...p}>

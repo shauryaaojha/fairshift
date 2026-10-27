@@ -1,23 +1,23 @@
-import { Suspense } from "react";
-import { getAdminContext } from "../../_lib/context";
-import { getSafetyData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
-import { HazardCard } from "@/src/components/admin/HazardCard";
+import { Suspense } from 'react';
+import { getAdminContext } from '../../_lib/context';
+import { getSafetyData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
+import { HazardCard } from '@/src/components/admin/HazardCard';
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
 const FILTERS = [
-  { value: "open", label: "Open" },
-  { value: "escalated", label: "Escalated" },
-  { value: "reported", label: "Logged" },
-  { value: "acknowledged", label: "Acknowledged" },
-  { value: "resolved", label: "Resolved" },
-  { value: "all", label: "All" },
+  { value: 'open', label: 'Open' },
+  { value: 'escalated', label: 'Escalated' },
+  { value: 'reported', label: 'Logged' },
+  { value: 'acknowledged', label: 'Acknowledged' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'all', label: 'All' },
 ];
 
 async function Safety({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const status = typeof sp.status === "string" ? sp.status : "open";
+  const status = typeof sp.status === 'string' ? sp.status : 'open';
   const ctx = await getAdminContext();
   const { rows, total } = await getSafetyData(ctx.sector.key, status);
 
@@ -31,8 +31,8 @@ async function Safety({ searchParams }: { searchParams: SP }) {
           Safety queue
         </LineReveal>
         <p className="page-sub">
-          Most urgent first. A hazard that is not acknowledged in time escalates by itself. AI suggests a severity;
-          you confirm it.
+          Most urgent first. A hazard that is not acknowledged in time escalates by itself. AI
+          suggests a severity; you confirm it.
         </p>
       </header>
 
@@ -51,7 +51,8 @@ async function Safety({ searchParams }: { searchParams: SP }) {
           Apply filter
         </button>
         <p className="text-small muted">
-          <span className="mono">{rows.length}</span> of <span className="mono">{total}</span> reports
+          <span className="mono">{rows.length}</span> of <span className="mono">{total}</span>{' '}
+          reports
         </p>
       </form>
 

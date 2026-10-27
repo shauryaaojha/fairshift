@@ -1,8 +1,4 @@
-// ============================================================
-// FairShift — Domain: Quit Risk Engine (Pure)
-// Multi-factor attrition risk evaluation (0-100 score + top 3 reasons)
-// Factors: OT load, fatigue flags, attendance drop, unresolved complaints, team feedback trend
-// ============================================================
+// Domain: Quit Risk Engine (Pure)
 
 import type { QuitRiskInput, QuitRiskResult, QuitRiskFactor } from '../../shared/types';
 
@@ -10,13 +6,8 @@ import type { QuitRiskInput, QuitRiskResult, QuitRiskFactor } from '../../shared
  * Calculates a 0-100 attrition risk score and identifies the top 3 contributing factors.
  */
 export function calculateQuitRisk(input: QuitRiskInput): QuitRiskResult {
-  const {
-    weeklyHours,
-    fatigueFlags,
-    attendanceDropPct,
-    unresolvedComplaints,
-    teamFeedbackTrend,
-  } = input;
+  const { weeklyHours, fatigueFlags, attendanceDropPct, unresolvedComplaints, teamFeedbackTrend } =
+    input;
 
   const candidateFactors: QuitRiskFactor[] = [];
 
@@ -83,9 +74,7 @@ export function calculateQuitRisk(input: QuitRiskInput): QuitRiskResult {
   const score = Math.min(100, Math.max(0, rawScore));
 
   // Sort descending by weight to get the top 3 drivers
-  const topReasons = [...candidateFactors]
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 3);
+  const topReasons = [...candidateFactors].sort((a, b) => b.weight - a.weight).slice(0, 3);
 
   // If score is 0 or no factors triggered, provide standard baseline
   if (topReasons.length === 0) {

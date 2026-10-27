@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { TopBar } from "@/src/components/ui/TopBar";
+import type { ReactNode } from 'react';
+import { TopBar } from '@/src/components/ui/TopBar';
 
 type ScreenProps = {
   title: string;

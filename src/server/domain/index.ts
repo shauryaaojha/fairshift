@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Domain Layer Index
-// Pure statutory & business logic engines
-// ============================================================
+// Domain Layer Index
 
 export * from './overtime';
 export * from './payslip';

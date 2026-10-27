@@ -1,11 +1,4 @@
-// ============================================================
-// FairShift — Domain: Fatigue Flag Engine (Pure)
-// Compliance:
-// - >48h in rolling 7 days
-// - Shift >10h
-// - Rest gap <10h between consecutive shifts
-// - 7+ consecutive working days without a rest day
-// ============================================================
+// Domain: Fatigue Flag Engine (Pure)
 
 import { istDateKey } from './time';
 import type { FatigueFlag, FatigueInput, Shift } from '../../shared/types';
@@ -19,7 +12,10 @@ export const MAX_CONSECUTIVE_DAYS_WITHOUT_REST = 6; // 7 or more triggers flag
 /**
  * Calculates rest gap in hours between end of previous shift and start of next shift.
  */
-export function calculateRestGapHours(prevCheckOutIso: string | null, nextCheckInIso: string): number | null {
+export function calculateRestGapHours(
+  prevCheckOutIso: string | null,
+  nextCheckInIso: string,
+): number | null {
   if (!prevCheckOutIso) return null;
   const prevEnd = new Date(prevCheckOutIso).getTime();
   const nextStart = new Date(nextCheckInIso).getTime();
@@ -35,11 +31,7 @@ export function countConsecutiveWorkingDays(shifts: Shift[]): number {
   if (shifts.length === 0) return 0;
   // Get sorted unique dates (YYYY-MM-DD)
   const sortedDates = Array.from(
-    new Set(
-      shifts
-        .filter((s) => s.checkOut !== null)
-        .map((s) => istDateKey(s.checkIn))
-    )
+    new Set(shifts.filter((s) => s.checkOut !== null).map((s) => istDateKey(s.checkIn))),
   ).sort();
 
   if (sortedDates.length === 0) return 0;

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * Re-renders the kiosk (new server-generated QR) when the current code
@@ -29,7 +29,7 @@ export function KioskRefresher({ validUntil }: { validUntil: number }) {
 
   return (
     <p className="kiosk-timer mono" aria-live="off">
-      {left === null ? "New code in 60 s" : `New code in ${left} s`}
+      {left === null ? 'New code in 60 s' : `New code in ${left} s`}
     </p>
   );
 }

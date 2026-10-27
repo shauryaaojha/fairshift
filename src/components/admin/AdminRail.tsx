@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ADMIN_NAV, isActive } from "./nav";
-import { NavIcon } from "./NavIcon";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ADMIN_NAV, isActive } from './nav';
+import { NavIcon } from './NavIcon';
 
 /** Left rail, shown at 1024 px and wider. Below that the stairs menu takes over. */
-export function AdminRail({ sector }: { sector: "construction" | "college" }) {
+export function AdminRail({ sector }: { sector: 'construction' | 'college' }) {
   const pathname = usePathname();
   return (
     <nav className="rail" aria-label="Admin sections">
@@ -17,7 +17,7 @@ export function AdminRail({ sector }: { sector: "construction" | "college" }) {
             <li key={item.href}>
               <Link
                 href={item.href}
-                aria-current={active ? "page" : undefined}
+                aria-current={active ? 'page' : undefined}
                 className="rail-link"
                 data-active={active || undefined}
               >

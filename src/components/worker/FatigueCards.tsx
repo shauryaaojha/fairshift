@@ -1,5 +1,5 @@
-import { ConeIcon } from "@/src/components/icons";
-import type { FatigueNote } from "@/src/server/services/workerUi";
+import { ConeIcon } from '@/src/components/icons';
+import type { FatigueNote } from '@/src/server/services/workerViews';
 
 /**
  * Fatigue warnings in plain words. Hi-vis fill with a 2 px graphite outline

@@ -1,20 +1,23 @@
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { getPassportByToken } from "@/src/server/services/adminUi";
-import { Stamp } from "@/src/components/ui/Stamp";
-import "@/src/components/admin/admin.css";
+import { Suspense } from 'react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { getPassportByToken } from '@/src/server/services/adminViews';
+import { Stamp } from '@/src/components/ui/Stamp';
+import '@/src/components/admin/admin.css';
 
 export const metadata: Metadata = {
-  title: "Verify a skill | FairShift",
-  description: "Check that a training or experience record was issued through FairShift.",
+  title: 'Verify a skill | FairShift',
+  description: 'Check that a training or experience record was issued through FairShift.',
   robots: { index: false },
 };
 
 function fmt(iso: string): string {
-  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(
-    new Date(iso),
-  );
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(iso));
 }
 
 async function Passport({ params }: { params: Promise<{ token: string }> }) {
@@ -27,7 +30,8 @@ async function Passport({ params }: { params: Promise<{ token: string }> }) {
         <div className="login-sheet">
           <h1 className="page-title">Record not found</h1>
           <p className="page-sub">
-            This link does not match any FairShift skill record. Ask the worker to share the link again.
+            This link does not match any FairShift skill record. Ask the worker to share the link
+            again.
           </p>
           <p className="section">
             <Link href="/" className="link">
@@ -39,7 +43,7 @@ async function Passport({ params }: { params: Promise<{ token: string }> }) {
     );
   }
 
-  const ok = view.verified && view.status === "active";
+  const ok = view.verified && view.status === 'active';
   return (
     <div className="login-page">
       <article className="login-sheet" aria-labelledby="skill-title">
@@ -51,9 +55,12 @@ async function Passport({ params }: { params: Promise<{ token: string }> }) {
           Held by <strong>{view.holder}</strong>
         </p>
 
-        <div style={{ margin: "24px 0" }}>
-          <Stamp variant={ok ? "cleared" : view.status === "expired" ? "escalated" : "hivis"} id={token}>
-            {ok ? "Verified" : view.status === "expired" ? "Expired" : "Not verified"}
+        <div style={{ margin: '24px 0' }}>
+          <Stamp
+            variant={ok ? 'cleared' : view.status === 'expired' ? 'escalated' : 'hivis'}
+            id={token}
+          >
+            {ok ? 'Verified' : view.status === 'expired' ? 'Expired' : 'Not verified'}
           </Stamp>
         </div>
 
@@ -63,10 +70,11 @@ async function Passport({ params }: { params: Promise<{ token: string }> }) {
           <dt>Issued on</dt>
           <dd className="mono">{fmt(view.issuedDate)}</dd>
           <dt>Valid until</dt>
-          <dd className="mono">{view.expiryDate ? fmt(view.expiryDate) : "No expiry"}</dd>
+          <dd className="mono">{view.expiryDate ? fmt(view.expiryDate) : 'No expiry'}</dd>
         </dl>
         <p className="demo-box">
-          Only the first name and this record are shown. Pay, phone and attendance are never shared. Demo data.
+          Only the first name and this record are shown. Pay, phone and attendance are never shared.
+          Demo data.
         </p>
       </article>
     </div>

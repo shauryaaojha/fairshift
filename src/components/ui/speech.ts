@@ -1,8 +1,12 @@
-import { SPEECH_LANG, type Locale } from "@/src/i18n";
+import { SPEECH_LANG, type Locale } from '@/src/i18n';
 
 /** True when this browser can speak text aloud. */
 export function speechSupported(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  return (
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    'SpeechSynthesisUtterance' in window
+  );
 }
 
 export function stopSpeaking(): void {
@@ -15,9 +19,9 @@ export function pickVoice(
   locale: Locale,
 ): SpeechSynthesisVoice | null {
   const tag = SPEECH_LANG[locale].toLowerCase();
-  const prefix = tag.split("-")[0];
+  const prefix = tag.split('-')[0];
   return (
-    voices.find((v) => v.lang.toLowerCase().replace("_", "-") === tag) ??
+    voices.find((v) => v.lang.toLowerCase().replace('_', '-') === tag) ??
     voices.find((v) => v.lang.toLowerCase().startsWith(prefix)) ??
     null
   );
@@ -43,7 +47,7 @@ export function speak(text: string, locale: Locale, onEnd?: () => void): boolean
 
 /** Short haptic tick where supported. */
 export function vibrate(ms: number | number[]): void {
-  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
     navigator.vibrate(ms);
   }
 }

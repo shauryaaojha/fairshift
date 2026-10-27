@@ -19,22 +19,22 @@ These rules are from `docs/PromptWars 2026 Submission Guide.pdf` (ACM Student Ch
 
 **Three deliverables**, submitted on the Hack2Skill Innovator Dashboard using your registered hackathon email:
 
-| Field | What to submit | Hard rules |
-| --- | --- | --- |
-| 1. GitHub | Public repo URL **ending in `.git`** (`https://github.com/user/project.git`) | Public. **Exactly 1 branch.** **Under 10 MB** (no datasets or videos) |
-| 2. Deployed link | Live **Google Cloud Run** URL | **Vercel and Netlify links are rejected.** AI Studio, Vertex AI, Firebase and Antigravity are allowed while building |
-| 3. LinkedIn post | Public post link | Structure: the problem, then your build and tools, then how the solution fits the problem |
+| Field            | What to submit                                                               | Hard rules                                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1. GitHub        | Public repo URL **ending in `.git`** (`https://github.com/user/project.git`) | Public. **Exactly 1 branch.** **Under 10 MB** (no datasets or videos)                                                |
+| 2. Deployed link | Live **Google Cloud Run** URL                                                | **Vercel and Netlify links are rejected.** AI Studio, Vertex AI, Firebase and Antigravity are allowed while building |
+| 3. LinkedIn post | Public post link                                                             | Structure: the problem, then your build and tools, then how the solution fits the problem                            |
 
 **AI evaluation: 6 parameters** (the same 6 that EcoPilot was scored on):
 
-| # | Parameter | What the evaluator checks |
-| --- | --- | --- |
-| 1 | Code Quality | Clean, readable, well-organised structure |
-| 2 | Security | Zero exposed keys or credentials |
-| 3 | Efficiency | Sensible resource usage, no bloat |
-| 4 | Testing | Features verified with unit tests |
-| 5 | Accessibility | Readable contrast, keyboard navigation |
-| 6 | Problem Alignment | Directly solves the assigned challenge statement |
+| #   | Parameter         | What the evaluator checks                        |
+| --- | ----------------- | ------------------------------------------------ |
+| 1   | Code Quality      | Clean, readable, well-organised structure        |
+| 2   | Security          | Zero exposed keys or credentials                 |
+| 3   | Efficiency        | Sensible resource usage, no bloat                |
+| 4   | Testing           | Features verified with unit tests                |
+| 5   | Accessibility     | Readable contrast, keyboard navigation           |
+| 6   | Problem Alignment | Directly solves the assigned challenge statement |
 
 **Max 2 submission attempts, and the latest score counts.** The leaderboard is real-time. A second attempt scoring 60 replaces a first attempt scoring 90. Resubmit only if you are sure the new version scores higher.
 
@@ -44,10 +44,10 @@ After submitting, check that the dashboard shows it as recorded.
 
 Both projects below won first place at an in-person PromptWars edition, and both have a live demo.
 
-| Project | Event | Result | Built with | Repo | Demo |
-| --- | --- | --- | --- | --- | --- |
-| **EcoPilot**: a Gemini agent that turns a plain-words description of your week into a measurable CO2-reduction plan | PromptWars x VYOM Club, NMIET, 23 Oct 2026 (Sustainability domain) | **1st Prize, INR 10,000.** Round 1 (AI code review): 97.27/100, ranked 2nd. Round 2 (pitch + viva): 1st | Gemini API, Firebase, Cloud Run ready | [chinmaymeshram1-wq/promptwar](https://github.com/chinmaymeshram1-wq/promptwar) | [promptwar-opal.vercel.app](https://promptwar-opal.vercel.app) |
-| **Project OrbitMentor**: a capstone project generator for final-year engineering students, with 3 feasibility tiers, a 16-week roadmap, stack trade-offs and viva prep | PromptWars x Parul University, 5 Sep 2026 | **Winner** (Dev Sonar) | React 19, TypeScript, Tailwind, Node/Express on Vercel serverless, Gemini via `@google/genai` | [Devsonar19/Project-OrbitMentor](https://github.com/Devsonar19/Project-OrbitMentor) | [project-orbit-mentor.vercel.app](https://project-orbit-mentor.vercel.app) |
+| Project                                                                                                                                                                | Event                                                              | Result                                                                                                  | Built with                                                                                    | Repo                                                                                | Demo                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **EcoPilot**: a Gemini agent that turns a plain-words description of your week into a measurable CO2-reduction plan                                                    | PromptWars x VYOM Club, NMIET, 23 Oct 2026 (Sustainability domain) | **1st Prize, INR 10,000.** Round 1 (AI code review): 97.27/100, ranked 2nd. Round 2 (pitch + viva): 1st | Gemini API, Firebase, Cloud Run ready                                                         | [chinmaymeshram1-wq/promptwar](https://github.com/chinmaymeshram1-wq/promptwar)     | [promptwar-opal.vercel.app](https://promptwar-opal.vercel.app)             |
+| **Project OrbitMentor**: a capstone project generator for final-year engineering students, with 3 feasibility tiers, a 16-week roadmap, stack trade-offs and viva prep | PromptWars x Parul University, 5 Sep 2026                          | **Winner** (Dev Sonar)                                                                                  | React 19, TypeScript, Tailwind, Node/Express on Vercel serverless, Gemini via `@google/genai` | [Devsonar19/Project-OrbitMentor](https://github.com/Devsonar19/Project-OrbitMentor) | [project-orbit-mentor.vercel.app](https://project-orbit-mentor.vercel.app) |
 
 **Parul University runner-ups** ([official article](https://www.paruluniversity.ac.in/news-and-awards/promptwars-x-parul-university-inside-a-google-backed-vibe-coding-hackathon/)):
 
@@ -58,24 +58,24 @@ Both projects below won first place at an in-person PromptWars edition, and both
 
 ## 2. Virtual PromptWars top rankers
 
-| Who | Claimed result | Projects | Evidence |
-| --- | --- | --- | --- |
-| **Rishet11** | Rank 27 of 16,000+ (top 0.2%) in Google PromptWars | [stadiumops-copilot](https://github.com/Rishet11/stadiumops-copilot) ([demo](https://promptwars-drab.vercel.app)), [VoteReady-PromptWars](https://github.com/Rishet11/VoteReady-PromptWars), [carbon-coach](https://github.com/Rishet11/carbon-coach) | Self-claimed on their portfolio site ([Rishet11/mehra-city](https://github.com/Rishet11/mehra-city)). The repo behind the rank is not stated. |
-| Unnamed (LinkedIn) | #98 of 17,500+, Hack2Skill Virtual PromptWars 2026 | Not found | Search snippet only |
-| Unnamed (LinkedIn) | 16th globally, Google Antigravity PromptWars 2026 | Not found | Search snippet only |
-| Unnamed (LinkedIn) | 2nd Runner-Up, Google PromptWars 2026 Gurugram | Not found | Search snippet only |
+| Who                | Claimed result                                     | Projects                                                                                                                                                                                                                                              | Evidence                                                                                                                                      |
+| ------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rishet11**       | Rank 27 of 16,000+ (top 0.2%) in Google PromptWars | [stadiumops-copilot](https://github.com/Rishet11/stadiumops-copilot) ([demo](https://promptwars-drab.vercel.app)), [VoteReady-PromptWars](https://github.com/Rishet11/VoteReady-PromptWars), [carbon-coach](https://github.com/Rishet11/carbon-coach) | Self-claimed on their portfolio site ([Rishet11/mehra-city](https://github.com/Rishet11/mehra-city)). The repo behind the rank is not stated. |
+| Unnamed (LinkedIn) | #98 of 17,500+, Hack2Skill Virtual PromptWars 2026 | Not found                                                                                                                                                                                                                                             | Search snippet only                                                                                                                           |
+| Unnamed (LinkedIn) | 16th globally, Google Antigravity PromptWars 2026  | Not found                                                                                                                                                                                                                                             | Search snippet only                                                                                                                           |
+| Unnamed (LinkedIn) | 2nd Runner-Up, Google PromptWars 2026 Gurugram     | Not found                                                                                                                                                                                                                                             | Search snippet only                                                                                                                           |
 
 **Why stadiumops-copilot is worth studying:** a pure, testable decision engine (`StadiumState -> ranked Recommendation[]`) is the source of truth. The LLM copilot (Groq) only answers questions grounded in that engine's output. The app works end to end with or without an API key.
 
 ## 3. Most-starred PromptWars repos (no win proof)
 
-| Repo | Stars | What it is |
-| --- | --- | --- |
-| [vigneshwaran484/stadium-ops-copilot](https://github.com/vigneshwaran484/stadium-ops-copilot) | 7 | Challenge 4: RAG-based SOP guidance for stadium volunteers. FastAPI + Gemini + FAISS, multilingual, escalation decisions |
-| [mysticalayushi/carboncut](https://github.com/mysticalayushi/carboncut) | 3 | Challenge 3 |
-| [pavankarthikeyaatchyuta-lab/EcoVerse-AI](https://github.com/pavankarthikeyaatchyuta-lab/EcoVerse-AI) | 3 | Gemini-based climate "behaviour companion" that converts emissions into everyday equivalents |
-| [shreyanshio/PromptwarsX-1](https://github.com/shreyanshio/PromptwarsX-1) | 2 | ProjectSpark: the same capstone-project problem statement as OrbitMentor |
-| [SairajNarayankar/Civicguide](https://github.com/SairajNarayankar/Civicguide) | 2 | Challenge 2 election guide, React + Gemini on Cloud Run |
+| Repo                                                                                                  | Stars | What it is                                                                                                               |
+| ----------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| [vigneshwaran484/stadium-ops-copilot](https://github.com/vigneshwaran484/stadium-ops-copilot)         | 7     | Challenge 4: RAG-based SOP guidance for stadium volunteers. FastAPI + Gemini + FAISS, multilingual, escalation decisions |
+| [mysticalayushi/carboncut](https://github.com/mysticalayushi/carboncut)                               | 3     | Challenge 3                                                                                                              |
+| [pavankarthikeyaatchyuta-lab/EcoVerse-AI](https://github.com/pavankarthikeyaatchyuta-lab/EcoVerse-AI) | 3     | Gemini-based climate "behaviour companion" that converts emissions into everyday equivalents                             |
+| [shreyanshio/PromptwarsX-1](https://github.com/shreyanshio/PromptwarsX-1)                             | 2     | ProjectSpark: the same capstone-project problem statement as OrbitMentor                                                 |
+| [SairajNarayankar/Civicguide](https://github.com/SairajNarayankar/Civicguide)                         | 2     | Challenge 2 election guide, React + Gemini on Cloud Run                                                                  |
 
 **Same name, unrelated:** [Kishalll/PromptWars](https://github.com/Kishalll/PromptWars) (11 stars, a multiplayer prompt-guessing game) and [thinkst/promptwars](https://github.com/thinkst/promptwars) (a CoreWars-style prompt battle). Neither is part of the Google/Hack2Skill hackathon.
 
@@ -85,15 +85,15 @@ Both projects below won first place at an in-person PromptWars edition, and both
 
 The AI evaluator in Round 1 scored six criteria. EcoPilot's README publishes its marks:
 
-| Criterion | Score |
-| --- | --- |
-| Security | 100 |
-| Efficiency | 100 |
-| Accessibility | 100 |
-| Problem Statement Alignment | 100 |
-| Testing | 98 |
-| Code Quality | 89 (refactored later) |
-| **Total** | **97.27 / 100** |
+| Criterion                   | Score                 |
+| --------------------------- | --------------------- |
+| Security                    | 100                   |
+| Efficiency                  | 100                   |
+| Accessibility               | 100                   |
+| Problem Statement Alignment | 100                   |
+| Testing                     | 98                    |
+| Code Quality                | 89 (refactored later) |
+| **Total**                   | **97.27 / 100**       |
 
 They proved each criterion with a badge in the README:
 

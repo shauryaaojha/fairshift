@@ -1,8 +1,8 @@
-// ============================================================
-// FairShift - Worker UI composition (owned by the worker app).
-// Reads and view-model helpers on top of workerService, repos and domain.
-// Pure helpers are exported on their own so they can be unit tested.
-// ============================================================
+/**
+ * Worker views: shapes and composes domain and repository data for worker mobile screens.
+ * Services handle business use-cases and domain rules; views shape and compose data specifically
+ * for presentation and page rendering.
+ */
 
 import { cookies } from 'next/headers';
 import { connection } from 'next/server';
@@ -12,6 +12,7 @@ import { getDatabase } from '../repos';
 import { SESSION_COOKIE_NAME, verifySession } from '../auth/session';
 import { explainPayslip } from '../ai/gemini';
 import { calculateShiftHours, calculateShiftsOvertime } from '../domain/overtime';
+import { WEEK_MS } from '../domain/time';
 import { LOCALE_COOKIE, SPEECH_LANG, parseLocale, t } from '../../i18n';
 import type {
   FatigueFlag,
@@ -85,7 +86,9 @@ export interface HazardTimeline {
 }
 
 /** Reported -> Acknowledged -> Resolved, with an extra Escalated node when the SLA was missed. */
-export function hazardTimeline(h: Pick<HazardReport, 'status' | 'reportedAt' | 'acknowledgedAt' | 'resolvedAt'>): HazardTimeline {
+export function hazardTimeline(
+  h: Pick<HazardReport, 'status' | 'reportedAt' | 'acknowledgedAt' | 'resolvedAt'>,
+): HazardTimeline {
   const steps: TimelineStep[] = [{ key: 'reported', at: h.reportedAt, done: true }];
   if (h.status === 'escalated') steps.push({ key: 'escalated', at: null, done: true });
   steps.push({ key: 'acknowledged', at: h.acknowledgedAt, done: h.acknowledgedAt !== null });
@@ -152,7 +155,7 @@ export function summarizeWeek(
   now: Date,
   policy?: Parameters<typeof calculateShiftsOvertime>[2],
 ): WeekSummary {
-  const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const cutoff = now.getTime() - WEEK_MS;
   const week = shifts
     .filter((s) => new Date(s.checkIn).getTime() >= cutoff)
     .sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime());

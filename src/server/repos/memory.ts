@@ -1,8 +1,4 @@
-// ============================================================
-// FairShift — Repositories: In-Memory Adapter
-// High-performance, self-contained in-memory database seeded on boot
-// Enables the entire application to run offline with zero cloud credentials
-// ============================================================
+// Repositories: In-Memory Adapter
 
 import type {
   FairShiftDatabase,
@@ -220,13 +216,13 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
     listBySite: async (siteId: string) => {
       await this.ensureInitialized();
       return sortHazardsNewestFirst(
-        this.hazardsList.filter((h) => h.siteId === siteId).map(withLiveHazardStatus)
+        this.hazardsList.filter((h) => h.siteId === siteId).map(withLiveHazardStatus),
       );
     },
     listByOrg: async (orgId: string) => {
       await this.ensureInitialized();
       return sortHazardsNewestFirst(
-        this.hazardsList.filter((h) => h.orgId === orgId).map(withLiveHazardStatus)
+        this.hazardsList.filter((h) => h.orgId === orgId).map(withLiveHazardStatus),
       );
     },
   };

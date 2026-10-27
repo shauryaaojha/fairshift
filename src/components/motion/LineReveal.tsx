@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, type ElementType, type ReactNode } from "react";
-import { prefersReducedMotion, setupGsap } from "./gsapSetup";
+import { useEffect, useRef, type ElementType, type ReactNode } from 'react';
+import { prefersReducedMotion, setupGsap } from './gsapSetup';
 
 /**
  * Heading that rises into view by LINES (SplitText type "lines" with a mask).
@@ -9,7 +9,7 @@ import { prefersReducedMotion, setupGsap } from "./gsapSetup";
  * the first time the heading is visible. With reduced motion it is static.
  */
 export function LineReveal({
-  as: Tag = "h2",
+  as: Tag = 'h2',
   className,
   children,
   immediate = false,
@@ -33,8 +33,8 @@ export function LineReveal({
 
     const run = () => {
       if (cancelled) return;
-      split = SplitText.create(el, { type: "lines", mask: "lines", linesClass: "reveal-line" });
-      tween = gsap.from(split.lines, { yPercent: 110, duration: 0.8, ease: "hop", stagger: 0.08 });
+      split = SplitText.create(el, { type: 'lines', mask: 'lines', linesClass: 'reveal-line' });
+      tween = gsap.from(split.lines, { yPercent: 110, duration: 0.8, ease: 'hop', stagger: 0.08 });
     };
 
     document.fonts.ready.then(() => {

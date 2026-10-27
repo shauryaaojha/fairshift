@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Domain: Skill Passport Engine (Pure)
-// Portable verifiable credentials for construction and facility workers
-// ============================================================
+// Domain: Skill Passport Engine (Pure)
 
 import { createHmac } from 'crypto';
 import type { SkillRecord } from '../../shared/types';
@@ -13,7 +10,7 @@ export function generateSkillVerifyToken(
   workerId: string,
   title: string,
   issuedDate: string,
-  secret: string
+  secret: string,
 ): string {
   // Keyed with a server secret, so a token cannot be recomputed from public facts.
   const mac = createHmac('sha256', secret);
@@ -24,10 +21,7 @@ export function generateSkillVerifyToken(
 /**
  * Checks if a skill record has expired.
  */
-export function isSkillExpired(
-  expiryDateIso: string | null,
-  nowInput?: Date | string
-): boolean {
+export function isSkillExpired(expiryDateIso: string | null, nowInput?: Date | string): boolean {
   if (!expiryDateIso) return false;
   const now = nowInput ? new Date(nowInput).getTime() : Date.now();
   const expiry = new Date(expiryDateIso).getTime();
@@ -40,7 +34,7 @@ export function isSkillExpired(
  */
 export function getSkillStatus(
   skill: SkillRecord,
-  nowInput?: Date | string
+  nowInput?: Date | string,
 ): 'active' | 'expired' | 'unverified' {
   if (!skill.verified) return 'unverified';
   if (isSkillExpired(skill.expiryDate, nowInput)) return 'expired';

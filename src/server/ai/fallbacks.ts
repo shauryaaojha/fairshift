@@ -1,8 +1,4 @@
-// ============================================================
-// FairShift — AI: Deterministic Fallbacks
-// Pure, reliable fallbacks when Gemini is unreachable or offline
-// Ensures UI functions 100% without cloud credentials
-// ============================================================
+// AI: Deterministic Fallbacks
 
 import type { PayslipResult, HazardSeverity, Locale } from '../../shared/types';
 
@@ -36,7 +32,9 @@ export function explainPayslipFallback(payslip: PayslipResult, locale: Locale = 
 
   if (locale === 'ta') {
     let msg = `உங்கள் நிகர ஊதியம் ₹${net.toLocaleString('en-IN')} ஆகும். இதில் அடிப்படை ஊதியம் ₹${base.toLocaleString('en-IN')}`;
-    if (ot > 0) msg += ` மற்றும் இரட்டிப்பு (2x) கூடுதல் நேர ஊதியம் (OT) ₹${ot.toLocaleString('en-IN')}`;
+    if (ot > 0) {
+      msg += ` மற்றும் இரட்டிப்பு (2x) கூடுதல் நேர ஊதியம் (OT) ₹${ot.toLocaleString('en-IN')}`;
+    }
     if (allow > 0) msg += ` மற்றும் படிகள் ₹${allow.toLocaleString('en-IN')}`;
     msg += ` அடங்கும்.`;
     if (pf > 0 || esi > 0) {
@@ -62,7 +60,7 @@ export function explainPayslipFallback(payslip: PayslipResult, locale: Locale = 
 export function summarizeHazardFallback(
   category: string,
   description: string,
-  severity: HazardSeverity
+  severity: HazardSeverity,
 ): { summary: string; suggestedSeverity: HazardSeverity } {
   const cleanDesc = description.trim().replace(/\s+/g, ' ');
   const firstSentence = cleanDesc.split(/[.!?]/)[0] || cleanDesc;
@@ -91,17 +89,19 @@ export function generateWeeklySafetySummaryFallback(stats: {
 
   if (stats.escalatedHazards > 0) {
     parts.push(
-      `Attention required: ${stats.escalatedHazards} hazard report(s) have crossed the statutory acknowledgement SLA and are escalated.`
+      `Attention required: ${stats.escalatedHazards} hazard report(s) have crossed the statutory acknowledgement SLA and are escalated.`,
     );
   } else if (stats.openHazards > 0) {
-    parts.push(`${stats.openHazards} open hazard report(s) remain actively monitored within safety SLAs.`);
+    parts.push(
+      `${stats.openHazards} open hazard report(s) remain actively monitored within safety SLAs.`,
+    );
   } else {
     parts.push(`All reported site hazard items are currently acknowledged or resolved.`);
   }
 
   if (stats.fatigueFlags > 0 || stats.highQuitRisk > 0) {
     parts.push(
-      `${stats.fatigueFlags} worker(s) trigger fatigue limits (>48h or consecutive shifts), contributing to ${stats.highQuitRisk} high quit-risk case(s).`
+      `${stats.fatigueFlags} worker(s) trigger fatigue limits (>48h or consecutive shifts), contributing to ${stats.highQuitRisk} high quit-risk case(s).`,
     );
   } else {
     parts.push(`Fatigue and attrition indicators remain within standard operational bounds.`);

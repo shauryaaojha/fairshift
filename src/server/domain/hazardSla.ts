@@ -1,12 +1,4 @@
-// ============================================================
-// FairShift — Domain: Hazard SLA & Escalation Engine (Pure)
-// Compliance:
-// - Critical: 1h acknowledgement SLA
-// - High: 4h acknowledgement SLA
-// - Medium: 24h acknowledgement SLA
-// - Low: 72h acknowledgement SLA
-// - Missed acknowledgement = escalated (computed on read)
-// ============================================================
+// Domain: Hazard SLA & Escalation Engine (Pure)
 
 import type {
   HazardReport,
@@ -21,7 +13,7 @@ import { DEFAULT_HAZARD_SLA } from '../../shared/types';
  */
 export function getSlaHours(
   severity: HazardSeverity,
-  config: HazardSlaConfig = DEFAULT_HAZARD_SLA
+  config: HazardSlaConfig = DEFAULT_HAZARD_SLA,
 ): number {
   return config[severity] ?? DEFAULT_HAZARD_SLA.medium;
 }
@@ -33,7 +25,7 @@ export function getSlaHours(
 export function computeHazardStatus(
   hazard: Pick<HazardReport, 'status' | 'severity' | 'reportedAt' | 'acknowledgedAt'>,
   nowInput?: Date | string,
-  config: HazardSlaConfig = DEFAULT_HAZARD_SLA
+  config: HazardSlaConfig = DEFAULT_HAZARD_SLA,
 ): HazardStatus {
   // If already resolved, status remains resolved
   if (hazard.status === 'resolved') {
@@ -70,7 +62,7 @@ export function computeHazardStatus(
 export function getRemainingSlaSeconds(
   hazard: Pick<HazardReport, 'severity' | 'reportedAt' | 'acknowledgedAt'>,
   nowInput?: Date | string,
-  config: HazardSlaConfig = DEFAULT_HAZARD_SLA
+  config: HazardSlaConfig = DEFAULT_HAZARD_SLA,
 ): number {
   if (hazard.acknowledgedAt) {
     return 0;

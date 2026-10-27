@@ -1,11 +1,14 @@
-// ============================================================
-// FairShift — Domain: Overtime Engine (Pure)
-// Compliance: OSH Code 2020 (8h/day, 48h/week, 2x OT multiplier)
-// ============================================================
+// Domain: Overtime Engine (Pure)
 
 import { calculateIsoWeek } from './anonymity';
 import { istDateKey } from './time';
-import type { DailyOvertimeInput, WeeklyOvertimeInput, OvertimeResult, Shift, OrgPolicy } from '../../shared/types';
+import type {
+  DailyOvertimeInput,
+  WeeklyOvertimeInput,
+  OvertimeResult,
+  Shift,
+  OrgPolicy,
+} from '../../shared/types';
 
 export const DEFAULT_DAILY_HOURS_LIMIT = 8;
 export const DEFAULT_WEEKLY_HOURS_LIMIT = 48;
@@ -80,7 +83,7 @@ export function calculateShiftHours(checkInIso: string, checkOutIso: string | nu
 export function calculateShiftsOvertime(
   shifts: Shift[],
   hourlyRate: number,
-  policy?: OrgPolicy
+  policy?: OrgPolicy,
 ): OvertimeResult {
   const dailyLimit = policy?.dailyHoursLimit ?? DEFAULT_DAILY_HOURS_LIMIT;
   const weeklyLimit = policy?.weeklyHoursLimit ?? DEFAULT_WEEKLY_HOURS_LIMIT;

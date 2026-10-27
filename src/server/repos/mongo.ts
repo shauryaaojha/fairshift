@@ -1,9 +1,4 @@
-// ============================================================
-// FairShift — Repositories: MongoDB Adapter (Atlas / Vercel Marketplace)
-// Connection string comes from MONGODB_URI (a Vercel environment variable),
-// never from the repo. One collection per repo, keyed by the entity `id`.
-// The client is cached on globalThis so serverless invocations reuse it.
-// ============================================================
+// Repositories: MongoDB Adapter (Atlas / Vercel Marketplace)
 
 import { MongoClient, type Db, type Document } from 'mongodb';
 import type { FairShiftDatabase } from './types';
@@ -55,10 +50,12 @@ type GlobalWithMongo = typeof globalThis & { __fairshiftMongo?: Promise<MongoCli
 function connect(uri: string): Promise<MongoClient> {
   const g = globalThis as GlobalWithMongo;
   if (!g.__fairshiftMongo) {
-    g.__fairshiftMongo = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000 }).connect().catch((err) => {
-      g.__fairshiftMongo = undefined;
-      throw err;
-    });
+    g.__fairshiftMongo = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000 })
+      .connect()
+      .catch((err) => {
+        g.__fairshiftMongo = undefined;
+        throw err;
+      });
   }
   return g.__fairshiftMongo;
 }
@@ -67,7 +64,9 @@ function connect(uri: string): Promise<MongoClient> {
 export async function seedMongoIfEmpty(db: Db): Promise<boolean> {
   for (const [col, fields] of Object.entries(INDEXES)) {
     await Promise.all(
-      fields.map((field) => db.collection(col).createIndex({ [field]: 1 }, { unique: field === 'id' }))
+      fields.map((field) =>
+        db.collection(col).createIndex({ [field]: 1 }, { unique: field === 'id' }),
+      ),
     );
   }
   if ((await db.collection(COLLECTIONS.orgs).countDocuments({}, { limit: 1 })) > 0) return false;
@@ -75,7 +74,9 @@ export async function seedMongoIfEmpty(db: Db): Promise<boolean> {
   const data = await generateSeedData();
   for (const key of Object.keys(COLLECTIONS) as Array<keyof typeof COLLECTIONS>) {
     const items = data[key] as Document[];
-    if (items.length > 0) await db.collection(COLLECTIONS[key]).insertMany(items.map((i) => ({ ...i })));
+    if (items.length > 0) {
+      await db.collection(COLLECTIONS[key]).insertMany(items.map((i) => ({ ...i })));
+    }
   }
   return true;
 }
@@ -91,7 +92,7 @@ class MongoFairShiftDb implements FairShiftDatabase {
       this.seedPromise = this.getDb()
         .then((db) => seedMongoIfEmpty(db))
         .then((seeded) => {
-          if (seeded) console.log('[FairShift Data] Seeded empty MongoDB database');
+          if (seeded) console.info('[FairShift Data] Seeded empty MongoDB database');
         })
         .catch((err) => {
           this.seedPromise = null;
@@ -103,23 +104,30 @@ class MongoFairShiftDb implements FairShiftDatabase {
 
   private async getDoc<T>(col: string, id: string): Promise<T | null> {
     await this.ensureSeeded();
-    return ((await this.getDb()).collection(col).findOne({ id }, NO_ID)) as Promise<T | null>;
+    return (await this.getDb()).collection(col).findOne({ id }, NO_ID) as Promise<T | null>;
   }
 
   private async query<T>(col: string, field: string, value: unknown): Promise<T[]> {
     await this.ensureSeeded();
-    return ((await this.getDb()).collection(col).find({ [field]: value }, NO_ID).toArray()) as Promise<T[]>;
+    return (await this.getDb())
+      .collection(col)
+      .find({ [field]: value }, NO_ID)
+      .toArray() as Promise<T[]>;
   }
 
   private async put<T extends { id: string }>(col: string, item: T): Promise<T> {
     await this.ensureSeeded();
-    await (await this.getDb()).collection(col).replaceOne({ id: item.id }, { ...item }, { upsert: true });
+    await (
+      await this.getDb()
+    )
+      .collection(col)
+      .replaceOne({ id: item.id }, { ...item }, { upsert: true });
     return item;
   }
 
   private async listAll<T>(col: string): Promise<T[]> {
     await this.ensureSeeded();
-    return ((await this.getDb()).collection(col).find({}, NO_ID).toArray()) as Promise<T[]>;
+    return (await this.getDb()).collection(col).find({}, NO_ID).toArray() as Promise<T[]>;
   }
 
   orgs = {
@@ -174,7 +182,9 @@ class MongoFairShiftDb implements FairShiftDatabase {
     getById: (id: string) => this.getDoc<Shift>(COLLECTIONS.shifts, id),
     getActiveForWorker: async (workerId: string) => {
       await this.ensureSeeded();
-      return ((await this.getDb()).collection(COLLECTIONS.shifts).findOne({ workerId, checkOut: null }, NO_ID)) as Promise<Shift | null>;
+      return (await this.getDb())
+        .collection(COLLECTIONS.shifts)
+        .findOne({ workerId, checkOut: null }, NO_ID) as Promise<Shift | null>;
     },
     listByWorker: async (workerId: string) =>
       (await this.query<Shift>(COLLECTIONS.shifts, 'workerId', workerId)).sort(byCheckInDesc),
@@ -194,14 +204,14 @@ class MongoFairShiftDb implements FairShiftDatabase {
     listBySite: async (siteId: string) =>
       sortHazardsNewestFirst(
         (await this.query<HazardReport>(COLLECTIONS.hazards, 'siteId', siteId)).map(
-          withLiveHazardStatus
-        )
+          withLiveHazardStatus,
+        ),
       ),
     listByOrg: async (orgId: string) =>
       sortHazardsNewestFirst(
         (await this.query<HazardReport>(COLLECTIONS.hazards, 'orgId', orgId)).map(
-          withLiveHazardStatus
-        )
+          withLiveHazardStatus,
+        ),
       ),
   };
 
@@ -213,7 +223,7 @@ class MongoFairShiftDb implements FairShiftDatabase {
       this.query<FeedbackSubmission>(COLLECTIONS.feedback, 'orgId', orgId),
     listBySiteAndWeek: async (siteId: string, isoWeek: string) =>
       (await this.query<FeedbackSubmission>(COLLECTIONS.feedback, 'siteId', siteId)).filter(
-        (f) => f.isoWeek === isoWeek
+        (f) => f.isoWeek === isoWeek,
       ),
   };
 
@@ -247,6 +257,6 @@ export function getMongoDb(): FairShiftDatabase {
   if (!uri) throw new Error('[FairShift Data] MONGODB_URI is not set.');
   const dbName = process.env.MONGODB_DB || 'fairshift';
   mongoInstance = new MongoFairShiftDb(async () => (await connect(uri)).db(dbName));
-  console.log('[FairShift Data] Backend in use: MongoDB');
+  console.info('[FairShift Data] Backend in use: MongoDB');
   return mongoInstance;
 }

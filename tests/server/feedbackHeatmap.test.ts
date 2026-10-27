@@ -1,14 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import {
-  computeFeedbackHeatmap,
-  adminService,
-} from '../../src/server/services/adminService';
+import { computeFeedbackHeatmap, adminService } from '../../src/server/services/adminService';
 import type { FeedbackSubmission } from '../../src/shared/types';
 
 describe('Server: Feedback Heatmap Service', () => {
-  const createSubmission = (
-    overrides: Partial<FeedbackSubmission> = {}
-  ): FeedbackSubmission => ({
+  const createSubmission = (overrides: Partial<FeedbackSubmission> = {}): FeedbackSubmission => ({
     id: `fb-${Math.random().toString(36).slice(2, 9)}`,
     orgId: 'org-test',
     siteId: 'site-test',
@@ -110,8 +105,8 @@ describe('Server: Feedback Heatmap Service', () => {
       expect(masonryResult.averages).not.toBeNull();
       expect(masonryResult.averages).toEqual({
         managerRespect: 4, // (4 + 5 + 3) / 3
-        safetyRating: 4,   // (5 + 4 + 3) / 3
-        payFairness: 4,    // (4 + 5 + 3) / 3
+        safetyRating: 4, // (5 + 4 + 3) / 3
+        payFairness: 4, // (4 + 5 + 3) / 3
         workloadRating: 4, // (3 + 4 + 5) / 3
       });
       expect(masonryResult.comments).toHaveLength(3);
@@ -156,7 +151,10 @@ describe('Server: Feedback Heatmap Service', () => {
 
   describe('adminService.getFeedbackHeatmap', () => {
     it('retrieves and aggregates feedback for an organization from repository', async () => {
-      const result = await adminService.getFeedbackHeatmap('org-construction', 'site-skyline-chennai');
+      const result = await adminService.getFeedbackHeatmap(
+        'org-construction',
+        'site-skyline-chennai',
+      );
       expect(Array.isArray(result)).toBe(true);
       // In seeded data, Masonry has 4 submissions in DEMO_WEEK
       const masonry = result.find((r) => r.team === 'Masonry');

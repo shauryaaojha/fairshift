@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { ViewTransition } from "react";
-import { BackIcon } from "@/src/components/icons";
-import { ReadAloud } from "./ReadAloud";
+import Link from 'next/link';
+import { ViewTransition } from 'react';
+import { BackIcon } from '@/src/components/icons';
+import { ReadAloud } from './ReadAloud';
 
 type TopBarProps = {
   title: string;
@@ -17,8 +17,8 @@ type TopBarProps = {
 export function TopBar({
   title,
   speakText,
-  backHref = "/w",
-  backLabel = "Back",
+  backHref = '/w',
+  backLabel = 'Back',
   transitionName,
 }: TopBarProps) {
   const bar = (

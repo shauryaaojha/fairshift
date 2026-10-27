@@ -1,14 +1,14 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { getAdminContext } from "../_lib/context";
-import { buildStateSegments, getOverviewData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
-import { StateSentence } from "@/src/components/admin/StateSentence";
-import { AttendanceChart } from "@/src/components/admin/AttendanceChart";
-import { FeedbackHeatmap } from "@/src/components/admin/FeedbackHeatmap";
-import { RiskTable } from "@/src/components/admin/RiskTable";
-import { StatusStamp } from "@/src/components/admin/StatusStamp";
-import { fmtDateTime } from "@/src/components/admin/format";
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { getAdminContext } from '../_lib/context';
+import { buildStateSegments, getOverviewData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
+import { StateSentence } from '@/src/components/admin/StateSentence';
+import { AttendanceChart } from '@/src/components/admin/AttendanceChart';
+import { FeedbackHeatmap } from '@/src/components/admin/FeedbackHeatmap';
+import { RiskTable } from '@/src/components/admin/RiskTable';
+import { StatusStamp } from '@/src/components/admin/StatusStamp';
+import { fmtDateTime } from '@/src/components/admin/format';
 
 async function Overview() {
   const ctx = await getAdminContext();
@@ -71,9 +71,12 @@ async function Overview() {
         <LineReveal as="h2" className="section-title">
           <span id="risk-h">Who may leave, and why</span>
         </LineReveal>
-        <RiskTable rows={data.risk.slice(0, 5)} caption="Workers with the highest quit-risk score" />
+        <RiskTable
+          rows={data.risk.slice(0, 5)}
+          caption="Workers with the highest quit-risk score"
+        />
         <p className="text-small muted">
-          Score 0 to 100 from overtime, fatigue, attendance, open complaints and team feedback.{" "}
+          Score 0 to 100 from overtime, fatigue, attendance, open complaints and team feedback.{' '}
           <Link className="link" href="/admin/risk">
             See everyone
           </Link>
@@ -95,8 +98,8 @@ async function Overview() {
           <p className="summary-text">{data.summary.summary}</p>
           <p className="ai-label">
             {data.summary.isAi
-              ? "Explained by AI · check with supervisor"
-              : "Rule-based summary (AI is off). Numbers come from the same data."}
+              ? 'Explained by AI · check with supervisor'
+              : 'Rule-based summary (AI is off). Numbers come from the same data.'}
           </p>
         </section>
       </div>
@@ -106,7 +109,14 @@ async function Overview() {
 
 export default function OverviewPage() {
   return (
-    <Suspense fallback={<div aria-busy="true"><div className="skeleton-line" /><div className="skeleton-line" /></div>}>
+    <Suspense
+      fallback={
+        <div aria-busy="true">
+          <div className="skeleton-line" />
+          <div className="skeleton-line" />
+        </div>
+      }
+    >
       <Overview />
     </Suspense>
   );

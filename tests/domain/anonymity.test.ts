@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  scrubPii,
-  calculateIsoWeek,
-  aggregateFeedback,
-} from '../../src/server/domain/anonymity';
+import { scrubPii, calculateIsoWeek, aggregateFeedback } from '../../src/server/domain/anonymity';
 import type { FeedbackSubmission } from '../../src/shared/types';
 
 describe('Domain: Anonymity & PII Scrubbing Engine', () => {
@@ -122,24 +118,14 @@ describe('Domain: Anonymity & PII Scrubbing Engine', () => {
     ];
 
     it('suppresses feedback when count is below k = 3', () => {
-      const result = aggregateFeedback(
-        submissions.slice(0, 2),
-        'Masonry',
-        '2026-W43',
-        3
-      );
+      const result = aggregateFeedback(submissions.slice(0, 2), 'Masonry', '2026-W43', 3);
       expect(result.count).toBe(2);
       expect(result.averages).toBeNull();
       expect(result.comments).toBeNull();
     });
 
     it('displays averages and scrubs comments when count >= k = 3', () => {
-      const result = aggregateFeedback(
-        submissions,
-        'Masonry',
-        '2026-W43',
-        3
-      );
+      const result = aggregateFeedback(submissions, 'Masonry', '2026-W43', 3);
       expect(result.count).toBe(3);
       expect(result.averages).not.toBeNull();
       expect(result.averages?.managerRespect).toBe(4);

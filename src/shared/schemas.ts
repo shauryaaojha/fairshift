@@ -56,13 +56,23 @@ export const skillRecordSchema = z.object({
   title: z.string().min(1).max(200),
   issuer: z.string().min(1).max(200),
   issuedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  expiryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .default(null),
 });
 
 // ── Admin filter schemas ────────────────────────────────────
 export const dateRangeSchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export const siteFilterSchema = z.object({

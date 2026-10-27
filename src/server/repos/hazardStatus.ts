@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Repositories: Shared hazard status (computed on read)
-// Used by BOTH adapters so escalation behaviour is identical.
-// ============================================================
+// Repositories: Shared hazard status (computed on read)
 
 import type { HazardReport } from '../../shared/types';
 import { computeHazardStatus } from '../domain/hazardSla';
@@ -14,6 +11,6 @@ export function withLiveHazardStatus(hazard: HazardReport): HazardReport {
 /** Newest-reported first; shared sort order for hazard lists. */
 export function sortHazardsNewestFirst(hazards: HazardReport[]): HazardReport[] {
   return hazards.sort(
-    (a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()
+    (a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime(),
   );
 }

@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { Magnetic } from "@/src/components/motion/Magnetic";
-import type { SentenceSegment } from "@/src/server/services/adminUi";
+import Link from 'next/link';
+import { Magnetic } from '@/src/components/motion/Magnetic';
+import type { SentenceSegment } from '@/src/server/services/adminViews';
 
 /** One sentence of state. Every number is a link to the rows behind it. */
 export function StateSentence({ segments }: { segments: SentenceSegment[] }) {
@@ -9,7 +9,10 @@ export function StateSentence({ segments }: { segments: SentenceSegment[] }) {
       {segments.map((s, i) =>
         s.href ? (
           <Magnetic key={i}>
-            <Link href={s.href} className="state-link mono">
+            <Link
+              href={s.href}
+              className="state-link mono underline decoration-2 underline-offset-4"
+            >
               {s.text}
             </Link>
           </Magnetic>

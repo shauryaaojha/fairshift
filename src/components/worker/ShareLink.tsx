@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { ShareIcon } from "@/src/components/icons";
-import { Button } from "@/src/components/ui/Button";
-import { useT } from "@/src/i18n/client";
+import { useState } from 'react';
+import { ShareIcon } from '@/src/components/icons';
+import { Button } from '@/src/components/ui/Button';
+import { useT } from '@/src/i18n/client';
 
 /** Shares (or copies) the public verify link for one credential. */
 export function ShareLink({ path, title }: { path: string; title: string }) {
@@ -13,7 +13,7 @@ export function ShareLink({ path, title }: { path: string; title: string }) {
   async function share() {
     const url = `${window.location.origin}${path}`;
     try {
-      if (typeof navigator.share === "function") {
+      if (typeof navigator.share === 'function') {
         await navigator.share({ title, url });
         return;
       }
@@ -27,7 +27,7 @@ export function ShareLink({ path, title }: { path: string; title: string }) {
   return (
     <Button variant="secondary" fullWidth onClick={share} aria-live="polite">
       <ShareIcon />
-      {copied ? t("skills.copied") : t("skills.share")}
+      {copied ? t('skills.copied') : t('skills.share')}
     </Button>
   );
 }

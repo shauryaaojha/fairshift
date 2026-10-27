@@ -5,6 +5,7 @@ That gap is what SDG 8, decent work, is about. Millions of shift workers on cons
 At PromptWars 2026 (ACM SRMIST × Hack2Skill × Google for Developers) I built FairShift, a phone-first platform with two sides.
 
 For the worker:
+
 - Check in by scanning a QR code at the site gate
 - A payslip that shows every line, overtime included, and reads itself aloud
 - Report a hazard by speaking in Hindi or Tamil, anonymously if they want
@@ -12,11 +13,13 @@ For the worker:
 - A skill passport they carry to the next job
 
 For the supervisor:
+
 - Who is on site right now
 - Hazards ranked by deadline, escalating on their own if nobody responds
 - Fatigue flags, and a quit-risk list that always shows its top three reasons
 
 How it's built:
+
 - Next.js 16 and TypeScript on Vercel, with MongoDB Atlas for data
 - Google Gemini explains payslips in plain words and turns a spoken Hindi or Tamil report into an English summary for the supervisor. A human confirms the severity, and every AI feature still works without AI
 - Pay, overtime (8 h/day, 48 h/week, double rate under the OSH Code), fatigue limits and hazard deadlines are tested code, not model guesses. 129 automated tests back them

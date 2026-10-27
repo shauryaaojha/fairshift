@@ -17,10 +17,7 @@ describe('Domain: Fatigue Flag Engine', () => {
     it('returns null for missing or invalid dates', () => {
       expect(calculateRestGapHours(null, '2026-10-21T08:00:00.000Z')).toBeNull();
       expect(
-        calculateRestGapHours(
-          '2026-10-21T18:00:00.000Z',
-          '2026-10-21T08:00:00.000Z'
-        )
+        calculateRestGapHours('2026-10-21T18:00:00.000Z', '2026-10-21T08:00:00.000Z'),
       ).toBeNull();
     });
   });
@@ -58,7 +55,7 @@ describe('Domain: Fatigue Flag Engine', () => {
           checkIn: `${d}T08:00:00.000Z`,
           checkOut: `${d}T17:00:00.000Z`,
           method: 'qr',
-        })
+        }),
       );
 
       expect(countConsecutiveWorkingDays(shifts)).toBe(2);

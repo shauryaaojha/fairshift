@@ -8,12 +8,29 @@ import type { SkillRecord } from '../../src/shared/types';
 
 describe('Domain: Skill Passport Engine', () => {
   it('generates consistent verification tokens', () => {
-    const token1 = generateSkillVerifyToken('worker-123', 'Scaffolding Safety Level 2', '2025-05-10', 'secret-a');
-    const token2 = generateSkillVerifyToken('worker-123', 'Scaffolding Safety Level 2', '2025-05-10', 'secret-a');
+    const token1 = generateSkillVerifyToken(
+      'worker-123',
+      'Scaffolding Safety Level 2',
+      '2025-05-10',
+      'secret-a',
+    );
+    const token2 = generateSkillVerifyToken(
+      'worker-123',
+      'Scaffolding Safety Level 2',
+      '2025-05-10',
+      'secret-a',
+    );
     expect(token1).toBe(token2);
     expect(token1.length).toBe(16);
     // A different server secret gives a different token, so tokens cannot be forged offline.
-    expect(generateSkillVerifyToken('worker-123', 'Scaffolding Safety Level 2', '2025-05-10', 'secret-b')).not.toBe(token1);
+    expect(
+      generateSkillVerifyToken(
+        'worker-123',
+        'Scaffolding Safety Level 2',
+        '2025-05-10',
+        'secret-b',
+      ),
+    ).not.toBe(token1);
   });
 
   it('determines skill expiration correctly', () => {

@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Auth & Security: In-Memory Token Bucket Rate Limiter
-// Simple, zero-dependency protection for login & report endpoints
-// ============================================================
+// Auth & Security: In-Memory Token Bucket Rate Limiter
 
 interface RateLimitRecord {
   count: number;
@@ -33,7 +30,7 @@ function prune(now: number): void {
 export function checkRateLimit(
   key: string,
   maxLimit: number = 10,
-  windowMs: number = 60 * 1000
+  windowMs: number = 60 * 1000,
 ): { allowed: boolean; remaining: number; retryAfterSeconds: number } {
   const now = Date.now();
   const record = rateLimitStore.get(key);
@@ -82,13 +79,18 @@ export function resetRateLimits(): void {
  */
 export function clientIp(headers: Headers): string {
   const forwarded = headers.get('x-forwarded-for');
-  const last = forwarded?.split(',').map((part) => part.trim()).filter(Boolean).pop();
+  const last = forwarded
+    ?.split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .pop();
   return last || headers.get('x-real-ip') || 'local';
 }
 
 const LOGIN_FAILURE_LIMIT = 5;
 const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
-const accountKey = (kind: string, account: string) => `login:${kind}:fail:${account.trim().toLowerCase()}`;
+const accountKey = (kind: string, account: string) =>
+  `login:${kind}:fail:${account.trim().toLowerCase()}`;
 
 /**
  * Login throttle, checked before verifying credentials: per IP (20 a minute) and per
@@ -99,14 +101,17 @@ const accountKey = (kind: string, account: string) => `login:${kind}:fail:${acco
 export function checkLoginLimit(
   kind: 'worker' | 'admin',
   headers: Headers,
-  account: string
+  account: string,
 ): { allowed: boolean; retryAfterSeconds: number } {
   const byIp = checkRateLimit(`login:${kind}:ip:${clientIp(headers)}`, 20, 60 * 1000);
   if (!byIp.allowed) return byIp;
   const failures = rateLimitStore.get(accountKey(kind, account));
   const now = Date.now();
   if (failures && now <= failures.resetTime && failures.count >= LOGIN_FAILURE_LIMIT) {
-    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((failures.resetTime - now) / 1000)) };
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((failures.resetTime - now) / 1000)),
+    };
   }
   return { allowed: true, retryAfterSeconds: 0 };
 }

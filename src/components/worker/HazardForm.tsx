@@ -1,32 +1,39 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { BoltIcon, ConeIcon, DotsIcon, FlameIcon, HardHatIcon, LadderIcon } from "@/src/components/icons";
-import { Button, ButtonLink } from "@/src/components/ui/Button";
-import { Stamp } from "@/src/components/ui/Stamp";
-import { speak, vibrate } from "@/src/components/ui/speech";
-import { useLocale, useT } from "@/src/i18n/client";
-import { en } from "@/src/i18n/en";
-import { reportHazardAction } from "@/app/w/actions";
-import { VoiceTextarea } from "./VoiceTextarea";
+import { useState, useTransition } from 'react';
+import {
+  BoltIcon,
+  ConeIcon,
+  DotsIcon,
+  FlameIcon,
+  HardHatIcon,
+  LadderIcon,
+} from '@/src/components/icons';
+import { Button, ButtonLink } from '@/src/components/ui/Button';
+import { Stamp } from '@/src/components/ui/Stamp';
+import { speak, vibrate } from '@/src/components/ui/speech';
+import { useLocale, useT } from '@/src/i18n/client';
+import { en } from '@/src/i18n/en';
+import { reportHazardAction } from '@/app/w/actions';
+import { VoiceTextarea } from './VoiceTextarea';
 
 const CATEGORIES = [
-  { key: "fall", Icon: LadderIcon },
-  { key: "electric", Icon: BoltIcon },
-  { key: "fire", Icon: FlameIcon },
-  { key: "equipment", Icon: HardHatIcon },
-  { key: "other", Icon: DotsIcon },
+  { key: 'fall', Icon: LadderIcon },
+  { key: 'electric', Icon: BoltIcon },
+  { key: 'fire', Icon: FlameIcon },
+  { key: 'equipment', Icon: HardHatIcon },
+  { key: 'other', Icon: DotsIcon },
 ] as const;
 
-const SEVERITIES = ["low", "medium", "high", "critical"] as const;
+const SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
 type Severity = (typeof SEVERITIES)[number];
 
 export function HazardForm() {
   const t = useT();
   const locale = useLocale();
   const [category, setCategory] = useState<string | null>(null);
-  const [severity, setSeverity] = useState<Severity>("medium");
-  const [text, setText] = useState("");
+  const [severity, setSeverity] = useState<Severity>('medium');
+  const [text, setText] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
@@ -36,7 +43,7 @@ export function HazardForm() {
 
   function send() {
     if (!ready || category === null) {
-      setError(t("hazard.needMore"));
+      setError(t('hazard.needMore'));
       return;
     }
     setError(null);
@@ -51,9 +58,9 @@ export function HazardForm() {
       if (res.ok) {
         setSentId(res.id);
         vibrate(15);
-        speak(t("hazard.thanks"), locale);
+        speak(t('hazard.thanks'), locale);
       } else {
-        setError(t("hazard.error"));
+        setError(t('hazard.error'));
       }
     });
   }
@@ -63,12 +70,12 @@ export function HazardForm() {
       <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">
           <Stamp announce variant="hivis" id={sentId} className="text-3xl">
-            {t("hazard.stamp.logged")}
+            {t('hazard.stamp.logged')}
           </Stamp>
-          <p className="text-body text-center">{t("hazard.thanks")}</p>
+          <p className="text-body text-center">{t('hazard.thanks')}</p>
         </div>
         <div className="sticky bottom-0 flex flex-col gap-2 bg-paper px-4 pb-3 pt-2">
-          <ButtonLink href={`/w/hazard/${sentId}`}>{t("hazard.seeStatus")}</ButtonLink>
+          <ButtonLink href={`/w/hazard/${sentId}`}>{t('hazard.seeStatus')}</ButtonLink>
         </div>
       </div>
     );
@@ -78,8 +85,12 @@ export function HazardForm() {
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-5 px-4 pb-4 pt-2">
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-h2 mb-2">{t("hazard.pickType")}</legend>
-          <div role="radiogroup" aria-label={t("hazard.pickType")} className="grid grid-cols-2 gap-3">
+          <legend className="text-h2 mb-2">{t('hazard.pickType')}</legend>
+          <div
+            role="radiogroup"
+            aria-label={t('hazard.pickType')}
+            className="grid grid-cols-2 gap-3"
+          >
             {CATEGORIES.map(({ key, Icon }) => (
               <button
                 key={key}
@@ -90,7 +101,9 @@ export function HazardForm() {
                 className="choice choice-danger flex min-h-20 flex-col items-start justify-between gap-2 rounded-[6px] p-3 text-start"
               >
                 <Icon size={32} />
-                <span className="text-label font-semibold leading-snug">{t(`hazard.cat.${key}`)}</span>
+                <span className="text-label font-semibold leading-snug">
+                  {t(`hazard.cat.${key}`)}
+                </span>
               </button>
             ))}
           </div>
@@ -98,15 +111,19 @@ export function HazardForm() {
 
         <VoiceTextarea
           id="hazard-text"
-          label={t("hazard.describe")}
+          label={t('hazard.describe')}
           value={text}
           onChange={setText}
-          placeholder={t("hazard.placeholder")}
+          placeholder={t('hazard.placeholder')}
         />
 
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-h2 mb-2">{t("hazard.severityTitle")}</legend>
-          <div role="radiogroup" aria-label={t("hazard.severityTitle")} className="grid grid-cols-2 gap-3">
+          <legend className="text-h2 mb-2">{t('hazard.severityTitle')}</legend>
+          <div
+            role="radiogroup"
+            aria-label={t('hazard.severityTitle')}
+            className="grid grid-cols-2 gap-3"
+          >
             {SEVERITIES.map((s) => (
               <button
                 key={s}
@@ -129,15 +146,15 @@ export function HazardForm() {
           onClick={() => setAnonymous((a) => !a)}
           className="flex min-h-14 items-center justify-between gap-3 rounded-[10px] border-2 border-graphite bg-card px-4 text-start"
         >
-          <span className="text-body font-semibold">{t("hazard.anonymous")}</span>
+          <span className="text-body font-semibold">{t('hazard.anonymous')}</span>
           <span
             aria-hidden="true"
             className={
-              "flex h-8 w-14 shrink-0 items-center rounded-full border-2 border-graphite px-0.5 " +
-              (anonymous ? "justify-end bg-ink" : "justify-start bg-paper")
+              'flex h-8 w-14 shrink-0 items-center rounded-full border-2 border-graphite px-0.5 ' +
+              (anonymous ? 'justify-end bg-ink' : 'justify-start bg-paper')
             }
           >
-            <span className={"h-5 w-5 rounded-full " + (anonymous ? "bg-white" : "bg-graphite")} />
+            <span className={'h-5 w-5 rounded-full ' + (anonymous ? 'bg-white' : 'bg-graphite')} />
           </span>
         </button>
 
@@ -150,7 +167,7 @@ export function HazardForm() {
       <div className="sticky bottom-0 bg-paper px-4 pb-3 pt-2">
         <Button variant="danger" disabled={pending} onClick={send}>
           <ConeIcon />
-          {pending ? t("hazard.sending") : t("hazard.send")}
+          {pending ? t('hazard.sending') : t('hazard.send')}
         </Button>
       </div>
     </div>

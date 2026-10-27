@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import { BackspaceIcon, CheckIcon } from "@/src/components/icons";
-import { useT } from "@/src/i18n/client";
-import { vibrate } from "./speech";
-import "./ui.css";
+import { useEffect, useRef } from 'react';
+import { BackspaceIcon, CheckIcon } from '@/src/components/icons';
+import { useT } from '@/src/i18n/client';
+import { vibrate } from './speech';
+import './ui.css';
 
 type PinPadProps = {
   value: string;
@@ -22,7 +22,7 @@ type PinPadProps = {
   className?: string;
 };
 
-const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 /** A 3x4 pad of 64 px keys. Also accepts physical keys. */
 export function PinPad({
@@ -34,7 +34,7 @@ export function PinPad({
   submitLabel,
   disabled = false,
   physicalKeys = true,
-  className = "",
+  className = '',
 }: PinPadProps) {
   const t = useT();
   // Keep the latest props visible to the single window listener.
@@ -50,17 +50,17 @@ export function PinPad({
       if (off || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
       if (/^\d$/.test(e.key)) {
         if (v.length < max) change(v + e.key);
         e.preventDefault();
-      } else if (e.key === "Backspace") {
+      } else if (e.key === 'Backspace') {
         change(v.slice(0, -1));
         e.preventDefault();
       }
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [physicalKeys]);
 
   function press(d: string) {
@@ -74,14 +74,14 @@ export function PinPad({
     onChange(value.slice(0, -1));
   }
 
-  const cells = Array.from({ length }, (_, i) => value[i] ?? "");
+  const cells = Array.from({ length }, (_, i) => value[i] ?? '');
   const complete = value.length === length;
 
   return (
     <div className={className}>
       <output
         aria-live="polite"
-        aria-label={t("pad.entered", { n: value.length, total: length })}
+        aria-label={t('pad.entered', { n: value.length, total: length })}
         data-testid="pin-display"
         className="mb-4 flex flex-wrap justify-center gap-2"
       >
@@ -90,11 +90,11 @@ export function PinPad({
             key={i}
             aria-hidden="true"
             className={
-              "flex h-12 items-center justify-center rounded-[6px] border-2 border-graphite bg-card font-mono text-xl tabular-nums " +
-              (length > 6 ? "w-8" : "w-12")
+              'flex h-12 items-center justify-center rounded-[6px] border-2 border-graphite bg-card font-mono text-xl tabular-nums ' +
+              (length > 6 ? 'w-8' : 'w-12')
             }
           >
-            {c ? (masked ? "●" : c) : ""}
+            {c ? (masked ? '●' : c) : ''}
           </span>
         ))}
       </output>
@@ -105,7 +105,7 @@ export function PinPad({
             type="button"
             className="pin-key"
             disabled={disabled}
-            aria-label={t("pad.key", { n: d })}
+            aria-label={t('pad.key', { n: d })}
             onClick={() => press(d)}
           >
             {d}
@@ -115,7 +115,7 @@ export function PinPad({
           type="button"
           className="pin-key pin-key-action"
           disabled={disabled || value.length === 0}
-          aria-label={t("pad.delete")}
+          aria-label={t('pad.delete')}
           onClick={back}
         >
           <BackspaceIcon size={28} />
@@ -124,8 +124,8 @@ export function PinPad({
           type="button"
           className="pin-key"
           disabled={disabled}
-          aria-label={t("pad.key", { n: "0" })}
-          onClick={() => press("0")}
+          aria-label={t('pad.key', { n: '0' })}
+          onClick={() => press('0')}
         >
           0
         </button>
@@ -134,7 +134,7 @@ export function PinPad({
             type="button"
             className="pin-key pin-key-submit"
             disabled={disabled || !complete}
-            aria-label={submitLabel ?? t("login.next")}
+            aria-label={submitLabel ?? t('login.next')}
             onClick={onSubmit}
           >
             <CheckIcon size={28} />

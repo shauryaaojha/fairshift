@@ -1,8 +1,8 @@
-import { ButtonLink } from "@/src/components/ui/Button";
-import { Stamp } from "@/src/components/ui/Stamp";
-import { HazardTimelineView } from "@/src/components/worker/HazardTimeline";
-import { Screen } from "@/src/components/worker/Screen";
-import { DEFAULT_LOCALE, t } from "@/src/i18n";
+import { ButtonLink } from '@/src/components/ui/Button';
+import { Stamp } from '@/src/components/ui/Stamp';
+import { HazardTimelineView } from '@/src/components/worker/HazardTimeline';
+import { Screen } from '@/src/components/worker/Screen';
+import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import {
   formatClock,
   formatDay,
@@ -10,25 +10,29 @@ import {
   hazardTimeline,
   loadHazard,
   requireWorkerContext,
-} from "@/src/server/services/workerUi";
+} from '@/src/server/services/workerViews';
 
 export default async function HazardStatusPage({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, ctx, cookieLocale] = await Promise.all([params, requireWorkerContext(), getLocale()]);
+  const [{ id }, ctx, cookieLocale] = await Promise.all([
+    params,
+    requireWorkerContext(),
+    getLocale(),
+  ]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
-  const back = t(locale, "common.back");
+  const back = t(locale, 'common.back');
   const hazard = await loadHazard(ctx.worker, id);
 
   if (!hazard) {
     return (
       <Screen
-        title={t(locale, "hazard.statusTitle")}
-        speakText={t(locale, "hazard.notFound")}
+        title={t(locale, 'hazard.statusTitle')}
+        speakText={t(locale, 'hazard.notFound')}
         backLabel={back}
         backHref="/w/hazard"
-        action={<ButtonLink href="/w">{t(locale, "common.home")}</ButtonLink>}
+        action={<ButtonLink href="/w">{t(locale, 'common.home')}</ButtonLink>}
       >
         <p role="alert" className="text-body">
-          {t(locale, "hazard.notFound")}
+          {t(locale, 'hazard.notFound')}
         </p>
       </Screen>
     );
@@ -36,10 +40,10 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
 
   const tl = hazardTimeline(hazard);
   const labels: Record<string, string> = {
-    reported: t(locale, "hazard.status.reported"),
-    escalated: t(locale, "hazard.status.escalated"),
-    acknowledged: t(locale, "hazard.status.acknowledged"),
-    resolved: t(locale, "hazard.status.resolved"),
+    reported: t(locale, 'hazard.status.reported'),
+    escalated: t(locale, 'hazard.status.escalated'),
+    acknowledged: t(locale, 'hazard.status.acknowledged'),
+    resolved: t(locale, 'hazard.status.resolved'),
   };
   const times: Partial<Record<string, string>> = {};
   for (const s of tl.steps) {
@@ -48,11 +52,15 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
 
   return (
     <Screen
-      title={t(locale, "hazard.statusTitle")}
-      speakText={t(locale, "hazard.statusSpeak", { status: labels[hazard.status] })}
+      title={t(locale, 'hazard.statusTitle')}
+      speakText={t(locale, 'hazard.statusSpeak', { status: labels[hazard.status] })}
       backLabel={back}
       backHref="/w/hazard"
-      action={<ButtonLink href="/w/hazard" variant="secondary" fullWidth className="min-h-14">{t(locale, "hazard.newReport")}</ButtonLink>}
+      action={
+        <ButtonLink href="/w/hazard" variant="secondary" fullWidth className="min-h-14">
+          {t(locale, 'hazard.newReport')}
+        </ButtonLink>
+      }
     >
       <section className="flex flex-col gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <div className="flex items-start justify-between gap-3">
@@ -62,7 +70,9 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
           </Stamp>
         </div>
         <p className="text-body">{hazard.description}</p>
-        {hazard.anonymous ? <p className="text-small text-muted">{t(locale, "hazard.anonNote")}</p> : null}
+        {hazard.anonymous ? (
+          <p className="text-small text-muted">{t(locale, 'hazard.anonNote')}</p>
+        ) : null}
       </section>
       <HazardTimelineView steps={tl.steps} labels={labels} times={times} />
     </Screen>

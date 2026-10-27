@@ -1,17 +1,17 @@
-import { Suspense } from "react";
-import { getAdminContext } from "../../_lib/context";
-import { getRiskData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
-import { RiskTable } from "@/src/components/admin/RiskTable";
+import { Suspense } from 'react';
+import { getAdminContext } from '../../_lib/context';
+import { getRiskData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
+import { RiskTable } from '@/src/components/admin/RiskTable';
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
-const pick = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+const pick = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
 
 async function Risk({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const filter = pick(sp.filter) ?? "all";
-  const team = pick(sp.team) ?? "all";
+  const filter = pick(sp.filter) ?? 'all';
+  const team = pick(sp.team) ?? 'all';
   const ctx = await getAdminContext();
   const { rows, teams } = await getRiskData(ctx.sector.key, { filter, team });
 

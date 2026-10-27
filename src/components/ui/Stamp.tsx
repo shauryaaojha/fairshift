@@ -1,7 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
-import "./ui.css";
+import type { CSSProperties, ReactNode } from 'react';
+import './ui.css';
 
-export type StampVariant = "ink" | "cleared" | "escalated" | "hivis";
+export type StampVariant = 'ink' | 'cleared' | 'escalated' | 'hivis';
 
 /**
  * Deterministic rotation from -4deg to +3deg derived from the record id,
@@ -37,26 +37,29 @@ type StampProps = {
  * animation is CSS only and is switched off by prefers-reduced-motion.
  */
 export function Stamp({
-  variant = "ink",
-  id = "stamp",
+  variant = 'ink',
+  id = 'stamp',
   sub,
   announce = false,
   animate = true,
   delayMs,
-  className = "",
+  className = '',
   children,
 }: StampProps) {
   const style = {
-    "--stamp-rotation": `${stampRotation(id).toFixed(1)}deg`,
+    '--stamp-rotation': `${stampRotation(id).toFixed(1)}deg`,
     ...(delayMs ? { animationDelay: `${delayMs}ms` } : {}),
   } as CSSProperties;
-  const classes = ["stamp", `stamp-${variant}`, animate ? "stamp-animate" : "", className]
+  const classes = ['stamp', `stamp-${variant}`, animate ? 'stamp-animate' : '', className]
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
   return (
     <span
-      {...(announce ? { role: "status", "aria-live": "polite" as const } : {})}
-      className={classes} style={style} data-variant={variant}>
+      {...(announce ? { role: 'status', 'aria-live': 'polite' as const } : {})}
+      className={classes}
+      style={style}
+      data-variant={variant}
+    >
       <span>{children}</span>
       {sub ? <span className="stamp-sub">{sub}</span> : null}
     </span>

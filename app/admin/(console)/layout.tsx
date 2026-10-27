@@ -1,11 +1,11 @@
-import { Suspense, type ReactNode } from "react";
-import Link from "next/link";
-import { getAdminContext } from "../_lib/context";
-import { logoutAction, setSectorAction } from "../actions";
-import { AdminRail } from "@/src/components/admin/AdminRail";
-import { SectorSwitcher } from "@/src/components/admin/SectorSwitcher";
-import { ADMIN_NAV } from "@/src/components/admin/nav";
-import { StairsMenu } from "@/src/components/motion/StairsMenu";
+import { Suspense, type ReactNode } from 'react';
+import Link from 'next/link';
+import { getAdminContext } from '../_lib/context';
+import { logoutAction, setSectorAction } from '../actions';
+import { AdminRail } from '@/src/components/admin/AdminRail';
+import { SectorSwitcher } from '@/src/components/admin/SectorSwitcher';
+import { ADMIN_NAV } from '@/src/components/admin/nav';
+import { StairsMenu } from '@/src/components/motion/StairsMenu';
 
 async function Shell({ children }: { children: ReactNode }) {
   const ctx = await getAdminContext();
@@ -29,10 +29,17 @@ async function Shell({ children }: { children: ReactNode }) {
           FairShift
         </Link>
         <div className="hidden-below-lg">
-          <SectorSwitcher current={sectorKey} allowed={ctx.allowedSectors} action={setSectorAction} />
+          <SectorSwitcher
+            current={sectorKey}
+            allowed={ctx.allowedSectors}
+            action={setSectorAction}
+          />
         </div>
         <div className="admin-who">
-          <StairsMenu items={ADMIN_NAV.map((n) => ({ href: n.href, label: n.label }))} footer={footer} />
+          <StairsMenu
+            items={ADMIN_NAV.map((n) => ({ href: n.href, label: n.label }))}
+            footer={footer}
+          />
           <form action={logoutAction} className="hidden-below-lg">
             <button type="submit" className="btn-quiet btn-small">
               Sign out

@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Shared Types
-// All domain, service, and UI layers import from here.
-// ============================================================
+// Shared Types
 
 // ── Locale ──────────────────────────────────────────────────
 export type Locale = 'en' | 'hi' | 'ta';
@@ -18,14 +15,14 @@ export interface Org {
 }
 
 export interface OrgPolicy {
-  dailyHoursLimit?: number;    // default 8
-  weeklyHoursLimit?: number;   // default 48
-  otMultiplier?: number;       // default 2
-  pfRate?: number;             // default 0.12
-  pfCeiling?: number;          // default 15000
-  esiRate?: number;            // default 0.0075
-  esiCeiling?: number;         // default 21000
-  anonymityK?: number;         // default 3
+  dailyHoursLimit?: number; // default 8
+  weeklyHoursLimit?: number; // default 48
+  otMultiplier?: number; // default 2
+  pfRate?: number; // default 0.12
+  pfCeiling?: number; // default 15000
+  esiRate?: number; // default 0.0075
+  esiCeiling?: number; // default 21000
+  anonymityK?: number; // default 3
 }
 
 export interface Site {
@@ -41,7 +38,8 @@ export interface Site {
 
 // ── Worker ──────────────────────────────────────────────────
 export type PayType = 'daily' | 'monthly';
-export type WorkerRole = 'mason' | 'helper' | 'electrician' | 'housekeeping' | 'security' | 'maintenance' | 'plumber';
+export type WorkerRole =
+  'mason' | 'helper' | 'electrician' | 'housekeeping' | 'security' | 'maintenance' | 'plumber';
 
 export interface Worker {
   id: string;
@@ -115,29 +113,29 @@ export interface OvertimeResult {
 export interface DailyOvertimeInput {
   totalHoursWorked: number;
   hourlyRate: number;
-  dailyLimit?: number;   // default 8
-  otMultiplier?: number;  // default 2
+  dailyLimit?: number; // default 8
+  otMultiplier?: number; // default 2
 }
 
 export interface WeeklyOvertimeInput {
-  dailyHours: number[];   // array of hours for each day
+  dailyHours: number[]; // array of hours for each day
   hourlyRate: number;
-  weeklyLimit?: number;   // default 48
-  otMultiplier?: number;  // default 2
+  weeklyLimit?: number; // default 48
+  otMultiplier?: number; // default 2
 }
 
 // ── Payslip ─────────────────────────────────────────────────
 export interface PayslipInput {
   worker: Pick<Worker, 'basePay' | 'allowances' | 'payType'>;
   shifts: Shift[];
-  periodStart: string;  // ISO date
-  periodEnd: string;    // ISO date
+  periodStart: string; // ISO date
+  periodEnd: string; // ISO date
   policy?: OrgPolicy;
 }
 
 export interface PayslipLine {
-  key: string;            // i18n key e.g. 'payslip.basePay'
-  label: string;          // fallback label
+  key: string; // i18n key e.g. 'payslip.basePay'
+  label: string; // fallback label
   amount: number;
   type: 'earning' | 'deduction' | 'total';
 }
@@ -153,10 +151,10 @@ export interface PayslipResult {
 
 // ── Fatigue ─────────────────────────────────────────────────
 export type FatigueFlagType =
-  | 'weekly_hours_exceeded'    // >48h in rolling 7 days
-  | 'long_shift'              // shift >10h
-  | 'short_rest'              // rest gap <10h
-  | 'no_rest_day';            // 7+ consecutive days
+  | 'weekly_hours_exceeded' // >48h in rolling 7 days
+  | 'long_shift' // shift >10h
+  | 'short_rest' // rest gap <10h
+  | 'no_rest_day'; // 7+ consecutive days
 
 export interface FatigueFlag {
   type: FatigueFlagType;
@@ -176,9 +174,9 @@ export interface FatigueInput {
 
 // ── Quit Risk ───────────────────────────────────────────────
 export interface QuitRiskFactor {
-  factor: string;         // e.g. 'ot_load'
-  weight: number;         // how much it contributed (0-100)
-  detail: string;         // human-readable detail
+  factor: string; // e.g. 'ot_load'
+  weight: number; // how much it contributed (0-100)
+  detail: string; // human-readable detail
 }
 
 export interface QuitRiskInput {
@@ -192,8 +190,8 @@ export interface QuitRiskInput {
 }
 
 export interface QuitRiskResult {
-  score: number;          // 0-100
-  topReasons: QuitRiskFactor[];  // top 3
+  score: number; // 0-100
+  topReasons: QuitRiskFactor[]; // top 3
 }
 
 // ── Hazard ──────────────────────────────────────────────────
@@ -201,10 +199,10 @@ export type HazardSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type HazardStatus = 'reported' | 'acknowledged' | 'resolved' | 'escalated';
 
 export interface HazardSlaConfig {
-  critical: number;   // hours: 1
-  high: number;       // hours: 4
-  medium: number;     // hours: 24
-  low: number;        // hours: 72
+  critical: number; // hours: 1
+  high: number; // hours: 4
+  medium: number; // hours: 24
+  low: number; // hours: 72
 }
 
 export const DEFAULT_HAZARD_SLA: HazardSlaConfig = {
@@ -246,10 +244,10 @@ export interface FeedbackSubmission {
   /** ISO week string e.g. '2026-W43' */
   isoWeek: string;
   /** No worker id – anonymous by design */
-  managerRespect: number;   // 1-5
-  safetyRating: number;     // 1-5
-  payFairness: number;      // 1-5
-  workloadRating: number;   // 1-5
+  managerRespect: number; // 1-5
+  safetyRating: number; // 1-5
+  payFairness: number; // 1-5
+  workloadRating: number; // 1-5
   comment: string | null;
 }
 
@@ -278,8 +276,8 @@ export interface GeofenceResult {
 // ── QR Code ─────────────────────────────────────────────────
 export interface QrCodeResult {
   code: string;
-  validFrom: number;   // unix timestamp
-  validUntil: number;  // unix timestamp
+  validFrom: number; // unix timestamp
+  validUntil: number; // unix timestamp
 }
 
 // ── Skills / Passport ───────────────────────────────────────
@@ -310,7 +308,7 @@ export interface ApiSuccess<T> {
 
 // ── Attendance summary ──────────────────────────────────────
 export interface DailyAttendance {
-  date: string;  // ISO date
+  date: string; // ISO date
   present: number;
   total: number;
 }

@@ -1,36 +1,29 @@
-import type { Metadata } from "next";
-import { Anek_Latin, Spline_Sans_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Anek_Latin, Spline_Sans_Mono } from 'next/font/google';
+import './globals.css';
 
 const anekLatin = Anek_Latin({
-  variable: "--font-anek",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["wdth"],
+  variable: '--font-anek',
+  subsets: ['latin'],
+  display: 'swap',
+  axes: ['wdth'],
 });
 
 const splineSansMono = Spline_Sans_Mono({
-  variable: "--font-mono-display",
-  subsets: ["latin"],
-  display: "swap",
+  variable: '--font-mono-display',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "FairShift — Fair pay. Safe sites. A voice that counts.",
+  title: 'FairShift — Fair pay. Safe sites. A voice that counts.',
   description:
-    "Digital platform for fair wages, safe workplaces and worker voice across construction sites and college campuses. SDG 8.",
+    'Digital platform for fair wages, safe workplaces and worker voice across construction sites and college campuses. SDG 8.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${anekLatin.variable} ${splineSansMono.variable}`}
-    >
+    <html lang="en" className={`${anekLatin.variable} ${splineSansMono.variable}`}>
       <body className="font-sans min-h-dvh flex flex-col">
         <a href="#main" className="skip-link">
           Skip to content
@@ -38,9 +31,7 @@ export default function RootLayout({
         <main id="main" className="flex-1 flex flex-col">
           {children}
         </main>
-        <footer className="text-small text-center py-4 text-muted">
-          Demo data · FairShift
-        </footer>
+        <footer className="text-small text-center py-4 text-muted">Demo data · FairShift</footer>
       </body>
     </html>
   );

@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Repositories: Interface Contracts
-// Unified repository contracts for both in-memory and Firestore adapters
-// ============================================================
+// Repositories: Interface Contracts
 
 import type {
   Org,

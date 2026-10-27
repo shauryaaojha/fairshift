@@ -1,15 +1,18 @@
-// ============================================================
-// FairShift - Admin UI compositions
-// Thin, testable layer between the admin pages and adminService/repos.
-// Pure helpers (sector config, state sentence, heatmap, filters) are
-// exported separately so they can be unit tested without a database.
-// ============================================================
+/**
+ * Admin views: shapes and composes domain and repository data for admin console pages.
+ * Services handle business use-cases and domain rules; views shape and compose data specifically
+ * for presentation and page rendering.
+ */
 
 import QRCode from 'qrcode';
 import { adminService, type PublicSite, type PublicWorker } from './adminService';
 import { generateSiteQrCode } from '../domain/qrCode';
 import { getDatabase } from '../repos';
-import { computeHazardStatus, getRemainingSlaSeconds, formatSlaRemaining } from '../domain/hazardSla';
+import {
+  computeHazardStatus,
+  getRemainingSlaSeconds,
+  formatSlaRemaining,
+} from '../domain/hazardSla';
 import { getSkillStatus } from '../domain/skills';
 import { istDateKey } from '../domain/time';
 import type {
@@ -219,7 +222,9 @@ export function buildAttendanceRows(
       const w = byId.get(s.workerId);
       if (!w) return null;
       const hours = s.checkOut
-        ? Math.round(((new Date(s.checkOut).getTime() - new Date(s.checkIn).getTime()) / 3600000) * 10) / 10
+        ? Math.round(
+            ((new Date(s.checkOut).getTime() - new Date(s.checkIn).getTime()) / 3600000) * 10,
+          ) / 10
         : null;
       return {
         shiftId: s.id,
@@ -234,7 +239,9 @@ export function buildAttendanceRows(
       };
     })
     .filter((r): r is AttendanceRow => r !== null)
-    .filter((r) => (opts.status === 'on-site' ? r.onSite : opts.status === 'over-8' ? (r.hours ?? 0) > 8 : true))
+    .filter((r) =>
+      opts.status === 'on-site' ? r.onSite : opts.status === 'over-8' ? (r.hours ?? 0) > 8 : true,
+    )
     .filter((r) => !opts.team || opts.team === 'all' || r.team === opts.team)
     .sort((a, b) => b.checkIn.localeCompare(a.checkIn) || a.workerName.localeCompare(b.workerName));
 }
@@ -243,10 +250,18 @@ export function buildAttendanceRows(
 
 export type RiskRow = PublicWorker & { risk: QuitRiskResult };
 
-export function filterRiskRows(rows: RiskRow[], filter: string | undefined, team?: string): RiskRow[] {
+export function filterRiskRows(
+  rows: RiskRow[],
+  filter: string | undefined,
+  team?: string,
+): RiskRow[] {
   let out = rows;
   if (filter === 'high') out = out.filter((r) => r.risk.score > 50);
-  if (filter === 'fatigue') out = out.filter((r) => r.risk.topReasons.some((t) => t.factor === 'fatigue_flags' || t.factor === 'ot_load'));
+  if (filter === 'fatigue') {
+    out = out.filter((r) =>
+      r.risk.topReasons.some((t) => t.factor === 'fatigue_flags' || t.factor === 'ot_load'),
+    );
+  }
   if (team && team !== 'all') out = out.filter((r) => r.team === team);
   return out;
 }
@@ -323,7 +338,9 @@ export async function getRiskData(sector: Sector, opts: { filter?: string; team?
   return { rows: filterRiskRows(all, opts.filter, opts.team), teams };
 }
 
-export async function getSitesData(allowed: Sector[]): Promise<{ sector: Sector; sites: PublicSite[] }[]> {
+export async function getSitesData(
+  allowed: Sector[],
+): Promise<{ sector: Sector; sites: PublicSite[] }[]> {
   const out: { sector: Sector; sites: PublicSite[] }[] = [];
   for (const key of allowed) {
     out.push({ sector: key, sites: await adminService.getSites(SECTORS[key].orgId) });
@@ -339,7 +356,10 @@ async function hazardInOrg(hazardId: string, orgId: string): Promise<HazardRepor
   return hazard;
 }
 
-export async function acknowledgeHazardForOrg(hazardId: string, orgId: string): Promise<HazardReport> {
+export async function acknowledgeHazardForOrg(
+  hazardId: string,
+  orgId: string,
+): Promise<HazardReport> {
   await hazardInOrg(hazardId, orgId);
   return adminService.acknowledgeHazard(hazardId, [orgId]);
 }

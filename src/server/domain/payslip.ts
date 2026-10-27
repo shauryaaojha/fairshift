@@ -1,18 +1,7 @@
-// ============================================================
-// FairShift — Domain: Payslip Engine (Pure)
-// Compliance:
-// - PF: 12% of basic with wage ceiling ₹15,000
-// - ESI: 0.75% of gross if gross <= ₹21,000
-// - OT: Calculated via overtime engine (2x ordinary rate)
-// - Line-by-line i18n explanation keys
-// ============================================================
+// Domain: Payslip Engine (Pure)
 
 import { istDateKey } from './time';
-import type {
-  PayslipInput,
-  PayslipResult,
-  PayslipLine,
-} from '../../shared/types';
+import type { PayslipInput, PayslipResult, PayslipLine } from '../../shared/types';
 import { calculateShiftsOvertime } from './overtime';
 
 export const DEFAULT_PF_RATE = 0.12;
@@ -52,9 +41,7 @@ export function calculatePayslip(input: PayslipInput): PayslipResult {
   if (worker.payType === 'daily') {
     // Count unique days or completed shifts
     const uniqueDays = new Set(
-      shifts
-        .filter((s) => s.checkOut !== null)
-        .map((s) => istDateKey(s.checkIn))
+      shifts.filter((s) => s.checkOut !== null).map((s) => istDateKey(s.checkIn)),
     );
     baseEarnings = uniqueDays.size * worker.basePay;
   } else {

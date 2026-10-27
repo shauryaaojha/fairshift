@@ -44,10 +44,7 @@ describe('Server: Auth & Storage', () => {
 
     it('rejects expired tokens', () => {
       // Negative TTL = expired
-      const expiredToken = signSession(
-        { userId: 'u1', orgId: 'o1', role: 'admin' },
-        -100
-      );
+      const expiredToken = signSession({ userId: 'u1', orgId: 'o1', role: 'admin' }, -100);
       expect(verifySession(expiredToken)).toBeNull();
     });
   });

@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
-import type { HazardTimeline as Timeline } from "@/src/server/services/workerUi";
+import type { CSSProperties } from 'react';
+import type { HazardTimeline as Timeline } from '@/src/server/services/workerViews';
 
 const ROW = 76;
 const X = 16;
@@ -14,7 +14,7 @@ export function HazardTimelineView({
   labels,
   times,
 }: {
-  steps: Timeline["steps"];
+  steps: Timeline['steps'];
   labels: Record<string, string>;
   /** Preformatted time per step key, if known. */
   times: Partial<Record<string, string>>;
@@ -47,7 +47,7 @@ export function HazardTimelineView({
             d={`M${X} ${y(0)} V${y(lastDone)}`}
             pathLength={1}
             className="draw-path"
-            style={{ "--path-length": 1 } as CSSProperties}
+            style={{ '--path-length': 1 } as CSSProperties}
             stroke="var(--graphite)"
             strokeWidth={4}
             strokeLinecap="round"
@@ -55,19 +55,31 @@ export function HazardTimelineView({
           />
         ) : null}
         {steps.map((s, i) => {
-          const escalated = s.key === "escalated";
-          const color = escalated ? "var(--escalated)" : s.key === "resolved" ? "var(--cleared)" : "var(--ink)";
+          const escalated = s.key === 'escalated';
+          const color = escalated
+            ? 'var(--escalated)'
+            : s.key === 'resolved'
+              ? 'var(--cleared)'
+              : 'var(--ink)';
           return (
             <g key={s.key}>
               {escalated ? (
-                <circle className="node-pulse" cx={X} cy={y(i)} r={9} fill="none" stroke={color} strokeWidth={2} />
+                <circle
+                  className="node-pulse"
+                  cx={X}
+                  cy={y(i)}
+                  r={9}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={2}
+                />
               ) : null}
               <circle
                 cx={X}
                 cy={y(i)}
                 r={10}
-                fill={s.done ? color : "var(--card)"}
-                stroke={s.done ? "var(--graphite)" : "var(--muted)"}
+                fill={s.done ? color : 'var(--card)'}
+                stroke={s.done ? 'var(--graphite)' : 'var(--muted)'}
                 strokeWidth={2}
               />
               {s.done ? (
@@ -88,7 +100,9 @@ export function HazardTimelineView({
         {steps.map((s) => (
           <li key={s.key} className="flex items-center pl-12" style={{ height: ROW }}>
             <div className="min-w-0">
-              <p className={"text-body " + (s.done ? "font-semibold" : "text-muted")}>{labels[s.key]}</p>
+              <p className={'text-body ' + (s.done ? 'font-semibold' : 'text-muted')}>
+                {labels[s.key]}
+              </p>
               {times[s.key] ? <p className="text-mono text-muted">{times[s.key]}</p> : null}
             </div>
           </li>

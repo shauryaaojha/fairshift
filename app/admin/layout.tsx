@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import { Suspense, type ReactNode } from "react";
-import { TransitionProvider } from "@/src/components/motion/TransitionProvider";
-import "@/src/components/admin/admin.css";
+import type { Metadata } from 'next';
+import { Suspense, type ReactNode } from 'react';
+import { TransitionProvider } from '@/src/components/motion/TransitionProvider';
+import '@/src/components/admin/admin.css';
 
 export const metadata: Metadata = {
-  title: "FairShift console",
-  description: "Live attendance, hazards, feedback and quit-risk for supervisors.",
+  title: 'FairShift console',
+  description: 'Live attendance, hazards, feedback and quit-risk for supervisors.',
 };
 
 // TransitionRouter reads usePathname(), so with Cache Components it has to sit inside

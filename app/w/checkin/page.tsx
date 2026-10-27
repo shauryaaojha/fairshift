@@ -1,7 +1,12 @@
-import { TopBar } from "@/src/components/ui/TopBar";
-import { CheckinPanel } from "@/src/components/worker/CheckinPanel";
-import { DEFAULT_LOCALE, t } from "@/src/i18n";
-import { formatClock, getLocale, loadHome, requireWorkerContext } from "@/src/server/services/workerUi";
+import { TopBar } from '@/src/components/ui/TopBar';
+import { CheckinPanel } from '@/src/components/worker/CheckinPanel';
+import { DEFAULT_LOCALE, t } from '@/src/i18n';
+import {
+  formatClock,
+  getLocale,
+  loadHome,
+  requireWorkerContext,
+} from '@/src/server/services/workerViews';
 
 export default async function CheckinPage({
   searchParams,
@@ -21,9 +26,9 @@ export default async function CheckinPage({
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
-        title={t(locale, "checkin.title")}
-        speakText={t(locale, "checkin.speak")}
-        backLabel={t(locale, "common.back")}
+        title={t(locale, 'checkin.title')}
+        speakText={t(locale, 'checkin.speak')}
+        backLabel={t(locale, 'common.back')}
         transitionName="tile-checkin"
       />
       <CheckinPanel

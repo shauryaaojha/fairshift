@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { TransitionRouter } from "next-transition-router";
-import { prefersReducedMotion, setupGsap } from "./gsapSetup";
+import { useEffect, useRef, type ReactNode } from 'react';
+import { TransitionRouter } from 'next-transition-router';
+import { prefersReducedMotion, setupGsap } from './gsapSetup';
 
 const CELL = 48;
 
@@ -27,16 +27,16 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
       grid.style.gridTemplateColumns = `repeat(${cols}, ${CELL}px)`;
       grid.style.gridAutoRows = `${CELL}px`;
       for (let i = 0; i < cols * rows; i++) {
-        const c = document.createElement("div");
-        c.className = "register-cell";
-        c.style.opacity = "0";
+        const c = document.createElement('div');
+        c.className = 'register-cell';
+        c.style.opacity = '0';
         grid.appendChild(c);
         cellsRef.current.push(c);
       }
     };
     build();
-    window.addEventListener("resize", build);
-    return () => window.removeEventListener("resize", build);
+    window.addEventListener('resize', build);
+    return () => window.removeEventListener('resize', build);
   }, []);
 
   return (
@@ -50,8 +50,8 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
         const tween = gsap.to(cellsRef.current, {
           opacity: 1,
           duration: 0.08,
-          ease: "power2.inOut",
-          stagger: { amount: 0.3, from: "random" },
+          ease: 'power2.inOut',
+          stagger: { amount: 0.3, from: 'random' },
           onComplete: next,
         });
         return () => {
@@ -69,8 +69,8 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
           opacity: 0,
           duration: 0.08,
           delay: 0.1,
-          ease: "power2.inOut",
-          stagger: { amount: 0.3, from: "random" },
+          ease: 'power2.inOut',
+          stagger: { amount: 0.3, from: 'random' },
           onComplete: next,
         });
         return () => {

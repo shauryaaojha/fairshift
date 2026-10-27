@@ -1,19 +1,19 @@
-import { Suspense } from "react";
-import { getAdminContext } from "../../_lib/context";
-import { getAttendanceData } from "@/src/server/services/adminUi";
-import { LineReveal } from "@/src/components/motion/LineReveal";
-import { AttendanceChart } from "@/src/components/admin/AttendanceChart";
-import { fmtDay, fmtTime } from "@/src/components/admin/format";
-import { Stamp } from "@/src/components/ui/Stamp";
+import { Suspense } from 'react';
+import { getAdminContext } from '../../_lib/context';
+import { getAttendanceData } from '@/src/server/services/adminViews';
+import { LineReveal } from '@/src/components/motion/LineReveal';
+import { AttendanceChart } from '@/src/components/admin/AttendanceChart';
+import { fmtDay, fmtTime } from '@/src/components/admin/format';
+import { Stamp } from '@/src/components/ui/Stamp';
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
-const pick = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+const pick = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
 
-async function Attendance({ searchParams }: { searchParams: SP }) {
+export async function Attendance({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const status = pick(sp.status) ?? "all";
-  const team = pick(sp.team) ?? "all";
+  const status = pick(sp.status) ?? 'all';
+  const team = pick(sp.team) ?? 'all';
   const ctx = await getAdminContext();
   const { rows, teams, trend } = await getAttendanceData(ctx.sector.key, { status, team });
 
@@ -60,7 +60,12 @@ async function Attendance({ searchParams }: { searchParams: SP }) {
         </p>
       </form>
 
-      <div className="table-wrap">
+      <div
+        className="table-wrap"
+        tabIndex={0}
+        role="region"
+        aria-label="Shifts in the last 14 days"
+      >
         <table className="data-table">
           <caption className="sr-only">Shifts in the last 14 days</caption>
           <thead>
@@ -89,7 +94,7 @@ async function Attendance({ searchParams }: { searchParams: SP }) {
                 <td>{fmtDay(r.checkIn)}</td>
                 <td className="num">{fmtTime(r.checkIn)}</td>
                 <td className="num">{fmtTime(r.checkOut)}</td>
-                <td className="num">{r.hours === null ? "-" : r.hours.toFixed(1)}</td>
+                <td className="num">{r.hours === null ? '-' : r.hours.toFixed(1)}</td>
                 <td>{r.method}</td>
                 <td>
                   {r.onSite ? (

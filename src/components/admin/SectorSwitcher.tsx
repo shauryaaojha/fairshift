@@ -1,5 +1,5 @@
-import { SECTORS } from "@/src/server/services/adminUi";
-import type { Sector } from "@/src/shared/types";
+import { SECTORS } from '@/src/server/services/adminViews';
+import type { Sector } from '@/src/shared/types';
 
 /** Segmented control. Each segment is a form button so it works without JS. */
 export function SectorSwitcher({

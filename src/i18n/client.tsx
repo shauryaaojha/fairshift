@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { createContext, useCallback, useContext, useMemo } from "react";
-import { en, type Messages } from "./en";
-import { translate, type Locale, type Params } from "./index";
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import { en, type Messages } from './en';
+import { translate, type Locale, type Params } from './index';
 
 type Ctx = { locale: Locale; messages: Messages };
 
-const I18nContext = createContext<Ctx>({ locale: "en", messages: en });
+const I18nContext = createContext<Ctx>({ locale: 'en', messages: en });
 
 /**
  * Hands one locale's dictionary to client components. Only the active

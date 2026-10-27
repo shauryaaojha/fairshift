@@ -1,12 +1,7 @@
-// ============================================================
-// FairShift — Domain: Anonymity & PII Scrubbing Engine (Pure)
-// Compliance:
-// - Feedback stored without worker id (org, site, team, ISO week only)
-// - Aggregates hidden when count < k (default k = 3)
-// - PII scrubbing on all free-text fields (phones, emails, names)
-// ============================================================
+// Domain: Anonymity & PII Scrubbing Engine (Pure)
 
 import type { FeedbackSubmission, AggregatedFeedback } from '../../shared/types';
+import { DAY_MS } from './time';
 
 export const DEFAULT_ANONYMITY_K = 3;
 
@@ -51,7 +46,7 @@ export function scrubPii(text: string, knownWorkerNames: string[] = []): string 
     const escaped = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const nameRegex = new RegExp(
       '(?<![\\p{L}\\p{M}\\p{N}])' + escaped + '(?![\\p{L}\\p{M}\\p{N}])',
-      'giu'
+      'giu',
     );
     scrubbed = scrubbed.replace(nameRegex, '[REDACTED_NAME]');
   }
@@ -67,7 +62,9 @@ export function calculateIsoWeek(dateInput: Date | string): string {
   // Thursday in current week decides the year.
   date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
   const week1 = new Date(date.getFullYear(), 0, 4);
-  const weekNumber = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  const weekNumber =
+    1 +
+    Math.round(((date.getTime() - week1.getTime()) / DAY_MS - 3 + ((week1.getDay() + 6) % 7)) / 7);
   const weekStr = weekNumber < 10 ? `0${weekNumber}` : `${weekNumber}`;
   return `${date.getFullYear()}-W${weekStr}`;
 }
@@ -81,7 +78,7 @@ export function aggregateFeedback(
   team: string,
   isoWeek: string,
   minK: number = DEFAULT_ANONYMITY_K,
-  rosterNames: string[] = []
+  rosterNames: string[] = [],
 ): AggregatedFeedback {
   const count = submissions.length;
 

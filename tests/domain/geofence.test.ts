@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  calculateHaversineDistance,
-  verifyGeofence,
-} from '../../src/server/domain/geofence';
+import { calculateHaversineDistance, verifyGeofence } from '../../src/server/domain/geofence';
 
 describe('Domain: Geofence Engine', () => {
   // Chennai site coordinates: 13.0827° N, 80.2707° E

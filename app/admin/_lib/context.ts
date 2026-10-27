@@ -1,16 +1,16 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { connection } from "next/server";
-import { verifySession, SESSION_COOKIE_NAME } from "@/src/server/auth/session";
-import { allowedOrgIds } from "@/src/server/auth/guard";
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
+import { verifySession, SESSION_COOKIE_NAME } from '@/src/server/auth/session';
+import { allowedOrgIds } from '@/src/server/auth/guard';
 import {
   SECTORS,
   SECTOR_COOKIE_NAME,
   resolveSector,
   sectorForOrg,
   type SectorConfig,
-} from "@/src/server/services/adminUi";
-import type { Sector } from "@/src/shared/types";
+} from '@/src/server/services/adminViews';
+import type { Sector } from '@/src/shared/types';
 
 export interface AdminContext {
   userId: string;
@@ -32,10 +32,12 @@ export async function getAdminContext(): Promise<AdminContext> {
   await connection();
   const token = jar.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? verifySession(token) : null;
-  if (!session || session.role !== "admin") redirect("/admin/login");
+  if (!session || session.role !== 'admin') redirect('/admin/login');
 
   const orgs = allowedOrgIds(session);
-  const allowedSectors = (Object.keys(SECTORS) as Sector[]).filter((key) => orgs.includes(SECTORS[key].orgId));
+  const allowedSectors = (Object.keys(SECTORS) as Sector[]).filter((key) =>
+    orgs.includes(SECTORS[key].orgId),
+  );
 
   const chosen = jar.get(SECTOR_COOKIE_NAME)?.value;
   const wanted = chosen ? resolveSector(chosen) : sectorForOrg(session.orgId);

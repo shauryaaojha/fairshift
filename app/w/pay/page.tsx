@@ -1,8 +1,8 @@
-import type { CSSProperties } from "react";
-import { Stamp } from "@/src/components/ui/Stamp";
-import { HearPayslipButton, PayActions } from "@/src/components/worker/PayActions";
-import { Screen } from "@/src/components/worker/Screen";
-import { DEFAULT_LOCALE, t } from "@/src/i18n";
+import type { CSSProperties } from 'react';
+import { Stamp } from '@/src/components/ui/Stamp';
+import { HearPayslipButton, PayActions } from '@/src/components/worker/PayActions';
+import { Screen } from '@/src/components/worker/Screen';
+import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import {
   buildPayslipSpeech,
   formatDay,
@@ -10,7 +10,7 @@ import {
   getLocale,
   loadPay,
   requireWorkerContext,
-} from "@/src/server/services/workerUi";
+} from '@/src/server/services/workerViews';
 
 const ROW_STEP_MS = 80;
 
@@ -26,14 +26,14 @@ export default async function PayPage() {
 
   return (
     <Screen
-      title={t(locale, "pay.title")}
+      title={t(locale, 'pay.title')}
       speakText={speech}
-      backLabel={t(locale, "common.back")}
+      backLabel={t(locale, 'common.back')}
       transitionName="tile-pay"
       action={<HearPayslipButton speech={speech} />}
     >
       <p className="text-small text-muted">
-        {t(locale, "pay.period", {
+        {t(locale, 'pay.period', {
           start: formatDay(payslip.periodStart, locale),
           end: formatDay(payslip.periodEnd, locale),
         })}
@@ -42,20 +42,28 @@ export default async function PayPage() {
       <section className="rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <ul className="flex flex-col">
           {rows.map((line, i) => {
-            const isNet = line.key === "payslip.net";
+            const isNet = line.key === 'payslip.net';
             const label = t(locale, line.key);
             return (
               <li
                 key={line.key}
                 className="payslip-row flex items-baseline justify-between gap-3 py-2"
-                style={{ "--i": i } as CSSProperties}
+                style={{ '--i': i } as CSSProperties}
               >
-                <span className={isNet ? "text-h2" : line.type === "total" ? "text-body font-semibold" : "text-body"}>
+                <span
+                  className={
+                    isNet
+                      ? 'text-h2'
+                      : line.type === 'total'
+                        ? 'text-body font-semibold'
+                        : 'text-body'
+                  }
+                >
                   {label === line.key ? line.label : label}
                 </span>
-                <span className={"text-mono shrink-0 " + (isNet ? "text-display" : "")}>
-                  {line.type === "deduction" ? "−" : ""}
-                  {"₹"}
+                <span className={'text-mono shrink-0 ' + (isNet ? 'text-display' : '')}>
+                  {line.type === 'deduction' ? '−' : ''}
+                  {'₹'}
                   {formatRupees(line.amount)}
                 </span>
               </li>
@@ -74,7 +82,12 @@ export default async function PayPage() {
             d="M0 3 H100"
             pathLength={1}
             className="draw-path"
-            style={{ "--path-length": 1, animationDelay: `${rows.length * ROW_STEP_MS}ms` } as CSSProperties}
+            style={
+              {
+                '--path-length': 1,
+                animationDelay: `${rows.length * ROW_STEP_MS}ms`,
+              } as CSSProperties
+            }
             fill="none"
             stroke="currentColor"
             strokeWidth={3}
@@ -83,7 +96,7 @@ export default async function PayPage() {
 
         <div className="mt-4 flex justify-end">
           <Stamp announce variant="cleared" id={`pay-${payslip.periodEnd}`} delayMs={stampDelay}>
-            {t(locale, "pay.paid")}
+            {t(locale, 'pay.paid')}
           </Stamp>
         </div>
       </section>

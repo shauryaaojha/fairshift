@@ -1,7 +1,4 @@
-// ============================================================
-// FairShift — Auth: HMAC-SHA256 Signed Session Token
-// Standard Web Crypto / Node crypto session signer & validator
-// ============================================================
+// Auth: HMAC-SHA256 Signed Session Token
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { SessionPayload } from '../../shared/types';
@@ -39,7 +36,10 @@ function getSessionSecret(): string {
 /**
  * Creates an HMAC-SHA256 signed session string.
  */
-export function signSession(payload: Omit<SessionPayload, 'iat' | 'exp'>, ttlSeconds: number = SESSION_TTL_SECONDS): string {
+export function signSession(
+  payload: Omit<SessionPayload, 'iat' | 'exp'>,
+  ttlSeconds: number = SESSION_TTL_SECONDS,
+): string {
   const now = Math.floor(Date.now() / 1000);
   const fullPayload: SessionPayload = {
     ...payload,

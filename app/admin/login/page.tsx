@@ -1,7 +1,7 @@
-import { LoginForm } from "@/src/components/admin/LoginForm";
-import { LineReveal } from "@/src/components/motion/LineReveal";
+import { LoginForm } from '@/src/components/admin/LoginForm';
+import { LineReveal } from '@/src/components/motion/LineReveal';
 
-export const metadata = { title: "Sign in | FairShift console" };
+export const metadata = { title: 'Sign in | FairShift console' };
 
 export default function AdminLoginPage() {
   return (

@@ -1,55 +1,55 @@
-import { ButtonLink } from "@/src/components/ui/Button";
-import { FatigueCards } from "@/src/components/worker/FatigueCards";
-import { Screen } from "@/src/components/worker/Screen";
-import { DEFAULT_LOCALE, t } from "@/src/i18n";
+import { ButtonLink } from '@/src/components/ui/Button';
+import { FatigueCards } from '@/src/components/worker/FatigueCards';
+import { Screen } from '@/src/components/worker/Screen';
+import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import {
   describeFatigue,
   formatDay,
   getLocale,
   loadHours,
   requireWorkerContext,
-} from "@/src/server/services/workerUi";
+} from '@/src/server/services/workerViews';
 
 export default async function HoursPage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const { week, fatigueFlags } = await loadHours(ctx.worker);
   const notes = describeFatigue(fatigueFlags, locale);
-  const hoursText = (n: number) => t(locale, "common.hours", { n });
+  const hoursText = (n: number) => t(locale, 'common.hours', { n });
 
   return (
     <Screen
-      title={t(locale, "hours.title")}
-      speakText={t(locale, "hours.speak", { total: week.totalHours })}
-      backLabel={t(locale, "common.back")}
+      title={t(locale, 'hours.title')}
+      speakText={t(locale, 'hours.speak', { total: week.totalHours })}
+      backLabel={t(locale, 'common.back')}
       transitionName="tile-hours"
-      action={<ButtonLink href="/w">{t(locale, "checkin.backHome")}</ButtonLink>}
+      action={<ButtonLink href="/w">{t(locale, 'checkin.backHome')}</ButtonLink>}
     >
       <section className="rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <p className="text-small text-muted">
-          {t(locale, "hours.week")} · {t(locale, "hours.total")}
+          {t(locale, 'hours.week')} · {t(locale, 'hours.total')}
         </p>
         <p className="text-display text-mono">{hoursText(week.totalHours)}</p>
         <dl className="mt-3 grid grid-cols-2 gap-3">
           <div>
-            <dt className="text-small text-muted">{t(locale, "hours.regular")}</dt>
+            <dt className="text-small text-muted">{t(locale, 'hours.regular')}</dt>
             <dd className="text-mono">{hoursText(week.overtime.regularHours)}</dd>
           </div>
           <div>
-            <dt className="text-small text-muted">{t(locale, "hours.overtime")}</dt>
+            <dt className="text-small text-muted">{t(locale, 'hours.overtime')}</dt>
             <dd className="text-mono">{hoursText(week.overtime.overtimeHours)}</dd>
           </div>
         </dl>
       </section>
 
       {notes.length > 0 ? (
-        <FatigueCards title={t(locale, "hours.flagsTitle")} notes={notes} />
+        <FatigueCards title={t(locale, 'hours.flagsTitle')} notes={notes} />
       ) : (
-        <p className="text-body font-semibold text-cleared">{t(locale, "hours.allGood")}</p>
+        <p className="text-body font-semibold text-cleared">{t(locale, 'hours.allGood')}</p>
       )}
 
       {week.rows.length === 0 ? (
-        <p className="text-body">{t(locale, "hours.noShifts")}</p>
+        <p className="text-body">{t(locale, 'hours.noShifts')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {week.rows.map((r) => (
@@ -60,11 +60,11 @@ export default async function HoursPage() {
               <div className="min-w-0">
                 <p className="text-body font-semibold">{formatDay(r.date, locale, true)}</p>
                 <p className="text-mono text-muted">
-                  {r.checkIn} - {r.checkOut ?? "..."}
+                  {r.checkIn} - {r.checkOut ?? '...'}
                 </p>
               </div>
               <p className="text-mono shrink-0">
-                {r.open ? t(locale, "hours.onSite") : hoursText(r.hours)}
+                {r.open ? t(locale, 'hours.onSite') : hoursText(r.hours)}
               </p>
             </li>
           ))}

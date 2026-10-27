@@ -12,8 +12,14 @@ body:has(.worker-shell) > footer {
 
 /* Hazard timeline: the escalated node pulses once, never loops. */
 @keyframes node-pulse {
-  0% { transform: scale(1); opacity: 0.9; }
-  100% { transform: scale(2.2); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 .node-pulse {
   transform-box: fill-box;
@@ -39,26 +45,28 @@ body:has(.worker-shell) > footer {
   background: var(--card);
   color: var(--graphite);
 }
-.choice[aria-checked="true"],
-.choice[aria-pressed="true"] {
+.choice[aria-checked='true'],
+.choice[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
 }
-.choice-danger[aria-checked="true"] {
+.choice-danger[aria-checked='true'] {
   background: var(--hivis);
   border-color: var(--graphite);
   color: var(--graphite);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .node-pulse { animation: none; opacity: 0; }
+  .node-pulse {
+    animation: none;
+    opacity: 0;
+  }
 }
-
 
 /* Tamil words are long; at the default h1 size a screen title like "ஆபத்தைச் சொல்"
    broke mid-word next to the back and speaker buttons. Smaller, whole-word wrapping. */
-[lang="ta"] .text-h1 {
+[lang='ta'] .text-h1 {
   font-size: 1.375rem;
   line-height: 1.5;
   overflow-wrap: normal;

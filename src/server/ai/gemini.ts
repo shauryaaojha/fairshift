@@ -1,8 +1,4 @@
-// ============================================================
-// FairShift — AI: Vertex AI Gemini Integration
-// Uses @google/genai with a server-side GEMINI_API_KEY; rule-based fallbacks when unset
-// Zero API keys required; 8-second timeout with deterministic fallback
-// ============================================================
+// AI: Vertex AI Gemini Integration
 
 import { GoogleGenAI } from '@google/genai';
 import type { PayslipResult, HazardSeverity, Locale } from '../../shared/types';
@@ -55,7 +51,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number = TIMEOUT_M
  */
 export async function explainPayslip(
   payslip: PayslipResult,
-  locale: Locale = 'en'
+  locale: Locale = 'en',
 ): Promise<{ text: string; isAi: boolean }> {
   const vertex = getGeminiClient();
   if (!vertex) {
@@ -80,7 +76,7 @@ Do not invent any numbers. Only use the numbers provided above.`;
         model: vertex.model,
         contents: prompt,
         config: FAST_CONFIG,
-      })
+      }),
     );
 
     const text = response.text?.trim();
@@ -88,7 +84,7 @@ Do not invent any numbers. Only use the numbers provided above.`;
       return { text, isAi: true };
     }
   } catch (err) {
-    console.warn('⚠️ [FairShift AI] Gemini payslip explanation failed or timed out:', err);
+    console.warn('[FairShift AI] Gemini payslip explanation failed or timed out:', err);
   }
 
   return {
@@ -103,7 +99,7 @@ Do not invent any numbers. Only use the numbers provided above.`;
 export async function summarizeHazard(
   category: string,
   description: string,
-  severity: HazardSeverity
+  severity: HazardSeverity,
 ): Promise<{ summary: string; suggestedSeverity: HazardSeverity; isAi: boolean }> {
   const fallback = summarizeHazardFallback(category, description, severity);
   const vertex = getGeminiClient();
@@ -123,7 +119,7 @@ Respond with a single English summary sentence.`;
         model: vertex.model,
         contents: prompt,
         config: FAST_CONFIG,
-      })
+      }),
     );
 
     const summary = response.text?.trim();
@@ -135,7 +131,7 @@ Respond with a single English summary sentence.`;
       };
     }
   } catch (err) {
-    console.warn('⚠️ [FairShift AI] Gemini hazard summary failed or timed out:', err);
+    console.warn('[FairShift AI] Gemini hazard summary failed or timed out:', err);
   }
 
   return { ...fallback, isAi: false };
@@ -173,7 +169,7 @@ Use professional, proactive tone. Highlight immediate action points.`;
         model: vertex.model,
         contents: prompt,
         config: FAST_CONFIG,
-      })
+      }),
     );
 
     const summary = response.text?.trim();
@@ -181,7 +177,7 @@ Use professional, proactive tone. Highlight immediate action points.`;
       return { summary, isAi: true };
     }
   } catch (err) {
-    console.warn('⚠️ [FairShift AI] Gemini executive summary failed or timed out:', err);
+    console.warn('[FairShift AI] Gemini executive summary failed or timed out:', err);
   }
 
   return { summary: fallback, isAi: false };

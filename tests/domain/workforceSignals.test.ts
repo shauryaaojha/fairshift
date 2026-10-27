@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { calculateAttendanceDrop, teamSentimentAverage } from '../../src/server/domain/workforceSignals';
+import {
+  calculateAttendanceDrop,
+  teamSentimentAverage,
+} from '../../src/server/domain/workforceSignals';
 import type { FeedbackSubmission, Shift } from '../../src/shared/types';
 
 const now = new Date('2026-10-27T12:00:00.000Z');
 
 function shiftOn(daysAgo: number): Shift {
   const checkIn = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
-  return { id: `s${daysAgo}`, workerId: 'w1', siteId: 'site', orgId: 'org', checkIn, checkOut: checkIn, method: 'qr' } as Shift;
+  return {
+    id: `s${daysAgo}`,
+    workerId: 'w1',
+    siteId: 'site',
+    orgId: 'org',
+    checkIn,
+    checkOut: checkIn,
+    method: 'qr',
+  } as Shift;
 }
 
 function feedback(team: string, rating: number): FeedbackSubmission {
@@ -54,7 +65,12 @@ describe('calculateAttendanceDrop', () => {
 
 describe('teamSentimentAverage', () => {
   it('averages all four ratings for the team', () => {
-    const subs = [feedback('Masonry', 2), feedback('Masonry', 3), feedback('Masonry', 4), feedback('Electrical', 5)];
+    const subs = [
+      feedback('Masonry', 2),
+      feedback('Masonry', 3),
+      feedback('Masonry', 4),
+      feedback('Electrical', 5),
+    ];
     expect(teamSentimentAverage(subs, 'Masonry')).toBe(3);
   });
 

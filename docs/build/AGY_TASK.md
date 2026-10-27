@@ -3,15 +3,17 @@
 > **RESUME NOTE (run 2):** A previous run stopped early, during P0. It hit a model quota limit.
 >
 > **State it left behind:**
+>
 > - `package.json`, `next.config.ts`, `app/layout.tsx`, `app/globals.css`, `app/page.tsx`, `proxy.ts`, `src/shared/types.ts`, `src/shared/schemas.ts`, `tests/setup.ts`, `vitest.config.ts` and `docs/BUILD_PROGRESS.md` exist.
 > - **`node_modules` is empty.** The npm install never finished.
 >
 > **What to do:**
+>
 > 1. Read `docs/BUILD_PROGRESS.md` and the existing files, and keep what is good.
 > 2. **Fix `package.json` to current versions** before installing:
->     - `zod@^4`, `@google/genai@^2`, `vitest@^5`, `@vitest/coverage-v8@^5`, `@vitejs/plugin-react@^6`, `jsdom@^30`, `typescript@^5` (keep TS 5 for Next compatibility).
->     - Replace the non-existent `@tailwindcss/turbopack` with **`@tailwindcss/postcss`** + a `postcss.config.mjs`.
->     - Use the latest `gsap`, `next-transition-router`, `firebase-admin` and `qrcode`.
+>    - `zod@^4`, `@google/genai@^2`, `vitest@^5`, `@vitest/coverage-v8@^5`, `@vitejs/plugin-react@^6`, `jsdom@^30`, `typescript@^5` (keep TS 5 for Next compatibility).
+>    - Replace the non-existent `@tailwindcss/turbopack` with **`@tailwindcss/postcss`** + a `postcss.config.mjs`.
+>    - Use the latest `gsap`, `next-transition-router`, `firebase-admin` and `qrcode`.
 > 3. Run **one** `npm install` (the network is slow; give it time, and do not start parallel installs).
 > 4. Continue from P0.
 
@@ -29,15 +31,15 @@ You are the lead engineer. **Use your subagents / parallel agents to split the w
 4. `docs/design-system.md`: **the design contract.** Tokens, fonts, layout, the `<Stamp>` signature component, the motion rules, the animation map and the ban list. Follow it exactly.
 5. `docs/promptwars-winners-research.md` sections 0, 4 and 5: what scored 97/100 before (tests, a11y, security, deterministic engine + LLM on top, demo mode).
 6. Animation references (read their code for technique, **do not copy their folders, images or fonts**). They are at `C:/Users/shaur/Documents/Animations/components/`. These are the entries from `design-system.md` §7:
-    - `Page Transitions/12`
-    - `Hero Animations/22`
-    - `Grid Animations/1`
-    - `Grid Animations/9`
-    - `Text Animations/12`
-    - `SVG Animations/5`
-    - `Navigation Menus/5`
-    - `Hover Effects/19`
-    - `Sliders/3`
+   - `Page Transitions/12`
+   - `Hero Animations/22`
+   - `Grid Animations/1`
+   - `Grid Animations/9`
+   - `Text Animations/12`
+   - `SVG Animations/5`
+   - `Navigation Menus/5`
+   - `Hover Effects/19`
+   - `Sliders/3`
 7. Next.js 16 changed APIs (for example, `middleware` is now `proxy.ts`). After installing, read the docs bundled in `node_modules/next/dist/docs/` for anything you are unsure about (App Router, route handlers, `proxy`, `next/font`, `output: "standalone"`, `experimental.viewTransition`). Do not rely on memory for Next 16 APIs.
 
 ---
@@ -62,26 +64,26 @@ You are the lead engineer. **Use your subagents / parallel agents to split the w
 - **Framework:** Next.js 16 (latest), React 19, TypeScript `strict`, App Router, `output: "standalone"`. Node 22. npm.
 - **Styling:** Tailwind CSS v4, with design tokens from `design-system.md` §3–4 as CSS variables in `app/globals.css`.
 - **Fonts:** via `next/font/google`:
-    - `Anek_Latin`, `Anek_Devanagari`, `Anek_Tamil` (variable). **Load the Indic script only for the active locale.**
-    - `Martian_Mono` for times, IDs and money. If `Martian_Mono` is not available in `next/font/google`, use `Spline_Sans_Mono`.
+  - `Anek_Latin`, `Anek_Devanagari`, `Anek_Tamil` (variable). **Load the Indic script only for the active locale.**
+  - `Martian_Mono` for times, IDs and money. If `Martian_Mono` is not available in `next/font/google`, use `Spline_Sans_Mono`.
 - **Data:** a repository interface with two adapters, chosen by `DATA_BACKEND=memory|firestore` (default `memory`):
-    - `memory`: seeded on boot.
-    - `firestore`: uses `firebase-admin` with **Application Default Credentials only** (no key file, no JSON in the repo).
+  - `memory`: seeded on boot.
+  - `firestore`: uses `firebase-admin` with **Application Default Credentials only** (no key file, no JSON in the repo).
 - **AI:** `@google/genai` with `vertexai: true`, `project = GOOGLE_CLOUD_PROJECT`, `location = GOOGLE_CLOUD_LOCATION` (default `asia-south1`), and model from `GEMINI_MODEL` (default `gemini-2.5-flash`; keep it env-configurable).
-    - If `GOOGLE_CLOUD_PROJECT` is unset or a call fails or times out (8 s), use the **deterministic fallback**. The UI must still work.
-    - Label AI text "Explained by AI · check with your supervisor".
+  - If `GOOGLE_CLOUD_PROJECT` is unset or a call fails or times out (8 s), use the **deterministic fallback**. The UI must still work.
+  - Label AI text "Explained by AI · check with your supervisor".
 - **Validation and security:**
-    - `zod` on every route handler input.
-    - Security headers + CSP in `next.config` headers.
-    - Rate limiting (simple in-memory token bucket) on login and report endpoints.
-    - Role guard in one place.
+  - `zod` on every route handler input.
+  - Security headers + CSP in `next.config` headers.
+  - Rate limiting (simple in-memory token bucket) on login and report endpoints.
+  - Role guard in one place.
 - **Auth:**
-    - Worker: phone + 4-digit PIN. Admin: email + password.
-    - Both hashed with Node `crypto.scrypt`.
-    - Session = HMAC-SHA256-signed token in an `httpOnly; Secure; SameSite=Lax` cookie, secret from `SESSION_SECRET`. In dev only, generate a random secret at boot and log a warning.
+  - Worker: phone + 4-digit PIN. Admin: email + password.
+  - Both hashed with Node `crypto.scrypt`.
+  - Session = HMAC-SHA256-signed token in an `httpOnly; Secure; SameSite=Lax` cookie, secret from `SESSION_SECRET`. In dev only, generate a random secret at boot and log a warning.
 - **Animation:**
-    - Worker routes: CSS + native View Transitions only (no animation library).
-    - Admin + landing routes: `gsap` + `@gsap/react` + `next-transition-router`, imported only there.
+  - Worker routes: CSS + native View Transitions only (no animation library).
+  - Admin + landing routes: `gsap` + `@gsap/react` + `next-transition-router`, imported only there.
 - **Tests:** Vitest + `@vitest/coverage-v8`, `@testing-library/react` + jsdom for components.
 - **CI:** `.github/workflows/ci.yml` runs `npm ci`, typecheck, lint, test with coverage, and build.
 - **Deploy artefacts:** a multi-stage `Dockerfile` (node:22-alpine, standalone output, non-root user, listens on `$PORT`, default 8080) and `.dockerignore`.
@@ -126,21 +128,21 @@ Defaults are per-org policy and overridable:
 
 - **Overtime:** 8 h/day and 48 h/week limits. Overtime is paid at 2× the ordinary rate (OSH Code 2020, in force 21 Nov 2025).
 - **Payslip:**
-    - Gross = base + OT + allowances.
-    - PF = 12% of basic, with the wage ceiling at ₹15,000.
-    - ESI = 0.75% if gross ≤ ₹21,000.
-    - Net, with every line carrying an explanation key (i18n).
+  - Gross = base + OT + allowances.
+  - PF = 12% of basic, with the wage ceiling at ₹15,000.
+  - ESI = 0.75% if gross ≤ ₹21,000.
+  - Net, with every line carrying an explanation key (i18n).
 - **Fatigue flags:**
-    - More than 48 h in a rolling 7 days.
-    - A shift longer than 10 h.
-    - A rest gap shorter than 10 h.
-    - 7 or more consecutive days without a rest day.
+  - More than 48 h in a rolling 7 days.
+  - A shift longer than 10 h.
+  - A rest gap shorter than 10 h.
+  - 7 or more consecutive days without a rest day.
 - **Quit risk:** a 0–100 score from OT load, fatigue flags, attendance drop, the worker's unresolved complaints and the team feedback trend. It returns its **top 3 reasons**.
 - **Hazard SLA:** Critical 1 h, High 4 h, Medium 24 h, Low 72 h. A missed acknowledgement means **escalated, computed on read**.
 - **Anonymity:**
-    - Feedback is stored without a worker id (org + site + team + ISO week only).
-    - Aggregates are hidden when fewer than **k = 3** responses exist.
-    - Free text is PII-scrubbed (phone numbers, emails, worker names from the roster).
+  - Feedback is stored without a worker id (org + site + team + ISO week only).
+  - Aggregates are hidden when fewer than **k = 3** responses exist.
+  - Free text is PII-scrubbed (phone numbers, emails, worker names from the roster).
 - **Geofence:** Haversine distance to the site must be within its radius.
 - **Rotating QR check-in code:** a TOTP-like 6-digit code per site, rotating every 60 s, accepted with ±1 window. The secret comes from env/seed, never the client.
 
@@ -157,21 +159,21 @@ Defaults are per-org policy and overridable:
 1. **Language gate:** English · हिंदी · தமிழ், in native script, with spoken names. The choice is stored in a cookie; set `<html lang>`. **All UI strings live in `src/i18n`.** Write real Hindi and Tamil translations, not placeholders.
 2. **Login:** a big numeric PIN pad that also accepts physical keys.
 3. **Home:**
-    - A today strip with a big CHECK IN stamp button and fatigue warning cards.
-    - A 2×3 tile grid (Check-in, My Pay, Report Danger, Feedback, My Hours, Skills), each tile with a custom icon + one word.
-    - Tile → screen uses View Transitions.
+   - A today strip with a big CHECK IN stamp button and fatigue warning cards.
+   - A 2×3 tile grid (Check-in, My Pay, Report Danger, Feedback, My Hours, Skills), each tile with a custom icon + one word.
+   - Tile → screen uses View Transitions.
 4. **Check-in/out:**
-    - Scanning the site QR with the phone's native camera opens `/w/checkin?site=…&code=…`. No scanner library.
-    - Or use GPS geofence.
-    - Success shows the `<Stamp>` "CHECKED IN 08:02" (CSS animation, `hop` easing, 320 ms) + `navigator.vibrate` + a spoken confirmation.
+   - Scanning the site QR with the phone's native camera opens `/w/checkin?site=…&code=…`. No scanner library.
+   - Or use GPS geofence.
+   - Success shows the `<Stamp>` "CHECKED IN 08:02" (CSS animation, `hop` easing, 320 ms) + `navigator.vibrate` + a spoken confirmation.
 5. **My Pay:**
-    - The current period payslip from the engine: rows reveal line by line (CSS), then the net is stamped PAID.
-    - "Hear my payslip" (speechSynthesis in the locale).
-    - "Why this amount?", which shows the AI explanation with a deterministic fallback.
+   - The current period payslip from the engine: rows reveal line by line (CSS), then the net is stamped PAID.
+   - "Hear my payslip" (speechSynthesis in the locale).
+   - "Why this amount?", which shows the AI explanation with a deterministic fallback.
 6. **Report Danger:**
-    - Voice (Web Speech API `SpeechRecognition` with the locale `hi-IN`/`ta-IN`/`en-IN`; hide the mic if unsupported) or text.
-    - Pick a category with big icon buttons, an optional anonymous toggle, and submit.
-    - Status page shows a timeline (Reported → Acknowledged → Resolved) drawn with an SVG `stroke-dashoffset`.
+   - Voice (Web Speech API `SpeechRecognition` with the locale `hi-IN`/`ta-IN`/`en-IN`; hide the mic if unsupported) or text.
+   - Pick a category with big icon buttons, an optional anonymous toggle, and submit.
+   - Status page shows a timeline (Reported → Acknowledged → Resolved) drawn with an SVG `stroke-dashoffset`.
 7. **Feedback:** 4 questions on a big face scale (manager respect, safety, pay fairness, workload) + an optional voice/text comment. It is clearly marked anonymous and stamped RECEIVED.
 8. **My Hours:** the week's shifts and OT, with fatigue flags explained in plain words.
 9. **Skills (stretch, do it last):** a skill passport list + a shareable verify link to `/passport/[token]`.
@@ -187,12 +189,12 @@ On every screen:
 
 - **Sector switcher** (Construction ↔ College) at the top, driving every view.
 - **Overview:**
-    - A one-sentence state line ("43 of 51 on site · 2 hazards escalated · 5 over 48 h"), with each number linking to its rows. Magnetic hover on desktop, per `Hover Effects/19`.
-    - A hand-built SVG 14-day attendance chart (no chart library).
-    - An escalated hazard queue.
-    - A quit-risk table with reasons.
-    - A feedback heatmap (team × question; a cell is hidden when k < 3).
-    - An "AI summary of this week" with a fallback.
+  - A one-sentence state line ("43 of 51 on site · 2 hazards escalated · 5 over 48 h"), with each number linking to its rows. Magnetic hover on desktop, per `Hover Effects/19`.
+  - A hand-built SVG 14-day attendance chart (no chart library).
+  - An escalated hazard queue.
+  - A quit-risk table with reasons.
+  - A feedback heatmap (team × question; a cell is hidden when k < 3).
+  - An "AI summary of this week" with a fallback.
 - **Safety:** a queue with SLA timers, Acknowledge / Resolve actions, the English AI summary of local-language reports, and a severity suggestion that the admin confirms.
 - **Attendance, Feedback and Risk** pages, each with a table + filters.
 - **Sites:** a list + a **kiosk page** showing the rotating QR (generate the SVG server-side with the `qrcode` package) for the site gate.
@@ -209,13 +211,13 @@ On every screen:
 ### 4.6 Docs and repo hygiene
 
 - **`README.md`:**
-    - What it is and how each PS requirement is met (with a table).
-    - Architecture diagram (ASCII).
-    - Local run (`npm i && npm run dev`, no credentials needed).
-    - Env vars.
-    - Tests.
-    - Cloud Run deploy commands (`gcloud run deploy fairshift --source . --region asia-south1 ...` with env vars and the service account roles `roles/datastore.user` and `roles/aiplatform.user`).
-    - Badges with **real** numbers from your test run only.
+  - What it is and how each PS requirement is met (with a table).
+  - Architecture diagram (ASCII).
+  - Local run (`npm i && npm run dev`, no credentials needed).
+  - Env vars.
+  - Tests.
+  - Cloud Run deploy commands (`gcloud run deploy fairshift --source . --region asia-south1 ...` with env vars and the service account roles `roles/datastore.user` and `roles/aiplatform.user`).
+  - Badges with **real** numbers from your test run only.
 - **`docs/industry-use-cases.md`:** construction, college and hospital (how the same model maps to each).
 - **`docs/linkedin-post.md`:** a draft in the structure problem → build & tools → solution fit.
 - **`.env.example`** with every variable and no values for secrets.
@@ -227,19 +229,19 @@ On every screen:
 ## 5. Hard DON'Ts
 
 - **Git:**
-    - Do **not** create git branches or worktrees that remain at the end.
-    - Do **not** `git commit` or `git push`. The orchestrator commits.
-    - The final state is the `main` working tree only.
+  - Do **not** create git branches or worktrees that remain at the end.
+  - Do **not** `git commit` or `git push`. The orchestrator commits.
+  - The final state is the `main` working tree only.
 - **Deploy:** do **not** run `gcloud`, deploy anything, or create cloud resources.
 - **Secrets:** do **not** write any real secret, API key, service-account JSON or `.env` file with values.
 - **Design ban list:** do **not** use anything on the ban list in `design-system.md` §9. In particular:
-    - Fonts: Inter, Roboto, Space Grotesk, Geist, Instrument Serif, Fraunces, Plus Jakarta Sans, DM Sans, Manrope, Poppins.
-    - Colour: purple/indigo, gradients, cream + terracotta.
-    - Components: `rounded-2xl` / `shadow-lg` / `backdrop-blur` by default, glass navbars.
-    - Icons: lucide or any icon library, emoji in the UI.
-    - Motion: count-up numbers, bounce easing.
-    - Layout: the hero + 3 cards + stats template.
-    - Copy: tracked all-caps labels.
+  - Fonts: Inter, Roboto, Space Grotesk, Geist, Instrument Serif, Fraunces, Plus Jakarta Sans, DM Sans, Manrope, Poppins.
+  - Colour: purple/indigo, gradients, cream + terracotta.
+  - Components: `rounded-2xl` / `shadow-lg` / `backdrop-blur` by default, glass navbars.
+  - Icons: lucide or any icon library, emoji in the UI.
+  - Motion: count-up numbers, bounce easing.
+  - Layout: the hero + 3 cards + stats template.
+  - Copy: tracked all-caps labels.
 - **Animation libraries:** do **not** use WebGL/three.js/canvas/cursor effects, Lenis on worker routes, or any animation library on worker routes.
 - **Indic text:** do **not** split Indic text by characters in any animation.
 - **No fake data shown as real.** Seed data is labelled "Demo data". No count-up animations.
@@ -251,14 +253,14 @@ On every screen:
 
 Run these in parallel where possible. Each subagent owns its directories, to avoid conflicts. You (the lead) do P0 first, then fan out, then integrate.
 
-| Agent | Owns | Delivers |
-| --- | --- | --- |
-| Lead (you) | root config, `app/layout.tsx`, `globals.css`, `proxy.ts`, integration | P0 scaffold, tokens, fonts, final wiring, verification |
-| A: Domain | `src/server/domain/**` + tests | All engines in §4.1, ≥ 90% coverage |
-| B: Data/Services/Auth/AI | `src/server/{repos,seed,services,auth,ai}/**`, `app/api/**` + tests | Repos (memory + firestore), seed, services, route handlers with zod, sessions, rate limit, Gemini + fallbacks |
-| C: Worker UI | `app/w/**`, `src/components/{ui,worker,icons}/**`, `src/i18n/**` + component tests | §4.3, including translations, Stamp, PinPad, ReadAloud, voice input |
-| D: Admin UI + Landing | `app/admin/**`, `app/page.tsx`, `app/passport/**`, `src/components/admin/**` | §4.4, §4.5, GSAP animations |
-| E: Infra/Docs | `Dockerfile`, `.dockerignore`, `.github/**`, `README.md`, `DESIGN.md`, `docs/industry-use-cases.md`, `docs/linkedin-post.md`, `.env.example` | §4.6 |
+| Agent                    | Owns                                                                                                                                         | Delivers                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Lead (you)               | root config, `app/layout.tsx`, `globals.css`, `proxy.ts`, integration                                                                        | P0 scaffold, tokens, fonts, final wiring, verification                                                        |
+| A: Domain                | `src/server/domain/**` + tests                                                                                                               | All engines in §4.1, ≥ 90% coverage                                                                           |
+| B: Data/Services/Auth/AI | `src/server/{repos,seed,services,auth,ai}/**`, `app/api/**` + tests                                                                          | Repos (memory + firestore), seed, services, route handlers with zod, sessions, rate limit, Gemini + fallbacks |
+| C: Worker UI             | `app/w/**`, `src/components/{ui,worker,icons}/**`, `src/i18n/**` + component tests                                                           | §4.3, including translations, Stamp, PinPad, ReadAloud, voice input                                           |
+| D: Admin UI + Landing    | `app/admin/**`, `app/page.tsx`, `app/passport/**`, `src/components/admin/**`                                                                 | §4.4, §4.5, GSAP animations                                                                                   |
+| E: Infra/Docs            | `Dockerfile`, `.dockerignore`, `.github/**`, `README.md`, `DESIGN.md`, `docs/industry-use-cases.md`, `docs/linkedin-post.md`, `.env.example` | §4.6                                                                                                          |
 
 Agree the shared types (`src/shared/types.ts`) and the repo interface **before** fanning out, so that C and D can code against them.
 
