@@ -37,8 +37,6 @@ export default defineConfig({
         'src/server/domain/index.ts',
         // Thin MongoDB driver adapter: exercised against a live cluster, not in unit tests.
         'src/server/repos/mongo.ts',
-        // Next.js request plumbing (cookies, redirect): covered through the actions that use it.
-        'src/server/seed/index.ts',
       ],
       thresholds: {
         branches: 85,

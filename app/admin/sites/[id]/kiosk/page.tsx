@@ -3,7 +3,8 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminContext } from '../../../_lib/context';
-import { SECTORS, getKioskView } from '@/src/server/services/adminViews';
+import { SECTORS } from '@/src/server/services/sectors';
+import { getKioskView } from '@/src/server/services/adminPages';
 import { KioskRefresher } from '@/src/components/admin/KioskRefresher';
 
 async function Kiosk({ params }: { params: Promise<{ id: string }> }) {

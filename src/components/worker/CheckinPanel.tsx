@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from 'react';
 import { PinIcon, QrIcon } from '@/src/components/icons';
 import { Button, ButtonLink } from '@/src/components/ui/Button';
 import { PinPad } from '@/src/components/ui/PinPad';
@@ -84,12 +84,15 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode, workerId
     });
   }
 
-  // Opened from the phone's camera: ?code=123456 checks in once, automatically.
-  useEffect(() => {
+  // Opened from the phone's camera: ?code=123456 checks in once, automatically. An effect event
+  // reads the latest props without making the mount-only effect re-run when they change.
+  const autoCheckIn = useEffectEvent(() => {
     if (autoRan.current || !initialCode || activeSince) return;
     autoRan.current = true;
     runCode(initialCode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    autoCheckIn();
   }, []);
 
   function runGps() {

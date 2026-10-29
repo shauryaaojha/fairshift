@@ -151,8 +151,7 @@ export async function checkOutAction(input: CheckoutInput = {}): Promise<Checkou
   return runWorkerAction('checkout', { max: 6, windowMs: MINUTE }, async (ctx) => {
     const parsed = checkoutSchema.safeParse(input);
     if (!parsed.success) return invalid(parsed.error.issues);
-    const { shiftId, capturedAt, clientId } = parsed.data;
-    const shift = await workerService.checkOut(ctx.worker.id, shiftId, { capturedAt, clientId });
+    const shift = await workerService.checkOut(ctx.worker.id, parsed.data);
     return {
       ok: true,
       time: formatClock(shift.checkOut ?? new Date().toISOString()),

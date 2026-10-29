@@ -1,4 +1,6 @@
-// Seed data: deterministic shift generation
+/**
+ * Demo shifts for the last three weeks: some workers overworked, others with missed days.
+ */
 import type { Worker, Shift } from '../../shared/types';
 import { DAY_MS } from '../domain/time';
 

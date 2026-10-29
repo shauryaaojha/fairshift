@@ -1,7 +1,12 @@
-// AI: Deterministic Fallbacks
+/**
+ * Deterministic text used whenever Gemini is not configured, fails or is rate-limited: payslip
+ * explanations in English, Hindi and Tamil, hazard summaries with a keyword severity hint, and
+ * the supervisor briefing.
+ */
 
 import type { PayslipResult, HazardSeverity, Locale } from '../../shared/types';
 import type { WeeklyStats } from './gemini';
+import { higherSeverity } from '../../shared/severity';
 
 /**
  * Deterministic explanation of a payslip in English, Hindi, or Tamil.
@@ -53,13 +58,6 @@ export function explainPayslipFallback(payslip: PayslipResult, locale: Locale = 
     msg += ` Statutory contributions of ₹${pf} for PF and ₹${esi} for ESI healthcare were deposited to your official welfare accounts.`;
   }
   return msg;
-}
-
-const SEVERITY_RANK: Record<HazardSeverity, number> = { low: 0, medium: 1, high: 2, critical: 3 };
-
-/** The more severe of two ratings. Used so a suggestion can raise a report but never lower it. */
-export function higherSeverity(a: HazardSeverity, b: HazardSeverity): HazardSeverity {
-  return SEVERITY_RANK[b] > SEVERITY_RANK[a] ? b : a;
 }
 
 /**

@@ -1,4 +1,6 @@
-// Domain Layer Index
+/**
+ * The rule engines, re-exported. Every module here is pure: no I/O and no framework imports.
+ */
 
 export * from './overtime';
 export * from './payslip';

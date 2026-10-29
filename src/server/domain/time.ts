@@ -1,4 +1,6 @@
-// Domain: Calendar helpers (Pure)
+/**
+ * Calendar helpers in IST (Asia/Kolkata): day keys, month start, and time constants. Pure.
+ */
 
 /** Standard time duration constants in milliseconds. */
 export const MINUTE_MS = 60 * 1000;

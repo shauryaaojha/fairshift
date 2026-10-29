@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getPassportByToken } from '@/src/server/services/adminViews';
+import { getPassportByToken } from '@/src/server/services/adminPages';
 import { Stamp } from '@/src/components/ui/Stamp';
 import '@/src/components/admin/admin.css';
 

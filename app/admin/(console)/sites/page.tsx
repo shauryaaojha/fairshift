@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { getAdminContext } from '../../_lib/context';
-import { SECTORS, getSitesData } from '@/src/server/services/adminViews';
+import { SECTORS } from '@/src/server/services/sectors';
+import { getSitesData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
 
 async function Sites() {

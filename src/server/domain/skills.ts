@@ -1,4 +1,6 @@
-// Domain: Skill Passport Engine (Pure)
+/**
+ * Skill passport: verification tokens and certificate status (active, expired, unverified). Pure.
+ */
 
 import { createHmac } from 'crypto';
 import type { SkillRecord } from '../../shared/types';

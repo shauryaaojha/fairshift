@@ -1,4 +1,4 @@
-import type { RiskRow } from '@/src/server/services/adminViews';
+import type { RiskRow } from '@/src/server/services/adminRows';
 import { RiskStamp } from './StatusStamp';
 
 /** Quit-risk table: score, status stamp and the top reasons behind it. */

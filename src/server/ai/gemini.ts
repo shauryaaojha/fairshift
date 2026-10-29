@@ -12,9 +12,9 @@ import { generateJson, generateText } from './client';
 import {
   explainPayslipFallback,
   generateWeeklySafetySummaryFallback,
-  higherSeverity,
   summarizeHazardFallback,
 } from './fallbacks';
+import { HAZARD_SEVERITIES, higherSeverity } from '../../shared/severity';
 
 export const AI_EXPLANATION_DISCLAIMER = 'Explained by AI · check with your supervisor';
 
@@ -39,18 +39,16 @@ Use only the numbers below; never compute or invent another number.
     : { text: explainPayslipFallback(payslip, locale), isAi: false };
 }
 
-const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
-
 const hazardSummarySchema = z.object({
   summary: z.string().trim().min(1).max(300),
-  severity: z.enum(SEVERITIES),
+  severity: z.enum(HAZARD_SEVERITIES),
 });
 
 const HAZARD_JSON_SCHEMA = {
   type: 'object',
   properties: {
     summary: { type: 'string', description: 'One English sentence, under 25 words.' },
-    severity: { type: 'string', enum: [...SEVERITIES] },
+    severity: { type: 'string', enum: [...HAZARD_SEVERITIES] },
   },
   required: ['summary', 'severity'],
 };

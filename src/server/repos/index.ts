@@ -1,4 +1,8 @@
-// Repositories: Factory & Singleton Access
+/**
+ * Picks the data store. With MONGODB_URI set, every call goes to MongoDB, unless the first ping
+ * fails (a blocked network, a paused cluster), in which case the app logs why and keeps serving
+ * the seeded in-memory store instead of erroring. Without a URI, the in-memory store is used.
+ */
 
 import type { FairShiftDatabase } from './types';
 import { inMemoryDb } from './memory';
@@ -10,49 +14,59 @@ export * from './memory';
 
 let backend: Promise<FairShiftDatabase> | null = null;
 
+/** Resolved once per server instance; the ping decides between MongoDB and memory. */
 function resolveBackend(): Promise<FairShiftDatabase> {
-  if (!backend) {
-    backend = pingMongo()
-      .then(() => getMongoDb())
-      .catch((err) => {
-        console.error(
-          '[FairShift Data] MongoDB unreachable, serving seeded in-memory data instead:',
-          err instanceof Error ? err.message : err,
-        );
-        return inMemoryDb;
-      });
-  }
+  backend ??= pingMongo()
+    .then(() => getMongoDb())
+    .catch((err) => {
+      console.error(
+        '[FairShift Data] MongoDB unreachable, serving seeded in-memory data instead:',
+        err instanceof Error ? err.message : err,
+      );
+      return inMemoryDb;
+    });
   return backend;
 }
 
-/** Wraps every repo method so it runs against whichever backend resolved. */
-function lazyDatabase(): FairShiftDatabase {
-  const repos = Object.keys(inMemoryDb) as Array<keyof FairShiftDatabase>;
-  const db = {} as Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>>;
-  for (const repo of repos) {
-    db[repo] = new Proxy(
-      {},
-      {
-        get:
-          (_target, method: string) =>
-          async (...args: unknown[]) => {
-            const target = (await resolveBackend())[repo] as unknown as Record<
-              string,
-              (...a: unknown[]) => unknown
-            >;
-            return target[method](...args);
-          },
+type RepoName = keyof FairShiftDatabase;
+type RepoMethod = (...args: unknown[]) => Promise<unknown>;
+
+/**
+ * A repository whose methods wait for the backend to resolve, then call the same method on it.
+ * Callers keep a synchronous `getDatabase()` even though choosing the backend is async.
+ */
+function deferredRepo<K extends RepoName>(name: K): FairShiftDatabase[K] {
+  const handler: ProxyHandler<FairShiftDatabase[K]> = {
+    get:
+      (_target, method) =>
+      async (...args: unknown[]) => {
+        const repo = (await resolveBackend())[name];
+        const call = Reflect.get(repo, method) as RepoMethod;
+        return call.apply(repo, args);
       },
-    );
-  }
-  return db as unknown as FairShiftDatabase;
+  };
+  return new Proxy({} as FairShiftDatabase[K], handler);
+}
+
+/** Every repository, listed so the compiler flags one that is added to the interface but not here. */
+function deferredDatabase(): FairShiftDatabase {
+  return {
+    orgs: deferredRepo('orgs'),
+    sites: deferredRepo('sites'),
+    workers: deferredRepo('workers'),
+    admins: deferredRepo('admins'),
+    shifts: deferredRepo('shifts'),
+    hazards: deferredRepo('hazards'),
+    feedback: deferredRepo('feedback'),
+    skills: deferredRepo('skills'),
+  };
 }
 
 let mongoBacked: FairShiftDatabase | null = null;
 
 export function getDatabase(): FairShiftDatabase {
   if (serverEnv().dataBackend === 'mongodb') {
-    return (mongoBacked ??= lazyDatabase());
+    return (mongoBacked ??= deferredDatabase());
   }
   return inMemoryDb;
 }

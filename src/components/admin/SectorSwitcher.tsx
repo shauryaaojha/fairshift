@@ -1,4 +1,4 @@
-import { SECTORS } from '@/src/server/services/adminViews';
+import { SECTORS } from '@/src/server/services/sectors';
 import type { Sector } from '@/src/shared/types';
 
 /** Segmented control. Each segment is a form button so it works without JS. */

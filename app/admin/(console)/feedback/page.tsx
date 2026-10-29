@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { getAdminContext } from '../../_lib/context';
-import { getFeedbackData } from '@/src/server/services/adminViews';
+import { getFeedbackData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
 import { FeedbackHeatmap } from '@/src/components/admin/FeedbackHeatmap';
 

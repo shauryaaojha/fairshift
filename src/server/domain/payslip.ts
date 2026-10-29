@@ -1,4 +1,7 @@
-// Domain: Payslip Engine (Pure)
+/**
+ * Payslip lines from shifts: base pay, overtime, allowances, PF (12% of basic up to Rs 15,000) and
+ * ESI (0.75% when gross is Rs 21,000 or less). Pure.
+ */
 
 import { istDateKey } from './time';
 import type { PayslipInput, PayslipResult, PayslipLine } from '../../shared/types';

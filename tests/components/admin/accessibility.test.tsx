@@ -5,8 +5,8 @@ import { FeedbackHeatmap, cellStyle } from '@/src/components/admin/FeedbackHeatm
 import { StateSentence } from '@/src/components/admin/StateSentence';
 import { RiskTable } from '@/src/components/admin/RiskTable';
 import { Attendance } from '@/app/admin/(console)/attendance/page';
-import type * as AdminViews from '@/src/server/services/adminViews';
-import { buildHeatmapRows, type RiskRow } from '@/src/server/services/adminViews';
+import type * as AdminPages from '@/src/server/services/adminPages';
+import { buildHeatmapRows, type RiskRow } from '@/src/server/services/adminRows';
 import type { AggregatedFeedback } from '@/src/shared/types';
 
 // Setup window.matchMedia for JSDOM
@@ -38,8 +38,8 @@ vi.mock('@/app/admin/_lib/context', () => ({
   }),
 }));
 
-vi.mock('@/src/server/services/adminViews', async (importOriginal) => {
-  const actual = await importOriginal<typeof AdminViews>();
+vi.mock('@/src/server/services/adminPages', async (importOriginal) => {
+  const actual = await importOriginal<typeof AdminPages>();
   return {
     ...actual,
     getAttendanceData: vi.fn().mockResolvedValue({

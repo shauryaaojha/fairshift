@@ -1,4 +1,6 @@
-// Domain: Offline Capture Validation (Pure)
+/**
+ * Limits for actions queued offline: at most 24 h old and at most 2 minutes in the future. Pure.
+ */
 
 /** Maximum age for an offline action before it is rejected as stale (24 hours). */
 export const MAX_OFFLINE_AGE_MS = 24 * 60 * 60 * 1000;

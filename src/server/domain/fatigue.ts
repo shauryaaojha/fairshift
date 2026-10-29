@@ -1,4 +1,7 @@
-// Domain: Fatigue Flag Engine (Pure)
+/**
+ * Fatigue flags: more than 48 h in 7 days, a shift over 10 h, under 10 h rest between shifts, and
+ * 7 days without a rest day. Pure.
+ */
 
 import { istDateKey } from './time';
 import type { FatigueFlag, FatigueInput, Shift } from '../../shared/types';

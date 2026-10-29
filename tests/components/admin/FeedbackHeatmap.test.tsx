@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FeedbackHeatmap } from '@/src/components/admin/FeedbackHeatmap';
-import { buildHeatmapRows } from '@/src/server/services/adminViews';
+import { buildHeatmapRows } from '@/src/server/services/adminRows';
 import type { AggregatedFeedback } from '@/src/shared/types';
 
 const avg = (n: number) => ({

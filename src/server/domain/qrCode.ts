@@ -1,4 +1,7 @@
-// Domain: Rotating QR Code Engine (Pure)
+/**
+ * Rotating 6-digit gate codes (HMAC of the 60-second window, TOTP style), accepting one window
+ * either side, and verification at an offline capture time. Pure.
+ */
 
 import { createHmac } from 'crypto';
 import type { QrCodeResult } from '../../shared/types';

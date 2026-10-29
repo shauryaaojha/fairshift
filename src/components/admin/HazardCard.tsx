@@ -1,5 +1,6 @@
-import type { HazardRow } from '@/src/server/services/adminViews';
-import { StatusStamp, SEVERITY_ORDER } from './StatusStamp';
+import type { HazardRow } from '@/src/server/services/adminRows';
+import { StatusStamp } from './StatusStamp';
+import { HAZARD_SEVERITIES } from '@/src/shared/severity';
 import { fmtDateTime } from './format';
 import { acknowledgeAction, confirmSeverityAction, resolveAction } from '@/app/admin/actions';
 
@@ -47,7 +48,7 @@ export function HazardCard({ h }: { h: HazardRow }) {
                 defaultValue={suggestion ?? h.severity}
                 className="btn-quiet btn-small"
               >
-                {SEVERITY_ORDER.map((s) => (
+                {HAZARD_SEVERITIES.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>

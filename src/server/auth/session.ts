@@ -1,4 +1,7 @@
-// Auth: HMAC-SHA256 Signed Session Token
+/**
+ * Session tokens: an HMAC-SHA256 signed, base64url JSON payload with an expiry, carried in an
+ * httpOnly cookie. Also derives per-purpose keys (QR, passport) from the one session secret.
+ */
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { SessionPayload } from '../../shared/types';

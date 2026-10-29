@@ -3,15 +3,13 @@ import {
   buildAttendanceRows,
   buildHeatmapRows,
   buildStateSegments,
-  confirmHazardSeverity,
   filterHazards,
   filterRiskRows,
-  isSeverity,
-  resolveSector,
-  sectorForOrg,
   toHazardRows,
   type RiskRow,
-} from '@/src/server/services/adminViews';
+} from '@/src/server/services/adminRows';
+import { confirmHazardSeverity } from '@/src/server/services/adminPages';
+import { resolveSector, sectorForOrg } from '@/src/server/services/sectors';
 import { getDatabase } from '@/src/server/repos';
 import type { HazardReport, Shift, Worker } from '@/src/shared/types';
 
@@ -111,12 +109,6 @@ describe('hazard rows', () => {
     expect(filterHazards(rows, 'open')).toHaveLength(3);
     expect(filterHazards(rows, 'all')).toHaveLength(4);
     expect(filterHazards(rows, undefined)).toHaveLength(4);
-  });
-
-  it('validates severities', () => {
-    expect(isSeverity('high')).toBe(true);
-    expect(isSeverity('urgent')).toBe(false);
-    expect(isSeverity(null)).toBe(false);
   });
 });
 

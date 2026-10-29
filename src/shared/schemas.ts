@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ASK_MAX_HISTORY, ASK_MAX_QUESTION } from './limits';
+import { HAZARD_SEVERITIES } from './severity';
 
 /**
  * Input schemas for every Server Action. Every client value is parsed here before a service sees it.
@@ -52,7 +53,7 @@ export const hazardReportSchema = z.object({
   siteId: recordId,
   category: z.string().trim().min(1).max(80),
   description: z.string().trim().min(1, 'Describe the hazard').max(2000),
-  severity: z.enum(['critical', 'high', 'medium', 'low']),
+  severity: z.enum(HAZARD_SEVERITIES),
   anonymous: z.boolean().default(false),
   capturedAt,
   clientId,
@@ -72,7 +73,7 @@ export const feedbackSchema = z.object({
 
 // ── Admin Schemas ───────────────────────────────────────────
 export const hazardIdSchema = recordId;
-export const hazardSeveritySchema = z.enum(['critical', 'high', 'medium', 'low']);
+export const hazardSeveritySchema = z.enum(HAZARD_SEVERITIES);
 
 // ── Assistant Schema ────────────────────────────────────────
 

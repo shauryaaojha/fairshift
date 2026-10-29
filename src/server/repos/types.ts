@@ -1,4 +1,6 @@
-// Repositories: Interface Contracts
+/**
+ * Repository contracts. Both stores implement these, so services never know which one is in use.
+ */
 
 import type {
   Org,

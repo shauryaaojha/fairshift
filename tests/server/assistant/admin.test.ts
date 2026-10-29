@@ -6,7 +6,7 @@ import {
   buildAdminTools,
   routeAdminQuestion,
 } from '@/src/server/assistant/admin';
-import { SECTORS } from '@/src/server/services/adminViews';
+import { SECTORS } from '@/src/server/services/sectors';
 import { adminService } from '@/src/server/services/adminService';
 
 const construction = SECTORS.construction;

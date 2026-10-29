@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { getAdminContext } from '../_lib/context';
-import { buildStateSegments, getOverviewData } from '@/src/server/services/adminViews';
+import { buildStateSegments } from '@/src/server/services/adminRows';
+import { getOverviewData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
 import { StateSentence } from '@/src/components/admin/StateSentence';
 import { AttendanceChart } from '@/src/components/admin/AttendanceChart';

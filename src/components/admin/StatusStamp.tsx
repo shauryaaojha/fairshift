@@ -1,5 +1,5 @@
 import { Stamp, type StampVariant } from '@/src/components/ui/Stamp';
-import type { HazardSeverity, HazardStatus } from '@/src/shared/types';
+import type { HazardStatus } from '@/src/shared/types';
 
 const STATUS: Record<HazardStatus, { variant: StampVariant; word: string }> = {
   escalated: { variant: 'escalated', word: 'Escalated' },
@@ -31,5 +31,3 @@ export function RiskStamp({ score, id }: { score: number; id: string }) {
     </span>
   );
 }
-
-export const SEVERITY_ORDER: HazardSeverity[] = ['critical', 'high', 'medium', 'low'];

@@ -1,4 +1,4 @@
-import type { HeatmapRow } from '@/src/server/services/adminViews';
+import type { HeatmapRow } from '@/src/server/services/adminRows';
 
 /** Five discrete steps of ink on white (no gradient). Score is also printed.
  * Ensures WCAG AA contrast (>= 4.5:1) for all 5 steps against text color.

@@ -1,4 +1,6 @@
-// Seed data: organisations and sites
+/**
+ * Demo organisations and sites: a construction site in Chennai and a college campus.
+ */
 import type { Org, Site } from '../../shared/types';
 import { deriveServerSecret } from '../auth/session';
 

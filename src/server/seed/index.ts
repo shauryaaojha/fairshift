@@ -1,4 +1,7 @@
-// Seed Data Generator: Coordinator & PRNG
+/**
+ * Deterministic demo data, anchored to today: a seeded PRNG builds the same organisations, people
+ * and records on every start.
+ */
 import type {
   Org,
   Site,

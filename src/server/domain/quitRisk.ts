@@ -1,4 +1,7 @@
-// Domain: Quit Risk Engine (Pure)
+/**
+ * Quit-risk score (0-100) from overtime load, fatigue, attendance drop, unresolved complaints and
+ * team sentiment, with the top three reasons. Pure.
+ */
 
 import type { QuitRiskInput, QuitRiskResult, QuitRiskFactor } from '../../shared/types';
 

@@ -1,4 +1,6 @@
-// Repositories: Shared hazard status (computed on read)
+/**
+ * Hazard helpers shared by both stores: the live (computed-on-read) status and newest-first order.
+ */
 
 import type { HazardReport } from '../../shared/types';
 import { computeHazardStatus } from '../domain/hazardSla';

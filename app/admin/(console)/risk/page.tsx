@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { getAdminContext } from '../../_lib/context';
-import { getRiskData } from '@/src/server/services/adminViews';
+import { getRiskData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
 import { RiskTable } from '@/src/components/admin/RiskTable';
 

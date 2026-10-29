@@ -1,4 +1,7 @@
-// Auth & Security: In-Memory Token Bucket Rate Limiter
+/**
+ * Fixed-window rate limits kept in memory per server instance: per-action caps, 20 login attempts
+ * per IP per minute, and a 15-minute lockout after 5 failed logins for one account.
+ */
 
 interface RateLimitRecord {
   count: number;
@@ -75,7 +78,7 @@ export function resetRateLimits(): void {
 /**
  * Client IP for rate limiting. Proxies append to X-Forwarded-For, so the left-most
  * entries can be set by the client; the last entry is the one Cloud Run's front end
- * added. Spoofing the header therefore cannot mint a fresh bucket per request.
+ * added. Spoofing the header therefore cannot reset the counter on each request.
  */
 export function clientIp(headers: Headers): string {
   const forwarded = headers.get('x-forwarded-for');

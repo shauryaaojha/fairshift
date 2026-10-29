@@ -1,4 +1,7 @@
-// Domain: Anonymity & PII Scrubbing Engine (Pure)
+/**
+ * Anonymity rules for feedback: k-anonymous aggregation per team and ISO week, and PII scrubbing
+ * (phones, emails, ID numbers and roster names, including Hindi and Tamil spellings). Pure.
+ */
 
 import type { FeedbackSubmission, AggregatedFeedback } from '../../shared/types';
 import { DAY_MS } from './time';

@@ -1,4 +1,6 @@
-// Seed data: workers and administrators
+/**
+ * Demo workers and administrators. Not real people.
+ */
 import type { Worker, Admin } from '../../shared/types';
 import { hashSecret } from '../auth/password';
 

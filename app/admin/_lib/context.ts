@@ -9,7 +9,7 @@ import {
   resolveSector,
   sectorForOrg,
   type SectorConfig,
-} from '@/src/server/services/adminViews';
+} from '@/src/server/services/sectors';
 import type { Sector } from '@/src/shared/types';
 
 export interface AdminContext {

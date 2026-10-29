@@ -1,7 +1,8 @@
 /**
- * Worker service: orchestrates business use-cases, check-ins, reports, and calculations for workers.
- * Services handle business use-cases and domain rules; views shape and compose data specifically
- * for presentation and page rendering.
+ * Worker use-cases: login, check-in and check-out, hazard reports, anonymous feedback, and the
+ * reads behind the worker screens. Every method takes the worker id from the signed session (the
+ * caller), never from client input, and re-checks that the site belongs to the worker's
+ * organisation. Presentation shaping lives in workerViews.ts.
  */
 
 import { getDatabase } from '../repos';
@@ -16,321 +17,259 @@ import { istDateKey, istMonthStart, WEEK_MS } from '../domain/time';
 import { evaluateFatigue } from '../domain/fatigue';
 import { scrubPii, calculateIsoWeek } from '../domain/anonymity';
 import { summarizeHazard } from '../ai/gemini';
+import { newRecordId } from '../ids';
 import { AppError } from '../../shared/errors';
 import type {
-  Worker,
-  Shift,
+  FatigueFlag,
+  FeedbackSubmission,
   HazardReport,
   HazardSeverity,
-  FeedbackSubmission,
-  SkillRecord,
-  PayslipResult,
-  FatigueFlag,
   OvertimeResult,
+  PayslipResult,
+  Shift,
+  Site,
+  SkillRecord,
+  Worker,
 } from '../../shared/types';
 
 /** An open shift older than 16 hours is treated as a missed check-out. */
 export const STALE_OPEN_SHIFT_MS = 16 * 60 * 60 * 1000;
 
+export type PublicWorker = Omit<Worker, 'pinHash'>;
+
+/** Fields every offline-capable action carries. */
+interface Replayable {
+  /** When the worker performed the action (ISO), if it was queued offline. */
+  capturedAt?: string;
+  /** Idempotency key from the client outbox. */
+  clientId?: string;
+}
+
+export interface CheckInInput extends Replayable {
+  siteId: string;
+  code?: string;
+  lat?: number;
+  lng?: number;
+}
+
+export interface CheckOutInput extends Replayable {
+  /** Close this shift; without it, the worker's open shift is closed. */
+  shiftId?: string;
+}
+
+export interface HazardInput extends Replayable {
+  siteId: string;
+  category: string;
+  description: string;
+  severity: HazardSeverity;
+  anonymous: boolean;
+}
+
+export interface FeedbackInput extends Replayable {
+  siteId: string;
+  managerRespect: number;
+  safetyRating: number;
+  payFairness: number;
+  workloadRating: number;
+  comment: string | null;
+}
+
+function toPublicWorker({ pinHash: _pinHash, ...rest }: Worker): PublicWorker {
+  return rest;
+}
+
+/** The capture time to store: the validated offline time, or now. */
+function resolveCapturedAt(capturedAt: string | undefined): string {
+  if (!capturedAt) return new Date().toISOString();
+  const check = validateCapturedAt(capturedAt);
+  if (!check.valid) {
+    throw new AppError('invalid_capture_time', `Invalid capture time: ${check.reason}`);
+  }
+  return capturedAt;
+}
+
+/** A replayed action returns the record it already created instead of writing a duplicate. */
+function findReplay<T extends { clientId?: string }>(
+  records: T[],
+  clientId: string | undefined,
+): T | undefined {
+  return clientId ? records.find((r) => r.clientId === clientId) : undefined;
+}
+
 export class WorkerService {
   private db = getDatabase();
 
-  /**
-   * Worker login with phone + 4-digit PIN.
-   */
-  async login(
-    phone: string,
-    pin: string,
-  ): Promise<{ worker: Omit<Worker, 'pinHash'>; token: string }> {
-    const worker = await this.db.workers.getByPhone(phone);
-    if (!worker || !worker.active) {
-      throw new AppError('invalid_credentials', 'Invalid phone number or inactive account');
-    }
-
-    const isValid = await verifySecret(pin, worker.pinHash);
-    if (!isValid) {
-      throw new AppError('invalid_credentials', 'Invalid 4-digit PIN');
-    }
-
-    const token = signSession({
-      userId: worker.id,
-      orgId: worker.orgId,
-      role: 'worker',
-    });
-
-    const { pinHash: _, ...workerData } = worker;
-    return { worker: workerData, token };
-  }
-
-  /**
-   * Get worker profile by ID.
-   */
-  async getProfile(workerId: string): Promise<Omit<Worker, 'pinHash'> | null> {
-    const worker = await this.db.workers.getById(workerId);
-    if (!worker) return null;
-    const { pinHash: _, ...workerData } = worker;
-    return workerData;
-  }
-
-  /**
-   * Check in via rotating QR code or GPS geofence.
-   */
-  async checkIn(
-    workerId: string,
-    params: {
-      siteId: string;
-      code?: string;
-      lat?: number;
-      lng?: number;
-      capturedAt?: string;
-      clientId?: string;
-    },
-  ): Promise<{ shift: Shift; message: string }> {
+  private async requireWorker(workerId: string): Promise<Worker> {
     const worker = await this.db.workers.getById(workerId);
     if (!worker) throw new AppError('not_found', 'Worker not found');
+    return worker;
+  }
 
-    if (params.clientId) {
-      const workerShifts = await this.db.shifts.listByWorker(workerId);
-      const existing = workerShifts.find((s) => s.clientId === params.clientId);
-      if (existing) {
-        return { shift: existing, message: 'Already checked in' };
-      }
-    }
-
-    const site = await this.db.sites.get(params.siteId);
-    // A worker can only check in at a site of their own organisation.
+  /** A worker may only act at a site of their own organisation. */
+  private async requireOwnSite(worker: Worker, siteId: string): Promise<Site> {
+    const site = await this.db.sites.get(siteId);
     if (!site || site.orgId !== worker.orgId) throw new AppError('not_found', 'Site not found');
+    return site;
+  }
 
-    if (params.capturedAt) {
-      const val = validateCapturedAt(params.capturedAt);
-      if (!val.valid) {
-        throw new AppError('invalid_capture_time', `Invalid capture time: ${val.reason}`);
-      }
+  /** Phone + 4-digit PIN. Every failure reads the same, so a phone number cannot be probed. */
+  async login(phone: string, pin: string): Promise<{ worker: PublicWorker; token: string }> {
+    const worker = await this.db.workers.getByPhone(phone);
+    if (!worker || !worker.active || !(await verifySecret(pin, worker.pinHash))) {
+      throw new AppError('invalid_credentials', 'Invalid phone number or PIN');
     }
+    const token = signSession({ userId: worker.id, orgId: worker.orgId, role: 'worker' });
+    return { worker: toPublicWorker(worker), token };
+  }
 
-    // An open shift from an earlier day means a missed check-out. Close it at its
-    // own start (0 hours, so it cannot inflate pay or overtime) and let the worker
-    // check in again; the supervisor can correct the record.
-    let existingActive = await this.db.shifts.getActiveForWorker(workerId);
-    if (existingActive && Date.now() - Date.parse(existingActive.checkIn) > STALE_OPEN_SHIFT_MS) {
-      await this.db.shifts.update({ ...existingActive, checkOut: existingActive.checkIn });
-      existingActive = null;
+  async getProfile(workerId: string): Promise<PublicWorker | null> {
+    const worker = await this.db.workers.getById(workerId);
+    return worker ? toPublicWorker(worker) : null;
+  }
+
+  /** Check in with the rotating gate QR code, or by GPS inside the site geofence. */
+  async checkIn(workerId: string, input: CheckInInput): Promise<{ shift: Shift; message: string }> {
+    const worker = await this.requireWorker(workerId);
+    const replay = findReplay(await this.db.shifts.listByWorker(workerId), input.clientId);
+    if (replay) return { shift: replay, message: 'Already checked in' };
+
+    const site = await this.requireOwnSite(worker, input.siteId);
+    const checkInAt = resolveCapturedAt(input.capturedAt);
+
+    // An open shift from an earlier day means a missed check-out. Close it at its own start
+    // (0 hours, so it cannot inflate pay or overtime) and let the worker check in again; the
+    // supervisor can correct the record.
+    let open = await this.db.shifts.getActiveForWorker(workerId);
+    if (open && Date.now() - Date.parse(open.checkIn) > STALE_OPEN_SHIFT_MS) {
+      await this.db.shifts.update({ ...open, checkOut: open.checkIn });
+      open = null;
     }
-    if (existingActive) {
-      return { shift: existingActive, message: 'Already checked in' };
-    }
+    if (open) return { shift: open, message: 'Already checked in' };
 
-    let verifiedMethod: 'qr' | 'gps' = 'qr';
-
-    if (params.code) {
-      const isQrValid = params.capturedAt
-        ? verifySiteQrCodeAt(params.code, site.qrSecret, Date.parse(params.capturedAt))
-        : verifySiteQrCode(params.code, site.qrSecret);
-      if (!isQrValid) {
-        throw new AppError('invalid_code', 'Invalid or expired 6-digit site check-in code');
-      }
-      verifiedMethod = 'qr';
-    } else if (params.lat !== undefined && params.lng !== undefined) {
-      const geoResult = verifyGeofence(params.lat, params.lng, site);
-      if (!geoResult.withinRadius) {
-        throw new AppError(
-          'outside_geofence',
-          `Outside site geofence (${geoResult.distanceMetres}m from site gate)`,
-        );
-      }
-      verifiedMethod = 'gps';
-    } else {
-      throw new AppError(
-        'no_checkin_method',
-        'Provide a valid QR code or GPS location to check in',
-      );
-    }
-
-    const newShift: Shift = {
-      id: `shift-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    const method = this.verifyPresence(site, input);
+    const shift = await this.db.shifts.create({
+      id: newRecordId('shift'),
       workerId,
       siteId: site.id,
       orgId: worker.orgId,
-      checkIn: params.capturedAt ?? new Date().toISOString(),
+      checkIn: checkInAt,
       checkOut: null,
-      method: verifiedMethod,
-      ...(params.clientId ? { clientId: params.clientId } : {}),
-    };
-
-    const saved = await this.db.shifts.create(newShift);
-    return { shift: saved, message: 'Checked in successfully' };
+      method,
+      ...(input.clientId ? { clientId: input.clientId } : {}),
+    });
+    return { shift, message: 'Checked in successfully' };
   }
 
-  /**
-   * Check out from active shift.
-   */
-  async checkOut(
-    workerId: string,
-    shiftIdOrOptions?: string | { shiftId?: string; capturedAt?: string; clientId?: string },
-    optionsParam?: { capturedAt?: string; clientId?: string },
-  ): Promise<Shift> {
-    let shiftId: string | undefined;
-    let options: { capturedAt?: string; clientId?: string } | undefined;
-
-    if (typeof shiftIdOrOptions === 'string') {
-      shiftId = shiftIdOrOptions;
-      options = optionsParam;
-    } else if (shiftIdOrOptions && typeof shiftIdOrOptions === 'object') {
-      shiftId = shiftIdOrOptions.shiftId;
-      options = shiftIdOrOptions;
-    } else {
-      shiftId = undefined;
-      options = optionsParam;
+  /** Proof the worker is at the gate. An offline scan is checked against its capture time. */
+  private verifyPresence(site: Site, input: CheckInInput): Shift['method'] {
+    if (input.code) {
+      const valid = input.capturedAt
+        ? verifySiteQrCodeAt(input.code, site.qrSecret, Date.parse(input.capturedAt))
+        : verifySiteQrCode(input.code, site.qrSecret);
+      if (!valid) {
+        throw new AppError('invalid_code', 'Invalid or expired 6-digit site check-in code');
+      }
+      return 'qr';
     }
+    if (input.lat !== undefined && input.lng !== undefined) {
+      const geo = verifyGeofence(input.lat, input.lng, site);
+      if (!geo.withinRadius) {
+        throw new AppError(
+          'outside_geofence',
+          `Outside site geofence (${geo.distanceMetres}m from site gate)`,
+        );
+      }
+      return 'gps';
+    }
+    throw new AppError('no_checkin_method', 'Provide a valid QR code or GPS location to check in');
+  }
 
-    if (options?.clientId) {
-      const workerShifts = await this.db.shifts.listByWorker(workerId);
-      const existing = workerShifts.find(
+  /** Close a shift. Idempotent: closing an already closed shift returns it unchanged. */
+  async checkOut(workerId: string, input: CheckOutInput = {}): Promise<Shift> {
+    if (input.clientId) {
+      const shifts = await this.db.shifts.listByWorker(workerId);
+      const replay = shifts.find(
         (s) =>
-          s.checkOutClientId === options!.clientId ||
-          (s.clientId === options!.clientId && s.checkOut !== null),
+          s.checkOutClientId === input.clientId ||
+          (s.clientId === input.clientId && s.checkOut !== null),
       );
-      if (existing) {
-        return existing;
-      }
+      if (replay) return replay;
     }
 
-    let shift: Shift | null = null;
-    if (shiftId) {
-      shift = await this.db.shifts.getById(shiftId);
-      if (!shift || shift.workerId !== workerId) {
-        throw new AppError('not_found', 'Shift record not found');
-      }
-    } else {
-      shift = await this.db.shifts.getActiveForWorker(workerId);
-      if (!shift) {
-        throw new AppError('not_found', 'Shift record not found');
-      }
+    const shift = input.shiftId
+      ? await this.db.shifts.getById(input.shiftId)
+      : await this.db.shifts.getActiveForWorker(workerId);
+    if (!shift || shift.workerId !== workerId) {
+      throw new AppError('not_found', 'Shift record not found');
     }
 
-    if (options?.capturedAt) {
-      const val = validateCapturedAt(options.capturedAt);
-      if (!val.valid) {
-        throw new AppError('invalid_capture_time', `Invalid capture time: ${val.reason}`);
-      }
-      if (Date.parse(options.capturedAt) < Date.parse(shift.checkIn)) {
-        throw new AppError('checkout_before_checkin', 'Check-out time must be after check-in time');
-      }
+    const checkOutAt = resolveCapturedAt(input.capturedAt);
+    if (Date.parse(checkOutAt) < Date.parse(shift.checkIn)) {
+      throw new AppError('checkout_before_checkin', 'Check-out time must be after check-in time');
     }
+    if (shift.checkOut !== null) return shift;
 
-    if (shift.checkOut !== null) {
-      return shift;
-    }
-
-    shift.checkOut = options?.capturedAt ?? new Date().toISOString();
-    if (options?.clientId) {
-      shift.checkOutClientId = options.clientId;
-    }
-
-    return await this.db.shifts.update(shift);
+    return this.db.shifts.update({
+      ...shift,
+      checkOut: checkOutAt,
+      ...(input.clientId ? { checkOutClientId: input.clientId } : {}),
+    });
   }
 
-  /**
-   * Get today's active shift status.
-   */
+  /** The open shift, the latest shifts, and fatigue flags for the last 7 days. */
   async getTodayStatus(workerId: string): Promise<{
     activeShift: Shift | null;
     recentShifts: Shift[];
     fatigueFlags: FatigueFlag[];
   }> {
-    const activeShift = await this.db.shifts.getActiveForWorker(workerId);
-    const allShifts = await this.db.shifts.listByWorker(workerId);
-
-    // Past 7 days window for fatigue check
+    const [activeShift, allShifts] = await Promise.all([
+      this.db.shifts.getActiveForWorker(workerId),
+      this.db.shifts.listByWorker(workerId),
+    ]);
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - WEEK_MS);
     const fatigueFlags = evaluateFatigue({
       shifts: allShifts,
-      windowStart: weekAgo.toISOString(),
+      windowStart: new Date(now.getTime() - WEEK_MS).toISOString(),
       windowEnd: now.toISOString(),
     });
-
-    return {
-      activeShift,
-      recentShifts: allShifts.slice(0, 5),
-      fatigueFlags,
-    };
+    return { activeShift, recentShifts: allShifts.slice(0, 5), fatigueFlags };
   }
 
-  /**
-   * Calculates payslip for the current period.
-   */
+  /** Payslip for the current IST calendar month so far. */
   async getMyPayslip(workerId: string): Promise<PayslipResult> {
-    const worker = await this.db.workers.getById(workerId);
-    if (!worker) throw new AppError('not_found', 'Worker not found');
-
-    const org = await this.db.orgs.get(worker.orgId);
-    const allShifts = await this.db.shifts.listByWorker(workerId);
-
+    const worker = await this.requireWorker(workerId);
+    const [org, allShifts] = await Promise.all([
+      this.db.orgs.get(worker.orgId),
+      this.db.shifts.listByWorker(workerId),
+    ]);
     const now = new Date();
     const periodStart = istMonthStart(now);
     const periodEnd = istDateKey(now);
-
-    const periodShifts = allShifts.filter((s) => {
-      const d = istDateKey(s.checkIn);
-      return d >= periodStart && d <= periodEnd;
+    const shifts = allShifts.filter((s) => {
+      const day = istDateKey(s.checkIn);
+      return day >= periodStart && day <= periodEnd;
     });
-
     return calculatePayslip({
-      worker: {
-        basePay: worker.basePay,
-        allowances: worker.allowances,
-        payType: worker.payType,
-      },
-      shifts: periodShifts,
+      worker: { basePay: worker.basePay, allowances: worker.allowances, payType: worker.payType },
+      shifts,
       periodStart,
       periodEnd,
       policy: org?.policy,
     });
   }
 
-  /**
-   * Reports a workplace hazard.
-   */
-  async reportHazard(
-    workerId: string,
-    input: {
-      siteId: string;
-      category: string;
-      description: string;
-      severity: HazardSeverity;
-      anonymous: boolean;
-      capturedAt?: string;
-      clientId?: string;
-    },
-  ): Promise<HazardReport> {
-    // The reporter is always authenticated; anonymity only drops the id from the stored record.
-    const worker = await this.db.workers.getById(workerId);
-    if (!worker) throw new AppError('not_found', 'Worker not found');
-    const site = await this.db.sites.get(input.siteId);
-    if (!site || site.orgId !== worker.orgId) throw new AppError('not_found', 'Site not found');
+  /** Stores a hazard report with an English summary. Anonymous reports keep no reporter id. */
+  async reportHazard(workerId: string, input: HazardInput): Promise<HazardReport> {
+    const worker = await this.requireWorker(workerId);
+    const site = await this.requireOwnSite(worker, input.siteId);
+    const replay = findReplay(await this.db.hazards.listBySite(site.id), input.clientId);
+    if (replay) return replay;
 
-    if (input.clientId) {
-      const existingHazards = await this.db.hazards.listBySite(input.siteId);
-      const existing = existingHazards.find((h) => h.clientId === input.clientId);
-      if (existing) {
-        return existing;
-      }
-    }
+    const reportedAt = resolveCapturedAt(input.capturedAt);
+    const ai = await summarizeHazard(input.category, input.description, input.severity);
 
-    let reportedAt = new Date().toISOString();
-    if (input.capturedAt) {
-      const val = validateCapturedAt(input.capturedAt);
-      if (!val.valid) {
-        throw new AppError('invalid_capture_time', `Invalid capture time: ${val.reason}`);
-      }
-      reportedAt = input.capturedAt;
-    }
-
-    const summaryResult = await summarizeHazard(input.category, input.description, input.severity);
-
-    const hazard: HazardReport = {
-      id: `hazard-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    return this.db.hazards.create({
+      id: newRecordId('hazard'),
       orgId: site.orgId,
       siteId: site.id,
       reporterId: input.anonymous ? null : workerId,
@@ -341,62 +280,28 @@ export class WorkerService {
       reportedAt,
       acknowledgedAt: null,
       resolvedAt: null,
-      aiSummary: summaryResult.summary,
-      aiSuggestedSeverity: summaryResult.suggestedSeverity,
+      aiSummary: ai.summary,
+      aiSuggestedSeverity: ai.suggestedSeverity,
       anonymous: input.anonymous,
       ...(input.clientId ? { clientId: input.clientId } : {}),
-    };
-
-    return await this.db.hazards.create(hazard);
+    });
   }
 
   /**
-   * Submits anonymous feedback with PII scrubbing.
+   * Stores anonymous feedback: no worker id, the team and ISO week only, and names on the site
+   * roster (plus phones, emails and ID numbers) scrubbed from the comment.
    */
-  async submitFeedback(
-    workerId: string,
-    input: {
-      siteId: string;
-      managerRespect: number;
-      safetyRating: number;
-      payFairness: number;
-      workloadRating: number;
-      comment: string | null;
-      capturedAt?: string;
-      clientId?: string;
-    },
-  ): Promise<FeedbackSubmission> {
-    const worker = await this.db.workers.getById(workerId);
-    if (!worker) throw new AppError('not_found', 'Worker not found');
+  async submitFeedback(workerId: string, input: FeedbackInput): Promise<FeedbackSubmission> {
+    const worker = await this.requireWorker(workerId);
+    const site = await this.requireOwnSite(worker, input.siteId);
+    const replay = findReplay(await this.db.feedback.listBySite(site.id), input.clientId);
+    if (replay) return replay;
 
-    const site = await this.db.sites.get(input.siteId);
-    if (!site || site.orgId !== worker.orgId) throw new AppError('not_found', 'Site not found');
+    const isoWeek = calculateIsoWeek(new Date(resolveCapturedAt(input.capturedAt)));
+    const roster = (await this.db.workers.listBySite(site.id)).map((w) => w.name);
 
-    if (input.clientId) {
-      const existingFeedback = await this.db.feedback.listBySite(input.siteId);
-      const existing = existingFeedback.find((f) => f.clientId === input.clientId);
-      if (existing) {
-        return existing;
-      }
-    }
-
-    let isoWeek = calculateIsoWeek(new Date());
-    if (input.capturedAt) {
-      const val = validateCapturedAt(input.capturedAt);
-      if (!val.valid) {
-        throw new AppError('invalid_capture_time', `Invalid capture time: ${val.reason}`);
-      }
-      isoWeek = calculateIsoWeek(new Date(input.capturedAt));
-    }
-
-    // Fetch team roster names for scrubbing
-    const siteWorkers = await this.db.workers.listBySite(input.siteId);
-    const rosterNames = siteWorkers.map((w) => w.name);
-
-    const scrubbedComment = input.comment ? scrubPii(input.comment, rosterNames) : null;
-
-    const feedback: FeedbackSubmission = {
-      id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    return this.db.feedback.create({
+      id: newRecordId('fb'),
       orgId: worker.orgId,
       siteId: site.id,
       team: worker.team,
@@ -405,56 +310,38 @@ export class WorkerService {
       safetyRating: input.safetyRating,
       payFairness: input.payFairness,
       workloadRating: input.workloadRating,
-      comment: scrubbedComment,
+      comment: input.comment ? scrubPii(input.comment, roster) : null,
       ...(input.clientId ? { clientId: input.clientId } : {}),
-    };
-
-    return await this.db.feedback.create(feedback);
+    });
   }
 
-  /**
-   * Get shifts and hours breakdown for past 2 weeks.
-   */
+  /** Shifts of the last 14 days with overtime, and fatigue flags for the last 7. */
   async getMyHours(workerId: string): Promise<{
     shifts: Shift[];
     otSummary: OvertimeResult;
     fatigueFlags: FatigueFlag[];
   }> {
-    const worker = await this.db.workers.getById(workerId);
-    if (!worker) throw new AppError('not_found', 'Worker not found');
-
-    const org = await this.db.orgs.get(worker.orgId);
-    const allShifts = await this.db.shifts.listByWorker(workerId);
-
-    const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 2 * WEEK_MS);
-    const recentShifts = allShifts.filter(
-      (s) => new Date(s.checkIn).getTime() >= twoWeeksAgo.getTime(),
-    );
-
+    const worker = await this.requireWorker(workerId);
+    const [org, allShifts] = await Promise.all([
+      this.db.orgs.get(worker.orgId),
+      this.db.shifts.listByWorker(workerId),
+    ]);
+    const now = Date.now();
+    const shifts = allShifts.filter((s) => Date.parse(s.checkIn) >= now - 2 * WEEK_MS);
+    // A monthly wage covers 26 working days of 8 hours (208 h).
     const hourlyRate = worker.payType === 'daily' ? worker.basePay / 8 : worker.basePay / 208;
-    const otSummary = calculateShiftsOvertime(recentShifts, hourlyRate, org?.policy);
-
+    const otSummary = calculateShiftsOvertime(shifts, hourlyRate, org?.policy);
     // Fatigue limits are defined per 7 days, so evaluate the same window as Home does.
-    const weekAgo = new Date(now.getTime() - WEEK_MS);
     const fatigueFlags = evaluateFatigue({
-      shifts: recentShifts,
-      windowStart: weekAgo.toISOString(),
-      windowEnd: now.toISOString(),
+      shifts,
+      windowStart: new Date(now - WEEK_MS).toISOString(),
+      windowEnd: new Date(now).toISOString(),
     });
-
-    return {
-      shifts: recentShifts,
-      otSummary,
-      fatigueFlags,
-    };
+    return { shifts, otSummary, fatigueFlags };
   }
 
-  /**
-   * Get verified skill passport credentials.
-   */
   async getMySkills(workerId: string): Promise<SkillRecord[]> {
-    return await this.db.skills.listByWorker(workerId);
+    return this.db.skills.listByWorker(workerId);
   }
 }
 

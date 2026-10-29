@@ -16,14 +16,12 @@ import { failure, toActionFailure, type ActionFailure } from '@/src/shared/error
 import { adminService } from '@/src/server/services/adminService';
 import { checkLoginLimit, recordLoginFailure } from '@/src/server/auth/rateLimit';
 import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/src/server/auth/session';
+import { SECTOR_COOKIE_NAME, resolveSector, sectorForOrg } from '@/src/server/services/sectors';
 import {
-  SECTOR_COOKIE_NAME,
   acknowledgeHazardForOrg,
   confirmHazardSeverity,
   resolveHazardForOrg,
-  resolveSector,
-  sectorForOrg,
-} from '@/src/server/services/adminViews';
+} from '@/src/server/services/adminPages';
 import { getAdminContext } from './_lib/context';
 
 export interface LoginState {

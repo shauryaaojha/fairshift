@@ -1,4 +1,7 @@
-// Domain: Overtime Engine (Pure)
+/**
+ * Overtime under the OSH Code 2020 defaults: beyond 8 h a day or 48 h per ISO week, paid at 2x,
+ * with per-organisation overrides. Pure.
+ */
 
 import { calculateIsoWeek } from './anonymity';
 import { istDateKey } from './time';

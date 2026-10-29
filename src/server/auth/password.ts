@@ -1,4 +1,7 @@
-// Auth: Scrypt Password & PIN Hashing
+/**
+ * scrypt hashing for worker PINs and admin passwords, with a per-secret random salt and a
+ * constant-time comparison.
+ */
 
 import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';

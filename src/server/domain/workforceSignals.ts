@@ -1,4 +1,6 @@
-// Domain: Workforce signals for quit-risk
+/**
+ * Inputs to the quit-risk score derived from records: attendance drop and team sentiment. Pure.
+ */
 
 import { istDateKey, DAY_MS } from './time';
 import type { FeedbackSubmission, Shift } from '../../shared/types';

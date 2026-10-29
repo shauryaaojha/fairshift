@@ -19,12 +19,15 @@ interface Recognition {
 }
 type RecognitionCtor = new () => Recognition;
 
+/** Chrome on Android exposes the Web Speech API under a webkit prefix. */
+type SpeechWindow = Window & {
+  SpeechRecognition?: RecognitionCtor;
+  webkitSpeechRecognition?: RecognitionCtor;
+};
+
 function getCtor(): RecognitionCtor | null {
   if (typeof window === 'undefined') return null;
-  const w = window as unknown as {
-    SpeechRecognition?: RecognitionCtor;
-    webkitSpeechRecognition?: RecognitionCtor;
-  };
+  const w: SpeechWindow = window;
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 

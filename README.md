@@ -252,16 +252,17 @@ npm run verify         # format + typecheck + lint + coverage + build, exactly a
 
 Measured on 2026-10-29 with `npm run verify`:
 
-| Check                                              | Result                                                                                 |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Tests                                              | **361 passed**, 0 failed, in 50 files                                                  |
-| Coverage of all server, shared and offline code    | **93% statements · 88% branches · 91% functions · 94% lines** (thresholds 90/85/90/90) |
-| Coverage of the rule engines (`src/server/domain`) | 99.4% statements · 97.5% branches · 100% functions                                     |
-| TypeScript strict                                  | 0 errors                                                                               |
-| ESLint `--max-warnings 0`                          | 0 problems                                                                             |
-| Prettier                                           | clean                                                                                  |
-| `npm audit --omit=dev`                             | 0 vulnerabilities                                                                      |
-| Production build                                   | passes                                                                                 |
+| Check                                                 | Result                                                                                                   |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Tests                                                 | **360 passed**, 0 failed, in 50 files                                                                    |
+| Coverage of all server, shared and offline code       | **93.7% statements · 88.7% branches · 90.9% functions · 94.3% lines** (thresholds 90/85/90/90)           |
+| Coverage of the rule engines (`src/server/domain`)    | 99.4% statements · 97.5% branches · 100% functions                                                       |
+| TypeScript strict                                     | 0 errors                                                                                                 |
+| ESLint `--max-warnings 0`                             | 0 problems                                                                                               |
+| Prettier                                              | clean                                                                                                    |
+| Accessibility (axe-core, WCAG 2.1 AA + best practice) | **0 violations on 25 pages**, worker pages in Hindi and Tamil, both Ask pages before and after an answer |
+| `npm audit --omit=dev`                                | 0 vulnerabilities                                                                                        |
+| Production build                                      | passes                                                                                                   |
 
 | Suite                          | What it proves                                                                                                                                                                                 |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -333,14 +334,16 @@ app/                      routes
   passport/[token]/       public skill verification
 src/
   server/domain/          pure rule engines (no framework imports)
-  server/services/        use-cases (workerService, adminService) and page views
+  server/services/        use-cases (workerService, adminService), console page data (adminPages),
+                          pure row builders (adminRows), sectors, worker page views (workerViews)
   server/assistant/       Ask FairShift: engine, worker and admin tools, fallback router
   server/ai/              Gemini client (timeout, circuit breaker), prompts, fallbacks
+  server/ids.ts           record ids (prefix + crypto UUID)
   server/auth/            sessions, password hashing, rate limits, org guard
   server/repos/           repository interface, MongoDB adapter, in-memory store
   server/seed/            deterministic demo data
   server/env.ts           validated environment
-  shared/                 types, zod schemas, typed errors, limits
+  shared/                 types, zod schemas, typed errors, severity scale, limits
   lib/offline/            IndexedDB outbox and sync
   components/             ui, worker, admin, motion, pwa, icons
   i18n/                   English, Hindi and Tamil dictionaries

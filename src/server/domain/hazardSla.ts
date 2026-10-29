@@ -1,4 +1,7 @@
-// Domain: Hazard SLA & Escalation Engine (Pure)
+/**
+ * Hazard response deadlines by severity (1 h / 4 h / 24 h / 72 h). Escalation is computed on read,
+ * so a missed deadline escalates without a scheduler. Pure.
+ */
 
 import type {
   HazardReport,

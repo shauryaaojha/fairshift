@@ -1,4 +1,7 @@
-// Repositories: In-Memory Adapter
+/**
+ * In-memory store seeded with the demo data. Used when MONGODB_URI is unset, in tests, and as the
+ * fallback when MongoDB is unreachable. Resets when the server instance restarts.
+ */
 
 import type {
   FairShiftDatabase,
@@ -21,7 +24,7 @@ import type {
   FeedbackSubmission,
   SkillRecord,
 } from '../../shared/types';
-import { generateSeedData } from '../seed/seed';
+import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
 
 class InMemoryFairShiftDb implements FairShiftDatabase {

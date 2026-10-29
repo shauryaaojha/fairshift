@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { getAdminContext } from '../../_lib/context';
-import { getAttendanceData } from '@/src/server/services/adminViews';
+import { getAttendanceData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
 import { AttendanceChart } from '@/src/components/admin/AttendanceChart';
 import { fmtDay, fmtTime } from '@/src/components/admin/format';

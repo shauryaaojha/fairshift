@@ -1,4 +1,6 @@
-// Seed data: hazards, feedback, and skill records
+/**
+ * Demo hazard reports, anonymous feedback and skill records.
+ */
 import type { HazardReport, FeedbackSubmission, SkillRecord } from '../../shared/types';
 import { deriveServerSecret } from '../auth/session';
 import { generateSkillVerifyToken } from '../domain/skills';

@@ -1,4 +1,6 @@
-// Domain: Geofence Verification Engine (Pure)
+/**
+ * GPS check-in: haversine distance from the site gate against the site radius. Pure.
+ */
 
 import type { GeofenceResult, Site } from '../../shared/types';
 

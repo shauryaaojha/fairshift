@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { adminService } from '@/src/server/services/adminService';
+import { SECTORS } from '@/src/server/services/sectors';
 import {
-  SECTORS,
   acknowledgeHazardForOrg,
   getAttendanceData,
   getFeedbackData,
@@ -12,7 +12,7 @@ import {
   getSafetyData,
   getSitesData,
   resolveHazardForOrg,
-} from '@/src/server/services/adminViews';
+} from '@/src/server/services/adminPages';
 import { getDatabase } from '@/src/server/repos';
 import { verifySession } from '@/src/server/auth/session';
 import { setGeminiForTests } from '@/src/server/ai/client';

@@ -5,7 +5,8 @@
  */
 
 import { adminService } from '../services/adminService';
-import { buildHeatmapRows, toHazardRows, type SectorConfig } from '../services/adminViews';
+import { buildHeatmapRows, toHazardRows } from '../services/adminRows';
+import { type SectorConfig } from '../services/sectors';
 import { ask, type AssistantAnswer, type AssistantTool, type ChatTurn } from './engine';
 
 export type AdminToolName =

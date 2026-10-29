@@ -1,4 +1,6 @@
-// Shared Types
+/**
+ * Types shared by the rule engines, services, repositories and UI.
+ */
 
 // ── Locale ──────────────────────────────────────────────────
 export type Locale = 'en' | 'hi' | 'ta';

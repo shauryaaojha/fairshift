@@ -103,16 +103,16 @@ describe('checkIn and checkOut', () => {
 
   it('checks out the open shift and is idempotent on replay', async () => {
     await workerService.checkIn(worker.id, { siteId: site.id, code: code() });
-    const out = await workerService.checkOut(worker.id, undefined, { clientId: 'client-out-1' });
+    const out = await workerService.checkOut(worker.id, { clientId: 'client-out-1' });
     expect(out.checkOut).not.toBeNull();
-    const replay = await workerService.checkOut(worker.id, undefined, { clientId: 'client-out-1' });
+    const replay = await workerService.checkOut(worker.id, { clientId: 'client-out-1' });
     expect(replay.id).toBe(out.id);
   });
 
   it("will not check out with no open shift, or someone else's shift", async () => {
     await expectCode(workerService.checkOut(worker.id), 'not_found');
     const { shift } = await workerService.checkIn(worker.id, { siteId: site.id, code: code() });
-    await expectCode(workerService.checkOut('worker-ramesh', shift.id), 'not_found');
+    await expectCode(workerService.checkOut('worker-ramesh', { shiftId: shift.id }), 'not_found');
   });
 });
 
@@ -127,6 +127,10 @@ describe('reportHazard', () => {
       anonymous: true,
     });
     expect(h.reporterId).toBeNull();
+    // Unguessable id: prefix plus a v4 UUID from the OS CSPRNG.
+    expect(h.id).toMatch(
+      /^hazard-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(h.status).toBe('reported');
     expect(h.aiSummary).toContain('Live wire');
     // The danger words raise the suggestion; the stored severity stays the worker's choice.

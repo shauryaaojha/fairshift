@@ -1,4 +1,7 @@
-// Repositories: MongoDB Adapter (Atlas / Vercel Marketplace)
+/**
+ * MongoDB store (Atlas or self-hosted). One pooled client per instance, indexes created on
+ * first use, and the demo data seeded into an empty database.
+ */
 
 import { MongoClient, type Db, type Document } from 'mongodb';
 import type { FairShiftDatabase } from './types';
@@ -13,7 +16,7 @@ import type {
   FeedbackSubmission,
   SkillRecord,
 } from '../../shared/types';
-import { generateSeedData } from '../seed/seed';
+import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
 
 const COLLECTIONS = {
