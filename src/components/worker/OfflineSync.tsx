@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '@/src/i18n/client';
 import {
   getActiveWorkerId,
@@ -8,15 +8,53 @@ import {
   setActiveWorkerId,
   type OutboxItem,
 } from '@/src/lib/offline/outbox';
-import { flushOutbox, type SyncHandlers } from '@/src/lib/offline/sync';
+import { flushOutbox, type SyncHandlerResult, type SyncHandlers } from '@/src/lib/offline/sync';
 import {
   checkInAction,
   checkOutAction,
   reportHazardAction,
   submitFeedbackAction,
+  type CheckinInput,
   type FeedbackInput,
   type HazardInput,
 } from '@/app/w/actions';
+
+function subscribeOnline(onChange: () => void): () => void {
+  window.addEventListener('online', onChange);
+  window.addEventListener('offline', onChange);
+  return () => {
+    window.removeEventListener('online', onChange);
+    window.removeEventListener('offline', onChange);
+  };
+}
+const getOnline = () => navigator.onLine;
+/**
+ * The server cannot know the phone's connection, so it renders "online". Reading
+ * `navigator.onLine` during render is wrong on the server: Node 22 defines a global `navigator`
+ * without `onLine`, which made every worker page server-render the offline banner.
+ */
+const getServerOnline = () => true;
+
+/** Replays keep the original capture time and use the outbox id as the idempotency key. */
+function stamp(item: OutboxItem): { capturedAt: string; clientId: string } {
+  return { capturedAt: item.capturedAt, clientId: item.id };
+}
+
+/**
+ * Run one replay. Every action returns `{ ok }` or an `ActionFailure` carrying `permanent`;
+ * a thrown error means the request never reached the server, so the item is kept for retry.
+ */
+async function send(
+  call: () => Promise<{ ok: true } | { ok: false; permanent: boolean; reason: string }>,
+): Promise<SyncHandlerResult> {
+  try {
+    const res = await call();
+    if (res.ok) return { ok: true };
+    return { ok: false, permanent: res.permanent, retryable: !res.permanent, reason: res.reason };
+  } catch (err) {
+    return { ok: false, retryable: true, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 interface Props {
   workerId: string | null;
@@ -26,9 +64,7 @@ type SyncState = 'idle' | 'syncing' | 'all-sent' | 'rejected';
 
 export function OfflineSync({ workerId }: Props) {
   const t = useT();
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  const isOnline = useSyncExternalStore(subscribeOnline, getOnline, getServerOnline);
   const [outboxCount, setOutboxCount] = useState<number>(0);
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [rejectedInfo, setRejectedInfo] = useState<{ count: number; reason: string } | null>(null);
@@ -69,144 +105,15 @@ export function OfflineSync({ workerId }: Props) {
     setSyncState('syncing');
 
     const handlers: SyncHandlers = {
-      checkin: async (item: OutboxItem) => {
-        try {
-          const payload = item.payload as { code?: string; lat?: number; lng?: number };
-          const res = await checkInAction({
-            ...payload,
-            capturedAt: item.capturedAt,
-            clientId: item.id,
-          } as unknown as { code?: string; lat?: number; lng?: number });
-
-          if (res.ok) return { ok: true };
-
-          const anyRes = res as unknown as {
-            permanent?: boolean;
-            retryable?: boolean;
-            reason?: string;
-            code?: string;
-          };
-          if (anyRes.permanent !== undefined) {
-            return {
-              ok: false,
-              permanent: anyRes.permanent,
-              retryable: anyRes.retryable,
-              reason: anyRes.reason || anyRes.code,
-            };
-          }
-          const isPerm =
-            anyRes.code === 'invalid_code' ||
-            anyRes.code === 'outside' ||
-            anyRes.code === 'stale' ||
-            anyRes.code === 'too_old' ||
-            anyRes.code === 'future';
-          return {
-            ok: false,
-            permanent: isPerm,
-            retryable: !isPerm,
-            reason: anyRes.code || 'Check-in failed',
-          };
-        } catch (err) {
-          return {
-            ok: false,
-            retryable: true,
-            reason: err instanceof Error ? err.message : String(err),
-          };
-        }
-      },
-      checkout: async () => {
-        try {
-          const res = await checkOutAction();
-          if (res.ok) return { ok: true };
-
-          const anyRes = res as unknown as {
-            permanent?: boolean;
-            retryable?: boolean;
-            reason?: string;
-          };
-          if (anyRes.permanent !== undefined) {
-            return {
-              ok: false,
-              permanent: anyRes.permanent,
-              retryable: anyRes.retryable,
-              reason: anyRes.reason,
-            };
-          }
-          return { ok: false, permanent: true, reason: anyRes.reason || 'Check-out rejected' };
-        } catch (err) {
-          return {
-            ok: false,
-            retryable: true,
-            reason: err instanceof Error ? err.message : String(err),
-          };
-        }
-      },
-      hazard: async (item: OutboxItem) => {
-        try {
-          const payload = item.payload as HazardInput;
-          const res = await reportHazardAction({
-            ...payload,
-            capturedAt: item.capturedAt,
-            clientId: item.id,
-          } as unknown as HazardInput);
-
-          if (res.ok) return { ok: true };
-
-          const anyRes = res as unknown as {
-            permanent?: boolean;
-            retryable?: boolean;
-            reason?: string;
-          };
-          if (anyRes.permanent !== undefined) {
-            return {
-              ok: false,
-              permanent: anyRes.permanent,
-              retryable: anyRes.retryable,
-              reason: anyRes.reason,
-            };
-          }
-          return { ok: false, permanent: true, reason: anyRes.reason || 'Report rejected' };
-        } catch (err) {
-          return {
-            ok: false,
-            retryable: true,
-            reason: err instanceof Error ? err.message : String(err),
-          };
-        }
-      },
-      feedback: async (item: OutboxItem) => {
-        try {
-          const payload = item.payload as FeedbackInput;
-          const res = await submitFeedbackAction({
-            ...payload,
-            capturedAt: item.capturedAt,
-            clientId: item.id,
-          } as unknown as FeedbackInput);
-
-          if (res.ok) return { ok: true };
-
-          const anyRes = res as unknown as {
-            permanent?: boolean;
-            retryable?: boolean;
-            reason?: string;
-          };
-          if (anyRes.permanent !== undefined) {
-            return {
-              ok: false,
-              permanent: anyRes.permanent,
-              retryable: anyRes.retryable,
-              reason: anyRes.reason,
-            };
-          }
-          return { ok: false, permanent: true, reason: anyRes.reason || 'Feedback rejected' };
-        } catch (err) {
-          return {
-            ok: false,
-            retryable: true,
-            reason: err instanceof Error ? err.message : String(err),
-          };
-        }
-      },
+      checkin: (item) =>
+        send(() => checkInAction({ ...(item.payload as CheckinInput), ...stamp(item) })),
+      // No shift id: the server closes the worker's open shift, which an earlier replayed
+      // check-in may have just created.
+      checkout: (item) => send(() => checkOutAction(stamp(item))),
+      hazard: (item) =>
+        send(() => reportHazardAction({ ...(item.payload as HazardInput), ...stamp(item) })),
+      feedback: (item) =>
+        send(() => submitFeedbackAction({ ...(item.payload as FeedbackInput), ...stamp(item) })),
     };
 
     try {
@@ -245,12 +152,10 @@ export function OfflineSync({ workerId }: Props) {
     })();
 
     const handleOnline = () => {
-      setIsOnline(true);
       runFlush();
     };
 
     const handleOffline = () => {
-      setIsOnline(false);
       setSyncState('idle');
       refreshCount();
     };

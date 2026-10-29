@@ -2,6 +2,7 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { SessionPayload } from '../../shared/types';
+import { serverEnv } from '../env';
 
 export const SESSION_COOKIE_NAME = 'fairshift_session';
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
@@ -21,12 +22,14 @@ export function deriveServerSecret(purpose: string): string {
 }
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (secret) return secret;
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('SESSION_SECRET must be set in production.');
+  const env = serverEnv();
+  if (env.sessionSecret) return env.sessionSecret;
+  // Checked here, at sign/verify time, not when the env is parsed: `next build` runs with
+  // NODE_ENV=production but signs nothing, so it must not need the secret.
+  if (env.nodeEnv === 'production') {
+    throw new Error('[FairShift] SESSION_SECRET must be set in production. See .env.example.');
   }
-  if (!warned && process.env.NODE_ENV !== 'test') {
+  if (!warned && env.nodeEnv !== 'test') {
     warned = true;
     console.warn('[FairShift Auth] SESSION_SECRET is unset. Using the local development secret.');
   }

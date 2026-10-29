@@ -1,0 +1,120 @@
+# FairShift: finals plan (Top 13 → Top 3)
+
+## What changed
+
+The online round was scored by an AI evaluator on six criteria:
+
+- code quality
+- security
+- efficiency
+- testing
+- accessibility
+- problem alignment
+
+FairShift scored **97.15** there and ranked **#1**.
+
+The finals are reviewed by a **human panel**. It will open the repo cold, run it, and read it.
+
+| The panel checks                          | Where FairShift stood before the finals                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Code runs without errors from fresh setup | `npm ci && npm run dev` works with no env vars. No Docker path, no Node version pin, no health check. |
+| Clean, readable, well-structured code     | Three layers, strict TS. But errors were plain strings, sorted by `message.includes(...)` matching.   |
+| Clear README                              | Long, written for the AI rubric. A first-time reader has to scroll to find "how do I run it".         |
+| `.env.example`                            | Present, but the variables were not validated at startup.                                             |
+| Error handling and input validation       | zod on every action. But no `error.tsx`, `not-found.tsx` or `loading.tsx` anywhere.                   |
+| Live demo                                 | Vercel, running the PWA commit. Not yet running the offline-first commit.                             |
+| Screenshots / demo video                  | Screenshots yes, video no.                                                                            |
+
+Submission format, from the org repo: put everything in `students/<RegisterNumber>-<Name>/`, on a branch of the same name, then open a pull request. The folder holds:
+
+- `README.md`
+- `src/` (full project)
+- `prompts.md`
+- `screenshots/`
+
+## Phases and exit criteria
+
+### P1: Typed errors, env validation, error pages
+
+- `src/shared/errors.ts`: `AppError` with a closed `code` union and a `permanent` flag. Services throw codes, not prose. Actions map codes to UI states without string matching.
+- `src/server/env.ts`: zod-validated server env. It fails fast in production with one readable message, and keeps a zero-config local dev setup.
+- `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`, plus worker and admin `loading.tsx` / `error.tsx`. All of them use the existing tokens and are translated.
+- `app/api/health/route.ts`: liveness, the data backend in use, and whether AI is configured. No secrets in the output.
+- Fix stale comments ("Vertex AI", "8-second timeout").
+- **Exit:** `grep -r "message.includes\|m.includes" src app` returns nothing. Every route segment has an error boundary.
+
+### P2: "Ask FairShift", a grounded assistant (standout feature)
+
+- **Worker (`/w/ask`):**
+  - Ask in English, Hindi or Tamil, by voice or text: "why is my pay lower this week?", "how many hours did I work?", "what happens to my hazard report?", "am I owed overtime?"
+  - Gemini **function calling** over read-only tools. Each tool is bound to the session worker on the server: week hours, payslip, fatigue, my hazards, labour-rights facts.
+  - The model never sees an id it could change, and it never computes a number. Every number comes from a tested rule engine, and the UI shows which tool supplied it ("From: your payslip").
+- **Supervisor (`/admin/ask`):**
+  - Questions like "who is at risk of quitting at Skyline?" or "which hazards are overdue?"
+  - Tools are scoped to `allowedOrgIds`.
+- **Without a key, or if Gemini fails:** a deterministic intent router answers from the same tools, so the feature never breaks in the demo.
+- **Guardrails:**
+  - max input length
+  - per-user rate limit
+  - tool allowlist
+  - max 3 tool rounds
+  - a timeout
+  - prompt-injection text in the question cannot reach another worker's data, because the tools have no id parameter
+- **Exit:** unit tests for the tool scoping, the fallback router, the guardrails and the Gemini loop (with a mocked client).
+
+### P3: Testing depth
+
+- Run node-only tests in a `node` environment and only component tests in `jsdom` (Vitest projects). The suite gets faster.
+- Widen coverage from `src/server/domain` to `src/server/**`, `src/shared/**` and `src/lib/**`, with enforced thresholds.
+- New tests: errors, env, health route, assistant, rate limiter, session tamper cases.
+- **Exit:** `npm run verify` is green, and the coverage numbers in the README are measured, not estimated.
+
+### P4: Security hardening
+
+- Nonce-based CSP from `proxy.ts` (no `'unsafe-inline'` for scripts), if Cache Components allows it. Otherwise document why.
+- `SECURITY.md` (threat model plus reporting), Dependabot, CodeQL, and `npm audit --omit=dev` in CI.
+- **Exit:** CI runs all of the above.
+
+### P5: Fresh-setup DX
+
+- `.nvmrc` and `engines`.
+- `npm run verify` (format, types, lint, tests, build).
+- Multi-stage `Dockerfile` (standalone) and `docker-compose.yml` with MongoDB.
+- README rewritten for a first-time human reader:
+  1. What it does
+  2. 60-second quick start
+  3. Demo logins
+  4. Tech stack
+  5. Env table
+  6. Architecture
+  7. Tests
+  8. Security
+  9. Screenshots and video
+  10. Live link
+
+### P6: Submission package
+
+- `students/<RegisterNumber>-<Name>/` containing `README.md`, `prompts.md`, `screenshots/`, and `src/` (the full project, so `cd src && npm ci && npm run dev` works).
+- A branch named the same, then a pull request titled `Submission – <RegisterNumber> – <Name>`.
+- No `.env*` (only `.env.example`), no `node_modules`, `.next` or coverage.
+- This needs the register number and name from Shaurya before pushing.
+
+## Status (2026-10-29)
+
+| Phase                             | State   | Notes                                                                                                                                                                     |
+| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1 Typed errors, env, error pages | Done    | `src/shared/errors.ts`, `src/server/env.ts`, `app/**/error.tsx`, `app/not-found.tsx`, `/api/health`                                                                       |
+| P2 Ask FairShift                  | Done    | Worker `/w/ask` and supervisor `/admin/ask`; verified live against Gemini                                                                                                 |
+| P3 Testing depth                  | Done    | 361 tests; 93% statements and 88% branches across server, shared and lib code                                                                                             |
+| P4 Security                       | Done    | `SECURITY.md`, CodeQL, Dependabot, `npm audit` in CI. Nonce CSP is not possible with PPR; see SECURITY.md                                                                 |
+| P5 Fresh-setup DX                 | Done    | `.nvmrc`, `engines`, `npm run verify`, Dockerfile, compose, `.gitattributes`, new README. Verified with a clean copy: `npm ci`, tests and build all pass with no env file |
+| P6 Submission package             | Waiting | Needs the register number and name, and Shaurya's go-ahead to push and open the PR                                                                                        |
+
+Bugs found and fixed along the way:
+
+- **Offline banner on every worker page.** Node 22 defines `navigator` without `onLine`, so worker pages server-rendered the offline banner.
+- **Offline check-out lost its time.** Replays dropped the capture time and client id.
+- **Overview loaded data three times.** It also gave the AI briefing a stale escalation count.
+- **Build needed a secret.** `next build` failed without `SESSION_SECRET`.
+- **Fallback routing missed suggested questions.** The keyword router did not match "How much will I get this month?" or "checked in".
+- **Quota errors slowed every request.** The free Gemini tier (5 requests a minute) caused 429s; a circuit breaker and a briefing cache now handle them.

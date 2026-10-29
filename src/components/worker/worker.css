@@ -57,6 +57,33 @@ body:has(.worker-shell) > footer {
   color: var(--graphite);
 }
 
+/* Ask FairShift: the worker's words on ink, answers on paper cards, like a site notebook. */
+.ask-bubble {
+  max-width: 88%;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+}
+.ask-bubble-user {
+  background: var(--ink);
+  color: #fff;
+}
+.ask-bubble-bot {
+  background: var(--card);
+  color: var(--graphite);
+  box-shadow: var(--shadow-paper);
+  border-left: 4px solid var(--ink);
+}
+.ask-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0 12px;
+  border: 2px solid var(--graphite);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--graphite);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .node-pulse {
     animation: none;

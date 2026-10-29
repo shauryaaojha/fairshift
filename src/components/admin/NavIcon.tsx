@@ -6,6 +6,7 @@ import {
   SpeechLockIcon,
   FlameIcon,
   PinIcon,
+  AskIcon,
 } from '@/src/components/icons';
 import type { NavIconKey } from './nav';
 
@@ -28,6 +29,8 @@ export function NavIcon({
       return <SpeechLockIcon {...props} />;
     case 'risk':
       return <FlameIcon {...props} />;
+    case 'ask':
+      return <AskIcon {...props} />;
     case 'sites':
       return <PinIcon {...props} />;
   }

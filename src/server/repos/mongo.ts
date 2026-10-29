@@ -2,6 +2,7 @@
 
 import { MongoClient, type Db, type Document } from 'mongodb';
 import type { FairShiftDatabase } from './types';
+import { serverEnv } from '../env';
 import type {
   Org,
   Site,
@@ -239,10 +240,10 @@ class MongoFairShiftDb implements FairShiftDatabase {
 
 /** Connects and pings, so callers can tell a reachable cluster from a blocked one. */
 export async function pingMongo(): Promise<void> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI is not set');
-  const client = await connect(uri);
-  await client.db(process.env.MONGODB_DB || 'fairshift').command({ ping: 1 });
+  const { mongoUri, mongoDb } = serverEnv();
+  if (!mongoUri) throw new Error('MONGODB_URI is not set');
+  const client = await connect(mongoUri);
+  await client.db(mongoDb).command({ ping: 1 });
 }
 
 let mongoInstance: FairShiftDatabase | null = null;
@@ -253,10 +254,9 @@ let mongoInstance: FairShiftDatabase | null = null;
  */
 export function getMongoDb(): FairShiftDatabase {
   if (mongoInstance) return mongoInstance;
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('[FairShift Data] MONGODB_URI is not set.');
-  const dbName = process.env.MONGODB_DB || 'fairshift';
-  mongoInstance = new MongoFairShiftDb(async () => (await connect(uri)).db(dbName));
+  const { mongoUri, mongoDb } = serverEnv();
+  if (!mongoUri) throw new Error('[FairShift Data] MONGODB_URI is not set.');
+  mongoInstance = new MongoFairShiftDb(async () => (await connect(mongoUri)).db(mongoDb));
   console.info('[FairShift Data] Backend in use: MongoDB');
   return mongoInstance;
 }

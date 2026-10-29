@@ -3,6 +3,7 @@
 import type { FairShiftDatabase } from './types';
 import { inMemoryDb } from './memory';
 import { getMongoDb, pingMongo } from './mongo';
+import { serverEnv } from '../env';
 
 export * from './types';
 export * from './memory';
@@ -50,7 +51,7 @@ function lazyDatabase(): FairShiftDatabase {
 let mongoBacked: FairShiftDatabase | null = null;
 
 export function getDatabase(): FairShiftDatabase {
-  if (process.env.DATA_BACKEND !== 'memory' && process.env.MONGODB_URI) {
+  if (serverEnv().dataBackend === 'mongodb') {
     return (mongoBacked ??= lazyDatabase());
   }
   return inMemoryDb;

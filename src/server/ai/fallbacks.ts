@@ -1,6 +1,7 @@
 // AI: Deterministic Fallbacks
 
 import type { PayslipResult, HazardSeverity, Locale } from '../../shared/types';
+import type { WeeklyStats } from './gemini';
 
 /**
  * Deterministic explanation of a payslip in English, Hindi, or Tamil.
@@ -54,8 +55,35 @@ export function explainPayslipFallback(payslip: PayslipResult, locale: Locale = 
   return msg;
 }
 
+const SEVERITY_RANK: Record<HazardSeverity, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+
+/** The more severe of two ratings. Used so a suggestion can raise a report but never lower it. */
+export function higherSeverity(a: HazardSeverity, b: HazardSeverity): HazardSeverity {
+  return SEVERITY_RANK[b] > SEVERITY_RANK[a] ? b : a;
+}
+
 /**
- * Deterministic hazard summary and severity recommendation.
+ * Words that signal danger to life, in English, Hindi and Tamil (as workers type or speak them).
+ * Matching is deliberately conservative: it only ever raises a rating, and a supervisor confirms.
+ */
+const SEVERITY_SIGNALS: Array<{ severity: HazardSeverity; pattern: RegExp }> = [
+  {
+    severity: 'critical',
+    pattern:
+      /live wire|electrocut|shock|collapse|fell from|fall from|no harness|\bfire\b|gas leak|unconscious|bijli|करंट|बिजली|गिर|आग|गैस|மின்|தீ|விழு/i,
+  },
+  {
+    severity: 'high',
+    pattern: /crack|loose scaffold|no helmet|exposed|sharp|bleed|चोट|दरार|हेलमेट|காயம்|விரிசல்/i,
+  },
+];
+
+export function suggestSeverityFromText(description: string): HazardSeverity | null {
+  return SEVERITY_SIGNALS.find((s) => s.pattern.test(description))?.severity ?? null;
+}
+
+/**
+ * Deterministic hazard summary and severity suggestion (never below the worker's own rating).
  */
 export function summarizeHazardFallback(
   category: string,
@@ -63,26 +91,20 @@ export function summarizeHazardFallback(
   severity: HazardSeverity,
 ): { summary: string; suggestedSeverity: HazardSeverity } {
   const cleanDesc = description.trim().replace(/\s+/g, ' ');
-  const firstSentence = cleanDesc.split(/[.!?]/)[0] || cleanDesc;
+  const firstSentence = cleanDesc.split(/[.!?।]/)[0] || cleanDesc;
   const summary = `Reported ${category.toLowerCase()} issue: "${firstSentence.slice(0, 160)}".`;
+  const signal = suggestSeverityFromText(cleanDesc);
 
   return {
     summary,
-    suggestedSeverity: severity,
+    suggestedSeverity: signal ? higherSeverity(severity, signal) : severity,
   };
 }
 
 /**
  * Deterministic executive summary for admin overview.
  */
-export function generateWeeklySafetySummaryFallback(stats: {
-  onSiteNow: number;
-  totalWorkers: number;
-  escalatedHazards: number;
-  openHazards: number;
-  fatigueFlags: number;
-  highQuitRisk: number;
-}): string {
+export function generateWeeklySafetySummaryFallback(stats: WeeklyStats): string {
   const parts: string[] = [
     `Workforce presence is at ${stats.onSiteNow} of ${stats.totalWorkers} registered personnel today.`,
   ];

@@ -1,0 +1,31 @@
+# FairShift with a local MongoDB: `docker compose up --build`, then open http://localhost:3000
+# The app seeds the empty database with the demo organisations on first start.
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: fairshift
+      # Local-only value. Set a long random string of your own for any shared deployment.
+      SESSION_SECRET: ${SESSION_SECRET:-local-compose-secret-change-me-0123456789}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+
+volumes:
+  mongo-data:

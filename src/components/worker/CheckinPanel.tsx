@@ -9,6 +9,7 @@ import { speak, vibrate } from '@/src/components/ui/speech';
 import { useLocale, useT } from '@/src/i18n/client';
 import { generateUuid, getActiveWorkerId, getOutboxStore } from '@/src/lib/offline/outbox';
 import { checkInAction, checkOutAction } from '@/app/w/actions';
+import { checkinErrorKey } from '@/src/shared/errors';
 
 type Props = {
   /** hh:mm if the worker is already checked in. */
@@ -74,7 +75,7 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode, workerId
         if (res.ok) {
           confirmIn(res.time, res.shiftId);
         } else {
-          setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+          setError(t(checkinErrorKey(res.code)));
         }
       } catch {
         setBusy(null);
@@ -114,7 +115,7 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode, workerId
             if (res.ok) {
               confirmIn(res.time, res.shiftId);
             } else {
-              setError(t(res.code === 'auth' ? 'checkin.err.generic' : `checkin.err.${res.code}`));
+              setError(t(checkinErrorKey(res.code)));
             }
           } catch {
             setBusy(null);

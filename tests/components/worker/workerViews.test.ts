@@ -8,7 +8,6 @@ vi.mock('@/src/server/ai/gemini', () => ({ explainPayslip: vi.fn() }));
 
 import {
   buildPayslipSpeech,
-  checkinErrorCode,
   describeFatigue,
   formatClock,
   formatDay,
@@ -129,14 +128,6 @@ describe('buildPayslipSpeech', () => {
   it('speaks in Hindi and Tamil', () => {
     expect(buildPayslipSpeech(payslip, 'hi')).toContain('रुपये');
     expect(buildPayslipSpeech(payslip, 'ta')).toContain('ரூபாய்');
-  });
-});
-
-describe('checkinErrorCode', () => {
-  it('maps backend messages to translatable codes', () => {
-    expect(checkinErrorCode('Invalid or expired 6-digit site check-in code')).toBe('invalid_code');
-    expect(checkinErrorCode('Outside site geofence (400m from site gate)')).toBe('outside');
-    expect(checkinErrorCode('boom')).toBe('generic');
   });
 });
 

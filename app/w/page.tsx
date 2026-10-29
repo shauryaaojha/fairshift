@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  AskIcon,
   BadgeIcon,
   ClockCardIcon,
   ConeIcon,
@@ -123,6 +124,14 @@ export default async function WorkerHomePage() {
               label={t(locale, 'tile.skills')}
               icon={<BadgeIcon size={36} />}
               transitionName="tile-skills"
+            />
+          </li>
+          <li className="col-span-2">
+            <Tile
+              href="/w/ask"
+              label={t(locale, 'tile.ask')}
+              icon={<AskIcon size={36} />}
+              transitionName="tile-ask"
             />
           </li>
         </ul>

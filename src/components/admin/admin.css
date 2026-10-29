@@ -698,3 +698,48 @@
   margin: 0;
   font-weight: 600;
 }
+
+/* ── Ask the console ───────────────────────────────────────── */
+.console-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+}
+.console-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.console-msg-user {
+  border-left: 4px solid var(--graphite);
+}
+.console-msg-assistant {
+  border-left: 4px solid var(--ink);
+}
+.console-text {
+  white-space: pre-line;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+.console-meta {
+  margin-top: 8px;
+}
+.console-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.console-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.console-field {
+  flex: 1 1 320px;
+}
+.console-error {
+  color: var(--escalated);
+  font-weight: 600;
+}

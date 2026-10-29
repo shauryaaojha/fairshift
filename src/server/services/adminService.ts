@@ -4,6 +4,7 @@
  * for presentation and page rendering.
  */
 
+import { cache } from 'react';
 import { getDatabase } from '../repos';
 import { verifySecret } from '../auth/password';
 import { signSession } from '../auth/session';
@@ -12,8 +13,13 @@ import { calculateQuitRisk } from '../domain/quitRisk';
 import { aggregateFeedback } from '../domain/anonymity';
 import { calculateAttendanceDrop, teamSentimentAverage } from '../domain/workforceSignals';
 import { istDateKey, DAY_MS, WEEK_MS } from '../domain/time';
-import { getRemainingSlaSeconds, formatSlaRemaining } from '../domain/hazardSla';
+import {
+  computeHazardStatus,
+  getRemainingSlaSeconds,
+  formatSlaRemaining,
+} from '../domain/hazardSla';
 import { generateWeeklySafetySummary } from '../ai/gemini';
+import { AppError } from '../../shared/errors';
 import type {
   Admin,
   OverviewKPIs,
@@ -72,6 +78,30 @@ export function computeFeedbackHeatmap(
   return result;
 }
 
+/** Everything the console reads for one organisation, or one site of it. */
+interface Scope {
+  workers: Worker[];
+  shifts: Shift[];
+  hazards: HazardReport[];
+  feedback: FeedbackSubmission[];
+}
+
+/**
+ * Loads a scope with one parallel round of queries. Wrapped in React `cache`, so the overview
+ * page, which needs KPIs, risk, the trend and the heatmap, reads each collection once per
+ * request instead of once per widget. Outside a request (tests, scripts) it simply runs.
+ */
+const loadScope = cache(async (orgId: string, siteId?: string): Promise<Scope> => {
+  const db = getDatabase();
+  const [workers, shifts, hazards, feedback] = await Promise.all([
+    siteId ? db.workers.listBySite(siteId) : db.workers.listByOrg(orgId),
+    siteId ? db.shifts.listBySite(siteId) : db.shifts.listByOrg(orgId),
+    siteId ? db.hazards.listBySite(siteId) : db.hazards.listByOrg(orgId),
+    siteId ? db.feedback.listBySite(siteId) : db.feedback.listByOrg(orgId),
+  ]);
+  return { workers, shifts, hazards, feedback };
+});
+
 export class AdminService {
   private db = getDatabase();
 
@@ -80,13 +110,7 @@ export class AdminService {
    * plus their team's anonymous sentiment. Shared by the overview and the risk table
    * so both always agree.
    */
-  private assessWorker(
-    worker: Worker,
-    shifts: Shift[],
-    hazards: HazardReport[],
-    feedback: FeedbackSubmission[],
-    now: Date,
-  ) {
+  private assessWorker(worker: Worker, { shifts, hazards, feedback }: Scope, now: Date) {
     const weekAgoMs = now.getTime() - WEEK_MS;
     const workerShifts = shifts.filter((s) => s.workerId === worker.id);
     const flags = evaluateFatigue({
@@ -127,12 +151,12 @@ export class AdminService {
   ): Promise<{ admin: Omit<Admin, 'passwordHash'>; token: string }> {
     const admin = await this.db.admins.getByEmail(email);
     if (!admin) {
-      throw new Error('Invalid email or password');
+      throw new AppError('invalid_credentials', 'Invalid email or password');
     }
 
     const isValid = await verifySecret(password, admin.passwordHash);
     if (!isValid) {
-      throw new Error('Invalid email or password');
+      throw new AppError('invalid_credentials', 'Invalid email or password');
     }
 
     const token = signSession({
@@ -150,62 +174,31 @@ export class AdminService {
    * Retrieves high-level workforce KPIs for the admin dashboard.
    */
   async getOverviewKPIs(orgId: string, siteId?: string): Promise<OverviewKPIs> {
-    const workers = siteId
-      ? await this.db.workers.listBySite(siteId)
-      : await this.db.workers.listByOrg(orgId);
-
-    const shifts = siteId
-      ? await this.db.shifts.listBySite(siteId)
-      : await this.db.shifts.listByOrg(orgId);
-
-    const hazards = siteId
-      ? await this.db.hazards.listBySite(siteId)
-      : await this.db.hazards.listByOrg(orgId);
-
-    // Active workers currently on site (checkOut is null)
-    const onSiteNow = shifts.filter((s) => s.checkOut === null).length;
-
-    // Hazards
-    const escalatedHazards = hazards.filter((h) => h.status === 'escalated').length;
-    const openHazards = hazards.filter((h) => h.status !== 'resolved').length;
-
-    // Fatigue & Quit Risk across active workers
+    const scope = await loadScope(orgId, siteId);
     const now = new Date();
-    let fatigueWorkersCount = 0;
-    let highRiskCount = 0;
-
-    const feedback = siteId
-      ? await this.db.feedback.listBySite(siteId)
-      : await this.db.feedback.listByOrg(orgId);
-
-    for (const worker of workers) {
-      const { flags, risk } = this.assessWorker(worker, shifts, hazards, feedback, now);
-
-      if (flags.length > 0) {
-        fatigueWorkersCount++;
-      }
-
-      if (risk.score > 50) {
-        highRiskCount++;
-      }
-    }
+    // Escalation is computed on read (deadline passed, not acknowledged), not taken from storage.
+    const liveStatuses = scope.hazards.map((h) => computeHazardStatus(h, now));
+    const assessments = scope.workers.map((w) => this.assessWorker(w, scope, now));
 
     return {
-      onSiteNow,
-      totalWorkers: workers.length,
-      escalatedHazards,
-      openHazards,
-      fatigueFlags: fatigueWorkersCount,
-      highQuitRisk: highRiskCount,
+      onSiteNow: scope.shifts.filter((s) => s.checkOut === null).length,
+      totalWorkers: scope.workers.length,
+      escalatedHazards: liveStatuses.filter((st) => st === 'escalated').length,
+      openHazards: liveStatuses.filter((st) => st !== 'resolved').length,
+      fatigueFlags: assessments.filter((a) => a.flags.length > 0).length,
+      highQuitRisk: assessments.filter((a) => a.risk.score > 50).length,
     };
   }
 
   /**
    * Executive AI summary of workforce state.
    */
-  async getAiSummary(orgId: string, siteId?: string): Promise<{ summary: string; isAi: boolean }> {
-    const kpis = await this.getOverviewKPIs(orgId, siteId);
-    return await generateWeeklySafetySummary(kpis);
+  async getAiSummary(
+    orgId: string,
+    siteId?: string,
+    kpis?: OverviewKPIs,
+  ): Promise<{ summary: string; isAi: boolean }> {
+    return generateWeeklySafetySummary(kpis ?? (await this.getOverviewKPIs(orgId, siteId)));
   }
 
   /**
@@ -216,14 +209,7 @@ export class AdminService {
     siteId?: string,
     days: number = 14,
   ): Promise<DailyAttendance[]> {
-    const workers = siteId
-      ? await this.db.workers.listBySite(siteId)
-      : await this.db.workers.listByOrg(orgId);
-
-    const shifts = siteId
-      ? await this.db.shifts.listBySite(siteId)
-      : await this.db.shifts.listByOrg(orgId);
-
+    const { workers, shifts } = await loadScope(orgId, siteId);
     const totalWorkers = workers.length;
     const result: DailyAttendance[] = [];
 
@@ -255,10 +241,7 @@ export class AdminService {
     orgId: string,
     siteId?: string,
   ): Promise<(HazardReport & { remainingSeconds: number; slaFormatted: string })[]> {
-    const hazards = siteId
-      ? await this.db.hazards.listBySite(siteId)
-      : await this.db.hazards.listByOrg(orgId);
-
+    const { hazards } = await loadScope(orgId, siteId);
     return hazards.map((h) => {
       const remainingSeconds = getRemainingSlaSeconds(h);
       return {
@@ -274,7 +257,9 @@ export class AdminService {
    */
   async acknowledgeHazard(hazardId: string, allowedOrgIds: string[]): Promise<HazardReport> {
     const hazard = await this.db.hazards.getById(hazardId);
-    if (!hazard || !allowedOrgIds.includes(hazard.orgId)) throw new Error('Hazard not found');
+    if (!hazard || !allowedOrgIds.includes(hazard.orgId)) {
+      throw new AppError('not_found', 'Hazard not found');
+    }
 
     hazard.acknowledgedAt = new Date().toISOString();
     hazard.status = 'acknowledged';
@@ -286,7 +271,9 @@ export class AdminService {
    */
   async resolveHazard(hazardId: string, allowedOrgIds: string[]): Promise<HazardReport> {
     const hazard = await this.db.hazards.getById(hazardId);
-    if (!hazard || !allowedOrgIds.includes(hazard.orgId)) throw new Error('Hazard not found');
+    if (!hazard || !allowedOrgIds.includes(hazard.orgId)) {
+      throw new AppError('not_found', 'Hazard not found');
+    }
 
     hazard.resolvedAt = new Date().toISOString();
     hazard.status = 'resolved';
@@ -297,17 +284,11 @@ export class AdminService {
    * Anonymous team feedback heatmap adhering to k >= 3 anonymity.
    */
   async getFeedbackHeatmap(orgId: string, siteId?: string): Promise<AggregatedFeedback[]> {
-    const feedbackList = siteId
-      ? await this.db.feedback.listBySite(siteId)
-      : await this.db.feedback.listByOrg(orgId);
-
-    const workers = siteId
-      ? await this.db.workers.listBySite(siteId)
-      : await this.db.workers.listByOrg(orgId);
-
-    const rosterNames = workers.map((w) => w.name);
-
-    return computeFeedbackHeatmap(feedbackList, rosterNames);
+    const { feedback, workers } = await loadScope(orgId, siteId);
+    return computeFeedbackHeatmap(
+      feedback,
+      workers.map((w) => w.name),
+    );
   }
 
   /**
@@ -317,35 +298,14 @@ export class AdminService {
     orgId: string,
     siteId?: string,
   ): Promise<(PublicWorker & { risk: QuitRiskResult })[]> {
-    const workers = siteId
-      ? await this.db.workers.listBySite(siteId)
-      : await this.db.workers.listByOrg(orgId);
-
-    const shifts = siteId
-      ? await this.db.shifts.listBySite(siteId)
-      : await this.db.shifts.listByOrg(orgId);
-
-    const hazards = siteId
-      ? await this.db.hazards.listBySite(siteId)
-      : await this.db.hazards.listByOrg(orgId);
-
-    const feedback = siteId
-      ? await this.db.feedback.listBySite(siteId)
-      : await this.db.feedback.listByOrg(orgId);
-
+    const scope = await loadScope(orgId, siteId);
     const now = new Date();
-    const ranked: (PublicWorker & { risk: QuitRiskResult })[] = [];
-
-    for (const worker of workers) {
-      const { risk } = this.assessWorker(worker, shifts, hazards, feedback, now);
-
+    const ranked = scope.workers.map((worker) => {
+      const { risk } = this.assessWorker(worker, scope, now);
       // Never hand the PIN hash to a client, even an admin.
       const { pinHash: _pinHash, ...publicWorker } = worker;
-      ranked.push({
-        ...publicWorker,
-        risk,
-      });
-    }
+      return { ...publicWorker, risk };
+    });
 
     return ranked.sort((a, b) => b.risk.score - a.risk.score);
   }

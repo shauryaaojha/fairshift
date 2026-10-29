@@ -209,3 +209,11 @@ export const InstallIcon = (p: IconProps) => (
     <path d="M10 18h4" />
   </Base>
 );
+
+export const AskIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 5h16v11H9l-5 4V5z" />
+    <path d="M10 9a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2" />
+    <path d="M12 14.5h.01" />
+  </Base>
+);

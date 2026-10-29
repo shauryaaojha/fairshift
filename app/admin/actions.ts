@@ -3,7 +3,16 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { adminLoginSchema } from '@/src/shared/schemas';
+import {
+  adminLoginSchema,
+  askSchema,
+  hazardIdSchema,
+  hazardSeveritySchema,
+} from '@/src/shared/schemas';
+import { checkRateLimit } from '@/src/server/auth/rateLimit';
+import { askAsAdmin } from '@/src/server/assistant/admin';
+import type { AssistantAnswer, ChatTurn } from '@/src/server/assistant/engine';
+import { failure, toActionFailure, type ActionFailure } from '@/src/shared/errors';
 import { adminService } from '@/src/server/services/adminService';
 import { checkLoginLimit, recordLoginFailure } from '@/src/server/auth/rateLimit';
 import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/src/server/auth/session';
@@ -11,7 +20,6 @@ import {
   SECTOR_COOKIE_NAME,
   acknowledgeHazardForOrg,
   confirmHazardSeverity,
-  isSeverity,
   resolveHazardForOrg,
   resolveSector,
   sectorForOrg,
@@ -94,22 +102,56 @@ export async function setSectorAction(formData: FormData): Promise<void> {
   revalidatePath('/admin', 'layout');
 }
 
+/** Parse the hazard id posted by a console form; a tampered id is ignored, never thrown. */
+function hazardIdFrom(formData: FormData): string | null {
+  const parsed = hazardIdSchema.safeParse(formData.get('id'));
+  return parsed.success ? parsed.data : null;
+}
+
 export async function acknowledgeAction(formData: FormData): Promise<void> {
   const ctx = await getAdminContext();
-  await acknowledgeHazardForOrg(String(formData.get('id') ?? ''), ctx.sector.orgId);
+  const id = hazardIdFrom(formData);
+  if (!id) return;
+  await acknowledgeHazardForOrg(id, ctx.sector.orgId);
   revalidatePath('/admin', 'layout');
 }
 
 export async function resolveAction(formData: FormData): Promise<void> {
   const ctx = await getAdminContext();
-  await resolveHazardForOrg(String(formData.get('id') ?? ''), ctx.sector.orgId);
+  const id = hazardIdFrom(formData);
+  if (!id) return;
+  await resolveHazardForOrg(id, ctx.sector.orgId);
   revalidatePath('/admin', 'layout');
 }
 
 export async function confirmSeverityAction(formData: FormData): Promise<void> {
   const ctx = await getAdminContext();
-  const severity = formData.get('severity');
-  if (!isSeverity(severity)) return;
-  await confirmHazardSeverity(String(formData.get('id') ?? ''), ctx.sector.orgId, severity);
+  const id = hazardIdFrom(formData);
+  const severity = hazardSeveritySchema.safeParse(formData.get('severity'));
+  if (!id || !severity.success) return;
+  await confirmHazardSeverity(id, ctx.sector.orgId, severity.data);
   revalidatePath('/admin', 'layout');
+}
+
+export type AskConsoleResult = { ok: true; answer: AssistantAnswer } | ActionFailure;
+
+/** Ask the console, scoped to the sector this admin is viewing (and allowed to view). */
+export async function askConsoleAction(
+  question: string,
+  history: ChatTurn[] = [],
+): Promise<AskConsoleResult> {
+  const ctx = await getAdminContext();
+  if (!checkRateLimit(`ask-admin:${ctx.userId}`, 12, 60 * 1000).allowed) {
+    return failure('rate_limited', 'Too many questions. Wait a minute and try again.');
+  }
+  const parsed = askSchema.safeParse({ question, history });
+  if (!parsed.success) return failure('validation', parsed.error.issues[0]?.message ?? 'Invalid');
+  try {
+    return {
+      ok: true,
+      answer: await askAsAdmin(ctx.sector, parsed.data.question, parsed.data.history),
+    };
+  } catch (err) {
+    return toActionFailure(err, 'askConsoleAction');
+  }
 }

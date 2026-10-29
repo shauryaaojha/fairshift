@@ -14,6 +14,7 @@ import {
   formatSlaRemaining,
 } from '../domain/hazardSla';
 import { getSkillStatus } from '../domain/skills';
+import { AppError } from '../../shared/errors';
 import { istDateKey } from '../domain/time';
 import type {
   AggregatedFeedback,
@@ -279,19 +280,18 @@ export interface OverviewData {
 
 export async function getOverviewData(sector: Sector): Promise<OverviewData> {
   const { orgId, siteId } = SECTORS[sector];
-  const [kpis, trend, queue, risk, feedback, summary] = await Promise.all([
+  const [kpis, trend, queue, risk, feedback] = await Promise.all([
     adminService.getOverviewKPIs(orgId, siteId),
     adminService.getAttendanceTrend(orgId, siteId, 14),
     adminService.getSafetyQueue(orgId, siteId),
     adminService.getWorkforceRisk(orgId, siteId),
     adminService.getFeedbackHeatmap(orgId, siteId),
-    adminService.getAiSummary(orgId, siteId),
   ]);
-  const rows = toHazardRows(queue);
-  const escalated = rows.filter((r) => r.liveStatus === 'escalated');
+  // The briefing reuses the KPIs above (live escalation count included) instead of recomputing.
+  const summary = await adminService.getAiSummary(orgId, siteId, kpis);
+  const escalated = toHazardRows(queue).filter((r) => r.liveStatus === 'escalated');
   return {
-    // Escalation is computed on read, so the headline count uses the live status.
-    kpis: { ...kpis, escalatedHazards: escalated.length },
+    kpis,
     trend,
     escalated,
     risk: risk.slice(0, 8),
@@ -352,7 +352,7 @@ export async function getSitesData(
 
 async function hazardInOrg(hazardId: string, orgId: string): Promise<HazardReport> {
   const hazard = await getDatabase().hazards.getById(hazardId);
-  if (!hazard || hazard.orgId !== orgId) throw new Error('Hazard not found');
+  if (!hazard || hazard.orgId !== orgId) throw new AppError('not_found', 'Hazard not found');
   return hazard;
 }
 
@@ -391,7 +391,7 @@ export async function confirmHazardSeverity(
   const hazard = await hazardInOrg(hazardId, orgId);
   const liveStatus = computeHazardStatus(hazard);
   if (liveStatus === 'escalated' && SEVERITY_RANK[severity] < SEVERITY_RANK[hazard.severity]) {
-    throw new Error('Cannot lower the severity of an escalated hazard');
+    throw new AppError('severity_locked', 'Cannot lower the severity of an escalated hazard');
   }
   return getDatabase().hazards.update({ ...hazard, severity });
 }

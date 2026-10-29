@@ -5,6 +5,7 @@ export const ADMIN_NAV = [
   { href: '/admin/feedback', label: 'Feedback', icon: 'feedback' },
   { href: '/admin/risk', label: 'Workforce risk', icon: 'risk' },
   { href: '/admin/sites', label: 'Sites', icon: 'sites' },
+  { href: '/admin/ask', label: 'Ask the console', icon: 'ask' },
 ] as const;
 
 export type NavIconKey = (typeof ADMIN_NAV)[number]['icon'];

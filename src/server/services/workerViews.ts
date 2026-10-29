@@ -125,16 +125,6 @@ export function buildPayslipSpeech(payslip: PayslipResult, locale: Locale): stri
   return parts.join(' ');
 }
 
-export type CheckinErrorCode = 'invalid_code' | 'outside' | 'generic';
-
-/** Map the backend's English error messages to a translatable code. */
-export function checkinErrorCode(message: string): CheckinErrorCode {
-  const m = message.toLowerCase();
-  if (m.includes('code')) return 'invalid_code';
-  if (m.includes('geofence')) return 'outside';
-  return 'generic';
-}
-
 export interface DayRow {
   id: string;
   date: string;
