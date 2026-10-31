@@ -1,5 +1,6 @@
 /**
- * Ask FairShift: a grounded question-answering loop.
+ * Urima, FairShift's assistant: a grounded question-answering loop. The name comes from the
+ * Tamil உரிமை (a right, what one is owed) and reads the same in English, Hindi and Tamil.
  *
  * The model can only call the read-only tools it is handed. Every tool is already bound on the
  * server to the signed-in user (the worker's id, or the admin's permitted sector), and none takes
@@ -11,6 +12,7 @@
 
 import type { Content, FunctionCall, Part } from '@google/genai';
 import { describeError, generate, getGemini } from '../ai/client';
+import type { ActionDraft } from './drafts';
 
 export interface AssistantTool {
   name: string;
@@ -36,6 +38,8 @@ export interface AssistantAnswer {
   text: string;
   sources: AssistantSource[];
   isAi: boolean;
+  /** A report or feedback Urima filled in from the message, for the worker to check and send. */
+  draft?: ActionDraft;
 }
 
 /** Deterministic answerer: picks tools for the question and writes a templated reply. */

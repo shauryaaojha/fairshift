@@ -1,19 +1,9 @@
 import Link from 'next/link';
-import {
-  AskIcon,
-  BadgeIcon,
-  ClockCardIcon,
-  ConeIcon,
-  QrIcon,
-  RupeeNoteIcon,
-  ScalesIcon,
-  SpeechLockIcon,
-} from '@/src/components/icons';
-import { ButtonLink } from '@/src/components/ui/Button';
-import { Stamp } from '@/src/components/ui/Stamp';
+import { BadgeIcon, ConeIcon, ScalesIcon, SpeechLockIcon } from '@/src/components/icons';
 import { Tile } from '@/src/components/ui/Tile';
 import { FatigueCards } from '@/src/components/worker/FatigueCards';
 import { HeatCard } from '@/src/components/worker/HeatCard';
+import { MusterStrip, ShiftTicket, TodoList } from '@/src/components/worker/HomeBoard';
 import { getSiteHeat } from '@/src/server/weather';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
@@ -21,8 +11,10 @@ import {
   describeFatigue,
   formatClock,
   formatDay,
+  formatMonth,
   getLocale,
   loadHome,
+  loadHomeBoard,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
 import { LogoutButton } from '@/src/components/worker/LogoutButton';
@@ -32,28 +24,20 @@ export default async function WorkerHomePage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const { worker, site } = ctx;
-  const [{ activeShift, fatigueFlags }, heat] = await Promise.all([
+  const now = new Date();
+  const [{ activeShift, fatigueFlags }, board, heat] = await Promise.all([
     loadHome(worker.id),
+    loadHomeBoard(worker, now),
     getSiteHeat(site),
   ]);
 
   const firstName = worker.name.split(' ')[0];
-  const today = formatDay(new Date().toISOString(), locale, true);
+  const today = formatDay(now.toISOString(), locale, true);
   const onSiteSince = activeShift ? formatClock(activeShift.checkIn) : null;
   const status = onSiteSince
     ? t(locale, 'home.onSite', { time: onSiteSince })
     : t(locale, 'home.notCheckedIn');
   const notes = describeFatigue(fatigueFlags, locale).slice(0, 2);
-
-  const action = activeShift ? (
-    <ButtonLink href="/w/checkin" variant="secondary" fullWidth className="min-h-14">
-      {t(locale, 'home.goToCheckout')}
-    </ButtonLink>
-  ) : (
-    <ButtonLink href="/w/checkin">
-      {t(locale, 'home.checkInAt', { site: site.name.split(',')[0] })}
-    </ButtonLink>
-  );
 
   return (
     <Screen
@@ -61,50 +45,45 @@ export default async function WorkerHomePage() {
       speakText={t(locale, 'home.speak', { name: firstName, date: today, status })}
       backLabel={t(locale, 'common.back')}
       backHref={null}
-      action={action}
     >
-      <section
-        aria-label={t(locale, 'home.today')}
-        className="flex items-center justify-between gap-4 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
-      >
-        <div className="min-w-0">
-          <p className="text-small text-muted">{t(locale, 'home.today')}</p>
-          <p className="text-h2">{today}</p>
-          <p className="text-body mt-1">{status}</p>
-        </div>
-        {onSiteSince ? (
-          <Stamp variant="ink" id={activeShift?.id} animate={false}>
-            {t(locale, 'home.checkedInStamp', { time: onSiteSince })}
-          </Stamp>
-        ) : null}
-      </section>
+      <ShiftTicket
+        locale={locale}
+        site={site.name}
+        today={today}
+        since={
+          activeShift && onSiteSince
+            ? { iso: activeShift.checkIn, clock: onSiteSince, shiftId: activeShift.id }
+            : null
+        }
+        renderedAt={now.getTime()}
+        dayHours={board.dayHours}
+      />
 
+      <TodoList
+        locale={locale}
+        items={board.todo}
+        monthName={(period) => formatMonth(period, locale)}
+      />
       <HeatCard heat={heat} locale={locale} />
       <FatigueCards title={t(locale, 'home.fatigueTitle')} notes={notes} />
 
-      <nav aria-label={t(locale, 'home.today')}>
+      <MusterStrip
+        locale={locale}
+        days={board.days}
+        totalHours={board.totalHours}
+        overtimeHours={board.overtimeHours}
+      />
+
+      <nav aria-labelledby="more-title" className="flex flex-col gap-2">
+        <h2 id="more-title" className="text-h2">
+          {t(locale, 'home.more')}
+        </h2>
         <ul className="grid grid-cols-2 gap-3">
-          <li>
-            <Tile
-              href="/w/checkin"
-              label={t(locale, 'tile.checkin')}
-              icon={<QrIcon size={36} />}
-              transitionName="tile-checkin"
-            />
-          </li>
-          <li>
-            <Tile
-              href="/w/pay"
-              label={t(locale, 'tile.pay')}
-              icon={<RupeeNoteIcon size={36} />}
-              transitionName="tile-pay"
-            />
-          </li>
           <li>
             <Tile
               href="/w/hazard"
               label={t(locale, 'tile.hazard')}
-              icon={<ConeIcon size={36} />}
+              icon={<ConeIcon size={28} />}
               tone="danger"
               transitionName="tile-hazard"
             />
@@ -113,40 +92,24 @@ export default async function WorkerHomePage() {
             <Tile
               href="/w/feedback"
               label={t(locale, 'tile.feedback')}
-              icon={<SpeechLockIcon size={36} />}
+              icon={<SpeechLockIcon size={28} />}
               transitionName="tile-feedback"
-            />
-          </li>
-          <li>
-            <Tile
-              href="/w/hours"
-              label={t(locale, 'tile.hours')}
-              icon={<ClockCardIcon size={36} />}
-              transitionName="tile-hours"
-            />
-          </li>
-          <li>
-            <Tile
-              href="/w/skills"
-              label={t(locale, 'tile.skills')}
-              icon={<BadgeIcon size={36} />}
-              transitionName="tile-skills"
             />
           </li>
           <li>
             <Tile
               href="/w/rights"
               label={t(locale, 'tile.rights')}
-              icon={<ScalesIcon size={36} />}
+              icon={<ScalesIcon size={28} />}
               transitionName="tile-rights"
             />
           </li>
           <li>
             <Tile
-              href="/w/ask"
-              label={t(locale, 'tile.ask')}
-              icon={<AskIcon size={36} />}
-              transitionName="tile-ask"
+              href="/w/skills"
+              label={t(locale, 'tile.skills')}
+              icon={<BadgeIcon size={28} />}
+              transitionName="tile-skills"
             />
           </li>
         </ul>

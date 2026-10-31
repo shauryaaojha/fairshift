@@ -11,22 +11,19 @@ type TileProps = {
   transitionName?: string;
 };
 
-/** A flat register tile: a big custom icon plus one word. */
+/** A register tile: an icon on a tinted chip plus one word. Hazards keep the hi-vis tile. */
 export function Tile({ href, label, icon, tone = 'default', transitionName }: TileProps) {
-  const toneClass =
-    tone === 'danger'
-      ? 'bg-hivis border-2 border-graphite text-graphite'
-      : 'bg-card border-2 border-graphite text-graphite';
+  const danger = tone === 'danger';
   const link = (
     <Link
       href={href}
       className={
-        'flex min-h-28 flex-col items-start justify-between gap-3 rounded-[6px] p-4 touch-manipulation ' +
-        'shadow-[var(--shadow-paper)] ' +
-        toneClass
+        'flex min-h-24 flex-col items-start justify-between gap-3 rounded-[10px] p-3.5 touch-manipulation ' +
+        'shadow-[var(--shadow-paper)] text-graphite ' +
+        (danger ? 'bg-hivis border-2 border-graphite' : 'bg-card border border-rule')
       }
     >
-      <span className={tone === 'danger' ? 'text-graphite' : 'text-ink'}>{icon}</span>
+      <span className={danger ? 'tile-chip tile-chip-danger' : 'tile-chip'}>{icon}</span>
       <span className="text-label text-base font-semibold leading-snug">{label}</span>
     </Link>
   );

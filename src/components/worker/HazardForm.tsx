@@ -31,14 +31,22 @@ type Severity = (typeof SEVERITIES)[number];
 
 type Props = {
   workerId?: string;
+  /** Filled in by Urima from what the worker said ("Change details" on its draft). */
+  initial?: { category?: string; severity?: string; text?: string };
 };
 
-export function HazardForm({ workerId }: Props = {}) {
+export function HazardForm({ workerId, initial }: Props = {}) {
   const t = useT();
   const locale = useLocale();
-  const [category, setCategory] = useState<string | null>(null);
-  const [severity, setSeverity] = useState<Severity>('medium');
-  const [text, setText] = useState('');
+  const [category, setCategory] = useState<string | null>(
+    CATEGORIES.some((c) => c.key === initial?.category) ? initial!.category! : null,
+  );
+  const [severity, setSeverity] = useState<Severity>(
+    SEVERITIES.find((s) => s === initial?.severity) ?? 'medium',
+  );
+  const [text, setText] = useState(
+    typeof initial?.text === 'string' ? initial.text.slice(0, 2000) : '',
+  );
   const [anonymous, setAnonymous] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
@@ -159,7 +167,7 @@ export function HazardForm({ workerId }: Props = {}) {
                 role="radio"
                 aria-checked={category === key}
                 onClick={() => setCategory(key)}
-                className="choice choice-danger flex min-h-20 flex-col items-start justify-between gap-2 rounded-[6px] p-3 text-start"
+                className="choice choice-danger flex min-h-20 flex-col items-start justify-between gap-2 rounded-[10px] p-3 text-start"
               >
                 <Icon size={32} />
                 <span className="text-label font-semibold leading-snug">

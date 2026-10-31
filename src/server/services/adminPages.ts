@@ -13,8 +13,9 @@ import {
   filterRiskRows,
   toHazardRows,
   buildAttendanceRows,
+  buildNeedsAction,
 } from './adminRows';
-import type { HazardRow, HeatmapRow, RiskRow } from './adminRows';
+import type { ActionItem, HazardRow, HeatmapRow, RiskRow } from './adminRows';
 import { generateSiteQrCode } from '../domain/qrCode';
 import { computeHazardStatus } from '../domain/hazardSla';
 import { getSkillStatus } from '../domain/skills';
@@ -27,8 +28,12 @@ import {
   type RegisterKind,
 } from '../domain/registers';
 import { policyForDate } from '../domain/payRules';
+import { payQueryState } from '../domain/payQuery';
 import { getDatabase } from '../repos';
 import { getSiteHeat } from '../weather';
+import { getWageMonths } from './adminPay';
+import { respectFrom, siteScore, type SiteScore } from '../domain/siteScore';
+import { periodOf, previousPeriod } from '../domain/wagePayment';
 import type { HeatReading } from '../domain/heat';
 import { AppError } from '../../shared/errors';
 import { SEVERITY_RANK } from '../../shared/severity';
@@ -52,11 +57,13 @@ export interface OverviewData {
   summary: { summary: string; isAi: boolean };
   /** Heat stress at the site now; null when the weather service is unavailable. */
   heat?: HeatReading | null;
+  /** What to do next, most urgent first. */
+  actions: ActionItem[];
 }
 
 export async function getOverviewData(sector: Sector): Promise<OverviewData> {
   const { orgId, siteId } = SECTORS[sector];
-  const [kpis, trend, queue, risk, feedback, heat] = await Promise.all([
+  const [kpis, trend, queue, risk, feedback, heat, queries, wages] = await Promise.all([
     adminService.getOverviewKPIs(orgId, siteId),
     adminService.getAttendanceTrend(orgId, siteId, 14),
     adminService.getSafetyQueue(orgId, siteId),
@@ -65,10 +72,23 @@ export async function getOverviewData(sector: Sector): Promise<OverviewData> {
     getDatabase()
       .sites.get(siteId)
       .then((site) => (site ? getSiteHeat(site) : null)),
+    getDatabase().payQueries.listByOrg(orgId),
+    getWageMonths(sector),
   ]);
   // The briefing reuses the KPIs above (live escalation count included) instead of recomputing.
   const summary = await adminService.getAiSummary(orgId, siteId, kpis);
-  const escalated = toHazardRows(queue).filter((r) => r.liveStatus === 'escalated');
+  const rows = toHazardRows(queue);
+  const escalated = rows.filter((r) => r.liveStatus === 'escalated');
+  const payStates = queries.filter((q) => q.siteId === siteId).map((q) => payQueryState(q));
+  const actions = buildNeedsAction({
+    escalated: escalated.length,
+    newHazards: rows.filter((r) => r.liveStatus === 'reported').length,
+    payWaiting: payStates.filter((s) => s === 'open' || s === 'overdue').length,
+    payOverdue: payStates.filter((s) => s === 'overdue').length,
+    wagesOverdue: wages.reduce((n, m) => n + m.overdueCount, 0),
+    fatigue: kpis.fatigueFlags,
+    highRisk: kpis.highQuitRisk,
+  });
   return {
     kpis,
     trend,
@@ -77,7 +97,16 @@ export async function getOverviewData(sector: Sector): Promise<OverviewData> {
     heatmap: buildHeatmapRows(feedback),
     summary,
     heat,
+    actions,
   };
+}
+
+/** Name and email of the signed-in supervisor, for the console's side rail. */
+export async function getAdminWho(
+  adminId: string,
+): Promise<{ name: string; email: string } | null> {
+  const admin = await getDatabase().admins.getById(adminId);
+  return admin ? { name: admin.name, email: admin.email } : null;
 }
 
 export async function getSafetyData(sector: Sector, status?: string) {
@@ -118,14 +147,38 @@ export async function getRiskData(sector: Sector, opts: { filter?: string; team?
   return { rows: filterRiskRows(all, opts.filter, opts.team), teams };
 }
 
+/** The fair-site score for a sector's site, from the records the console already keeps. */
+export async function getSiteScore(sector: Sector, now: Date = new Date()): Promise<SiteScore> {
+  const { orgId, siteId } = SECTORS[sector];
+  const [kpis, hazards, feedback, wages] = await Promise.all([
+    adminService.getOverviewKPIs(orgId, siteId),
+    getDatabase().hazards.listBySite(siteId),
+    adminService.getFeedbackHeatmap(orgId, siteId),
+    getWageMonths(sector, now),
+  ]);
+  const lastMonth = wages.find((m) => m.period === previousPeriod(periodOf(now)));
+  return siteScore({
+    workers: kpis.totalWorkers,
+    fatigued: kpis.fatigueFlags,
+    likelyToLeave: kpis.highQuitRisk,
+    hazards: hazards.length,
+    escalated: kpis.escalatedHazards,
+    respect: respectFrom(feedback),
+    wagesOwed: lastMonth?.rows.length ?? 0,
+    wagesOverdue: lastMonth?.overdueCount ?? 0,
+  });
+}
+
 export async function getSitesData(
   allowed: Sector[],
-): Promise<{ sector: Sector; sites: PublicSite[] }[]> {
-  const out: { sector: Sector; sites: PublicSite[] }[] = [];
-  for (const key of allowed) {
-    out.push({ sector: key, sites: await adminService.getSites(SECTORS[key].orgId) });
-  }
-  return out;
+): Promise<{ sector: Sector; sites: PublicSite[]; score: SiteScore }[]> {
+  return Promise.all(
+    allowed.map(async (key) => ({
+      sector: key,
+      sites: await adminService.getSites(SECTORS[key].orgId),
+      score: await getSiteScore(key),
+    })),
+  );
 }
 
 // ── Mutations (org-scoped) ──────────────────────────────────

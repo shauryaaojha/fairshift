@@ -97,6 +97,15 @@ export const payQueryVerdictSchema = z.object({
 });
 
 /** The console's answer form. An empty corrected amount means the amount is unchanged. */
+export const wagePaymentSchema = z.object({
+  workerId: recordId,
+  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Invalid month'),
+  utr: z
+    .string()
+    .trim()
+    .regex(/^\d{12}$/, 'The UTR is the 12-digit reference your UPI app shows.'),
+});
+
 export const payAnswerSchema = z.object({
   id: recordId,
   text: z

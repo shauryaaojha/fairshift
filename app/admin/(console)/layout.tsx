@@ -6,10 +6,12 @@ import { AdminRail } from '@/src/components/admin/AdminRail';
 import { SectorSwitcher } from '@/src/components/admin/SectorSwitcher';
 import { ADMIN_NAV } from '@/src/components/admin/nav';
 import { StairsMenu } from '@/src/components/motion/StairsMenu';
+import { getAdminWho } from '@/src/server/services/adminPages';
 
 async function Shell({ children }: { children: ReactNode }) {
   const ctx = await getAdminContext();
   const sectorKey = ctx.sector.key;
+  const who = await getAdminWho(ctx.userId);
 
   const footer = (
     <>
@@ -40,14 +42,24 @@ async function Shell({ children }: { children: ReactNode }) {
             items={ADMIN_NAV.map((n) => ({ href: n.href, label: n.label }))}
             footer={footer}
           />
-          <form action={logoutAction} className="hidden-below-lg">
+        </div>
+      </header>
+      <aside className="rail">
+        <AdminRail sector={sectorKey} />
+        <div className="rail-who">
+          {who ? (
+            <>
+              <p className="rail-who-name">{who.name}</p>
+              <p className="text-small muted">{who.email}</p>
+            </>
+          ) : null}
+          <form action={logoutAction}>
             <button type="submit" className="btn-quiet btn-small">
               Sign out
             </button>
           </form>
         </div>
-      </header>
-      <AdminRail sector={sectorKey} />
+      </aside>
       <div className="admin-main" id="admin-content">
         {children}
       </div>

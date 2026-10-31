@@ -16,7 +16,7 @@ const SEVERITY_SIGNALS: Array<{ severity: HazardSeverity; pattern: RegExp }> = [
   {
     severity: 'critical',
     pattern:
-      /live wire|electrocut|shock|collapse|fell from|fall from|no harness|\bfire\b|gas leak|unconscious|bijli|करंट|बिजली|गिर|आग|गैस|மின்|தீ|விழு/i,
+      /live wire|electrocut|shock|collapse|fell from|fall from|no harness|\bfire\b|gas (?:leak|smell)|smell of gas|unconscious|bijli|करंट|बिजली|गिर|आग|गैस|மின்|தீ|விழு/i,
   },
   {
     severity: 'high',

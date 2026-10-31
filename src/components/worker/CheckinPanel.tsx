@@ -222,7 +222,7 @@ export function CheckinPanel({ activeSince, activeShiftId, initialCode, workerId
         </Button>
       }
     >
-      <div className="flex items-start gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+      <div className="flex items-start gap-3 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <span className="shrink-0 text-ink">
           <QrIcon size={36} />
         </span>

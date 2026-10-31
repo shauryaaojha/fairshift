@@ -22,7 +22,7 @@ export function HeatCard({ heat, locale }: { heat: HeatReading | null; locale: L
   return (
     <section
       aria-labelledby="heat-title"
-      className="flex gap-3 rounded-[6px] border-2 border-graphite bg-hivis p-4 text-graphite"
+      className="flex gap-3 rounded-[10px] border-2 border-graphite bg-hivis p-4 text-graphite"
     >
       <span className="mt-0.5 shrink-0">
         <SunIcon />

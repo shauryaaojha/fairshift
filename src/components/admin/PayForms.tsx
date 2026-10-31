@@ -1,7 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
-import { answerPayQueryAction, schedulePayRulesAction, type FormState } from '@/app/admin/actions';
+import {
+  answerPayQueryAction,
+  recordWagePaymentAction,
+  schedulePayRulesAction,
+  type FormState,
+} from '@/app/admin/actions';
 import type { PayRules } from '@/src/shared/types';
 
 const INITIAL: FormState = { ok: false };
@@ -31,6 +36,35 @@ export function PayAnswerForm({ id, payslipNet }: { id: string; payslipNet: numb
       </p>
       <button type="submit" className="btn-primary btn-small" disabled={pending}>
         {pending ? 'Sending' : 'Send answer'}
+      </button>
+    </form>
+  );
+}
+
+/** After paying by UPI, the employer records the bank's reference so the worker can trace it. */
+export function WagePaymentForm({ workerId, period }: { workerId: string; period: string }) {
+  const [state, action, pending] = useActionState(recordWagePaymentAction, INITIAL);
+  const id = `utr-${workerId}-${period}`;
+  return (
+    <form action={action} className="pay-form">
+      <input type="hidden" name="workerId" value={workerId} />
+      <input type="hidden" name="period" value={period} />
+      <div className="field">
+        <label htmlFor={id}>UTR (12-digit reference after paying)</label>
+        <input
+          id={id}
+          name="utr"
+          inputMode="numeric"
+          autoComplete="off"
+          pattern="\s*\d(\s*\d){11}\s*"
+          required
+        />
+      </div>
+      <p role="status" className={state.ok ? 'form-ok' : 'form-error'}>
+        {state.ok ? state.message : (state.error ?? '')}
+      </p>
+      <button type="submit" className="btn-primary btn-small" disabled={pending}>
+        {pending ? 'Saving' : 'Mark paid'}
       </button>
     </form>
   );

@@ -12,7 +12,7 @@ async function Ask() {
           {ctx.sector.label} · {ctx.sector.place} · Demo data
         </p>
         <LineReveal as="h1" className="page-title" immediate>
-          Ask the console
+          Ask Urima
         </LineReveal>
         <p className="page-sub">
           Plain questions, answered from the same live numbers as the other pages. Each answer links

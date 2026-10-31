@@ -12,8 +12,10 @@ import type {
   ShiftRepo,
   HazardRepo,
   FeedbackRepo,
+  FeedbackBallotRepo,
   SkillRepo,
   PayQueryRepo,
+  WagePaymentRepo,
 } from './types';
 import type {
   Org,
@@ -25,7 +27,9 @@ import type {
   FeedbackSubmission,
   SkillRecord,
   PayQuery,
+  WagePayment,
 } from '../../shared/types';
+import type { FeedbackBallot } from '../domain/feedbackBallot';
 import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
 
@@ -40,8 +44,10 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
   private shiftsList: Shift[] = [];
   private hazardsList: HazardReport[] = [];
   private feedbackList: FeedbackSubmission[] = [];
+  private ballotIds = new Set<string>();
   private skillsList: SkillRecord[] = [];
   private payQueriesList: PayQuery[] = [];
+  private wagePaymentsMap = new Map<string, WagePayment>();
 
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
@@ -58,6 +64,7 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
       this.feedbackList = [...data.feedback];
       this.skillsList = [...data.skills];
       this.payQueriesList = [...data.payQueries];
+      for (const p of data.wagePayments) this.wagePaymentsMap.set(p.id, p);
       this.initialized = true;
     })();
 
@@ -255,6 +262,20 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
     },
   };
 
+  // ── Feedback ballots ────────────────────────────────────────
+  feedbackBallots: FeedbackBallotRepo = {
+    claim: async (ballot: FeedbackBallot) => {
+      await this.ensureInitialized();
+      if (this.ballotIds.has(ballot.id)) return false;
+      this.ballotIds.add(ballot.id);
+      return true;
+    },
+    has: async (id: string) => {
+      await this.ensureInitialized();
+      return this.ballotIds.has(id);
+    },
+  };
+
   // ── Skill Repo ──────────────────────────────────────────────
   skills: SkillRepo = {
     create: async (skill: SkillRecord) => {
@@ -301,6 +322,28 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
     listByOrg: async (orgId: string) => {
       await this.ensureInitialized();
       return newestFirst(this.payQueriesList.filter((q) => q.orgId === orgId));
+    },
+  };
+
+  // ── Wage payments ───────────────────────────────────────────
+  wagePayments: WagePaymentRepo = {
+    record: async (payment: WagePayment) => {
+      await this.ensureInitialized();
+      if (this.wagePaymentsMap.has(payment.id)) return false;
+      this.wagePaymentsMap.set(payment.id, payment);
+      return true;
+    },
+    get: async (workerId: string, period: string) => {
+      await this.ensureInitialized();
+      return (
+        [...this.wagePaymentsMap.values()].find(
+          (p) => p.workerId === workerId && p.period === period,
+        ) ?? null
+      );
+    },
+    listBySite: async (siteId: string) => {
+      await this.ensureInitialized();
+      return [...this.wagePaymentsMap.values()].filter((p) => p.siteId === siteId);
     },
   };
 }

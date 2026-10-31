@@ -1,4 +1,4 @@
-import { ButtonLink } from '@/src/components/ui/Button';
+import Link from 'next/link';
 import { FatigueCards } from '@/src/components/worker/FatigueCards';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
@@ -23,9 +23,8 @@ export default async function HoursPage() {
       speakText={t(locale, 'hours.speak', { total: week.totalHours })}
       backLabel={t(locale, 'common.back')}
       transitionName="tile-hours"
-      action={<ButtonLink href="/w">{t(locale, 'checkin.backHome')}</ButtonLink>}
     >
-      <section className="rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+      <section className="rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <p className="text-small text-muted">
           {t(locale, 'hours.week')} · {t(locale, 'hours.total')}
         </p>
@@ -51,17 +50,29 @@ export default async function HoursPage() {
       {week.rows.length === 0 ? (
         <p className="text-body">{t(locale, 'hours.noShifts')}</p>
       ) : (
+        <p className="text-small text-muted">{t(locale, 'hours.receiptNote')}</p>
+      )}
+      {week.rows.length === 0 ? null : (
         <ul className="flex flex-col gap-2">
           {week.rows.map((r) => (
             <li
               key={r.id}
-              className="flex items-center justify-between gap-3 rounded-[6px] bg-card px-4 py-3 shadow-[var(--shadow-paper)]"
+              className="flex items-center justify-between gap-3 rounded-[10px] bg-card px-4 py-3 shadow-[var(--shadow-paper)]"
             >
               <div className="min-w-0">
                 <p className="text-body font-semibold">{formatDay(r.date, locale, true)}</p>
                 <p className="text-mono text-muted">
                   {r.checkIn} - {r.checkOut ?? '...'}
                 </p>
+                {r.receipt ? (
+                  <Link
+                    href={`/verify/${r.receipt.token}`}
+                    className="link text-small"
+                    prefetch={false}
+                  >
+                    {t(locale, 'hours.receipt', { code: r.receipt.code })}
+                  </Link>
+                ) : null}
               </div>
               <p className="text-mono shrink-0">
                 {r.open ? t(locale, 'hours.onSite') : hoursText(r.hours)}

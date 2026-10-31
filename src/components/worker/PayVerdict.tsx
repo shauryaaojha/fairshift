@@ -41,7 +41,7 @@ export function PayVerdict({ queryId }: { queryId: string }) {
   return (
     <section
       aria-labelledby="pay-verdict-q"
-      className="flex flex-col gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
+      className="flex flex-col gap-3 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]"
     >
       <h2 id="pay-verdict-q" className="text-h2">
         {t('payq.verdict.ask')}

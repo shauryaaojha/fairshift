@@ -10,6 +10,232 @@ body:has(.worker-shell) > footer {
   font-family: var(--font-anek), var(--font-anek-deva), var(--font-anek-tamil), sans-serif;
 }
 
+/* ── Bottom tab bar ─────────────────────────────────────────
+   Five places, one thumb away. The active tab carries an ink rule on top, like a ledger tab. */
+.worker-shell {
+  --tabs-h: calc(64px + env(safe-area-inset-bottom));
+}
+.worker-shell:has(.worker-tabs) {
+  padding-bottom: var(--tabs-h);
+}
+.worker-shell:has(.worker-tabs) .screen-action {
+  bottom: var(--tabs-h);
+}
+.worker-tabs {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  background: var(--card);
+  border-top: 1px solid var(--rule);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.worker-tabs ul {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: 480px;
+  margin: 0 auto;
+}
+.worker-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 6px 2px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  touch-action: manipulation;
+}
+.worker-tab[aria-current='page'] {
+  color: var(--ink);
+}
+.worker-tab[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24%;
+  right: 24%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--ink);
+}
+[lang='ta'] .worker-tab {
+  font-size: 0.68rem;
+}
+
+/* ── Tiles: icon on a tinted chip ──────────────────────────── */
+.tile-chip {
+  display: inline-flex;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 9%, var(--card));
+}
+.tile-chip-danger {
+  color: var(--graphite);
+  background: color-mix(in srgb, var(--card) 35%, transparent);
+}
+
+/* ── Shift ticket: today as a paper ticket with a tear line ── */
+.ticket {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-paper);
+  overflow: hidden;
+}
+.ticket-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+.ticket-head .text-mono {
+  color: #fff;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.ticket-body {
+  padding: 16px;
+}
+.ticket-tear {
+  position: relative;
+  margin: 0 16px;
+  border-top: 2px dashed var(--rule);
+}
+.ticket-tear::before,
+.ticket-tear::after {
+  content: '';
+  position: absolute;
+  top: -11px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+.ticket-tear::before {
+  left: -27px;
+}
+.ticket-tear::after {
+  right: -27px;
+}
+.ticket-foot {
+  padding: 14px 16px 16px;
+}
+.shift-clock {
+  font-family: var(--font-mono-display), monospace;
+  font-size: 2rem;
+  line-height: 1.1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[lang='ta'] .shift-clock {
+  font-size: 1.6rem;
+}
+.shift-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.shift-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--ink);
+}
+.shift-bar.is-over > span {
+  background: var(--hivis);
+}
+
+/* ── Muster strip: the last seven days as a register row ───── */
+.muster {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.muster-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.muster-wd {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.muster-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1.5px dashed var(--rule);
+  border-radius: 8px;
+  color: var(--muted);
+  font-family: var(--font-mono-display), monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.muster-day.is-present .muster-cell {
+  border: 1.5px solid var(--ink);
+  background: color-mix(in srgb, var(--ink) 12%, var(--card));
+  color: var(--ink-deep);
+}
+.muster-day.is-today .muster-wd {
+  color: var(--ink);
+}
+.muster-day.is-today .muster-cell {
+  outline: 2px solid var(--graphite);
+  outline-offset: 2px;
+}
+
+/* ── Waiting for you: one row per thing to answer ──────────── */
+.todo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-paper);
+  border-left: 5px solid var(--ink);
+  font-weight: 550;
+}
+.todo.is-urgent {
+  border-left-color: var(--escalated);
+}
+.todo-mark {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.todo.is-urgent .todo-mark {
+  background: var(--escalated);
+}
+.todo-go {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
 /* Hazard timeline: the escalated node pulses once, never loops. */
 @keyframes node-pulse {
   0% {
@@ -57,7 +283,7 @@ body:has(.worker-shell) > footer {
   color: var(--graphite);
 }
 
-/* Ask FairShift: the worker's words on ink, answers on paper cards, like a site notebook. */
+/* Urima, the assistant: the worker's words on ink, answers on paper cards, like a site notebook. */
 .ask-bubble {
   max-width: 88%;
   padding: 12px 14px;
@@ -83,6 +309,21 @@ body:has(.worker-shell) > footer {
   font-weight: 600;
   color: var(--graphite);
 }
+/* A report Urima filled in: a tear-off slip inside the answer, sent only by the worker. */
+.ask-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px dashed var(--graphite);
+  border-radius: 6px;
+  background: var(--paper);
+}
+.ask-draft-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .node-pulse {
@@ -98,4 +339,73 @@ body:has(.worker-shell) > footer {
   line-height: 1.5;
   overflow-wrap: normal;
   word-break: keep-all;
+}
+
+/* ── Letter to the labour office ───────────────────────────── */
+.letter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--card);
+  color: var(--graphite);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+  line-height: 1.5;
+}
+.letter-right {
+  text-align: right;
+}
+.letter-laws {
+  list-style: disc;
+  padding-inline-start: 1.25rem;
+}
+.letter-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.letter-table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  flex: 1 1 260px;
+}
+.letter-table th,
+.letter-table td {
+  border: 1px solid var(--rule);
+  padding: 2px 6px;
+  text-align: start;
+}
+.letter-qr {
+  width: 132px;
+  margin: 0;
+}
+.letter-sign {
+  margin-top: 28px;
+  padding-top: 6px;
+  border-top: 1px solid var(--graphite);
+  max-width: 260px;
+}
+.letter-footer {
+  color: var(--muted);
+}
+
+/* Print only the letter: no app chrome, black on white, full page width. */
+@media print {
+  .worker-shell {
+    max-width: none;
+  }
+  .worker-shell > :not(.letter-page),
+  .no-print {
+    display: none !important;
+  }
+  .letter {
+    box-shadow: none;
+    padding: 0;
+    color: #000;
+  }
+  .letter-table tr {
+    break-inside: avoid;
+  }
 }

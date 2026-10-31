@@ -27,6 +27,14 @@ function Base({ size = 24, children, ...rest }: IconProps & { children: React.Re
   );
 }
 
+export const HomeIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 11l9-7 9 7" />
+    <path d="M5 10v10h14V10" />
+    <path d="M10 20v-6h4v6" />
+  </Base>
+);
+
 export const HardHatIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M3 18h18" />

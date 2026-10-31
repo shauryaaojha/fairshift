@@ -22,13 +22,15 @@ const LEVELS: Level[] = [1, 2, 3, 4, 5];
 
 type Props = {
   workerId?: string;
+  /** The worker's own words, carried over from Urima. */
+  initialComment?: string;
 };
 
-export function FeedbackForm({ workerId }: Props = {}) {
+export function FeedbackForm({ workerId, initialComment }: Props = {}) {
   const t = useT();
   const locale = useLocale();
   const [answers, setAnswers] = useState<Partial<Record<Field, Level>>>({});
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState((initialComment ?? '').slice(0, 2000));
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -80,7 +82,9 @@ export function FeedbackForm({ workerId }: Props = {}) {
           vibrate(15);
           speak(t('feedback.thanks'), locale);
         } else {
-          setError(t('feedback.error'));
+          setError(
+            t(res.code === 'feedback_already_given' ? 'feedback.already' : 'feedback.error'),
+          );
         }
       } catch {
         const clientId = generateUuid();

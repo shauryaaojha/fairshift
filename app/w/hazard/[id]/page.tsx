@@ -30,7 +30,6 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
         speakText={t(locale, 'hazard.notFound')}
         backLabel={back}
         backHref="/w/hazard"
-        action={<ButtonLink href="/w">{t(locale, 'common.home')}</ButtonLink>}
       >
         <p role="alert" className="text-body">
           {t(locale, 'hazard.notFound')}
@@ -69,7 +68,7 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
         </ButtonLink>
       }
     >
-      <section className="flex flex-col gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+      <section className="flex flex-col gap-3 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <div className="flex items-start justify-between gap-3">
           <p className="text-h2 min-w-0">{hazard.category}</p>
           <Stamp variant={tl.stamp.variant} id={hazard.id}>

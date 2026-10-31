@@ -6,9 +6,11 @@ import { askAction } from '@/app/w/actions';
 import { ReadAloud } from '@/src/components/ui/ReadAloud';
 import { Button } from '@/src/components/ui/Button';
 import { VoiceTextarea } from '@/src/components/worker/VoiceTextarea';
+import { AskDraft } from '@/src/components/worker/AskDraft';
 import { useT } from '@/src/i18n/client';
 import { ASK_MAX_HISTORY, ASK_MAX_QUESTION } from '@/src/shared/limits';
 import type { AssistantSource } from '@/src/server/assistant/engine';
+import type { ActionDraft } from '@/src/server/assistant/drafts';
 
 interface Message {
   id: number;
@@ -16,6 +18,7 @@ interface Message {
   text: string;
   sources?: AssistantSource[];
   isAi?: boolean;
+  draft?: ActionDraft;
 }
 
 const SUGGESTIONS = ['ask.suggest1', 'ask.suggest2', 'ask.suggest3', 'ask.suggest4'] as const;
@@ -83,10 +86,11 @@ export function AskChat() {
                 : 'ask-bubble ask-bubble-bot self-start'
             }
           >
-            <span className="sr-only">{m.role === 'user' ? t('ask.you') : t('app.name')}: </span>
+            <span className="sr-only">{m.role === 'user' ? t('ask.you') : t('ask.name')}: </span>
             <p className="text-body whitespace-pre-line">{m.text}</p>
             {m.role === 'assistant' ? (
               <div className="mt-2 flex flex-col gap-2">
+                {m.draft ? <AskDraft draft={m.draft} /> : null}
                 {m.sources && m.sources.length > 0 ? (
                   <p className="text-small flex flex-wrap items-center gap-2">
                     <span className="text-muted">{t('ask.sources')}</span>
@@ -97,9 +101,11 @@ export function AskChat() {
                     ))}
                   </p>
                 ) : null}
-                <p className="text-small text-muted">
-                  {m.isAi ? t('ask.aiNote') : t('ask.ruleNote')}
-                </p>
+                {m.draft ? null : (
+                  <p className="text-small text-muted">
+                    {m.isAi ? t('ask.aiNote') : t('ask.ruleNote')}
+                  </p>
+                )}
                 <ReadAloud text={m.text} />
               </div>
             ) : null}

@@ -14,6 +14,7 @@ import {
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
 import { wagesDueBy } from '@/src/server/domain/payQuery';
+import { canWriteLetter } from '@/src/server/domain/labourLetter';
 import type { Locale } from '@/src/shared/types';
 
 const when = (iso: string, locale: Locale) => `${formatDay(iso, locale)} ${formatClock(iso)}`;
@@ -35,7 +36,6 @@ export default async function PayQueryStatusPage({ params }: { params: Promise<{
         speakText={t(locale, 'payq.notFound')}
         backLabel={back}
         backHref="/w/pay"
-        action={<ButtonLink href="/w">{t(locale, 'common.home')}</ButtonLink>}
       >
         <p role="alert" className="text-body">
           {t(locale, 'payq.notFound')}
@@ -59,7 +59,7 @@ export default async function PayQueryStatusPage({ params }: { params: Promise<{
       backLabel={back}
       backHref="/w/pay"
     >
-      <section className="flex flex-col gap-2 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+      <section className="flex flex-col gap-2 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-h2 min-w-0">{t(locale, `payq.reason.${q.reason}`)}</h2>
           <Stamp variant={stamp.variant} id={q.id}>
@@ -99,7 +99,7 @@ export default async function PayQueryStatusPage({ params }: { params: Promise<{
           {q.answers.map((a) => (
             <li
               key={a.at}
-              className="flex flex-col gap-1 rounded-[6px] border-2 border-graphite bg-card p-4"
+              className="flex flex-col gap-1 rounded-[10px] border-2 border-graphite bg-card p-4"
             >
               <p className="text-small text-muted">
                 {t(locale, 'payq.answerFrom', { name: a.by })} · {when(a.at, locale)}
@@ -120,6 +120,15 @@ export default async function PayQueryStatusPage({ params }: { params: Promise<{
       ) : null}
 
       {askVerdict ? <PayVerdict queryId={q.id} /> : null}
+
+      {canWriteLetter(q) ? (
+        <section className="flex flex-col gap-2 rounded-[10px] border-2 border-escalated bg-card p-4">
+          <p className="text-body">{t(locale, 'letter.openHint')}</p>
+          <ButtonLink href={`/w/pay/query/${encodeURIComponent(q.id)}/letter`} variant="secondary">
+            {t(locale, 'letter.open')}
+          </ButtonLink>
+        </section>
+      ) : null}
     </Screen>
   );
 }

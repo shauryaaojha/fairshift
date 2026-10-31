@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ButtonLink } from '@/src/components/ui/Button';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { Screen } from '@/src/components/worker/Screen';
 import { ShareLink } from '@/src/components/worker/ShareLink';
@@ -22,7 +21,6 @@ export default async function SkillsPage() {
       speakText={t(locale, 'skills.speak')}
       backLabel={t(locale, 'common.back')}
       transitionName="tile-skills"
-      action={<ButtonLink href="/w">{t(locale, 'checkin.backHome')}</ButtonLink>}
     >
       {skills.length === 0 ? (
         <p className="text-body">{t(locale, 'skills.empty')}</p>
@@ -31,7 +29,7 @@ export default async function SkillsPage() {
           {skills.map((s) => (
             <li
               key={s.id}
-              className="flex flex-col gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
+              className="flex flex-col gap-3 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-h2 min-w-0">{s.title}</p>

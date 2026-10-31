@@ -10,6 +10,7 @@ import { calculateShiftHours, calculateShiftsOvertime } from './overtime';
 import { calculateIsoWeek } from './anonymity';
 import { DAY_MS, HOUR_MS, istDateKey } from './time';
 import type { FatigueFlag, PolicySource, Shift } from '../../shared/types';
+import { toPaise, toRupees } from '../../shared/money';
 
 /** A planned shift may be at most this long; anything longer is a typing mistake. */
 export const MAX_PLANNED_SHIFT_HOURS = 16;
@@ -103,7 +104,7 @@ export function checkShiftPlan(
     clashes,
     newFlags,
     extraOvertimeHours: Math.round((withPlan.overtimeHours - without.overtimeHours) * 100) / 100,
-    extraOvertimePay: Math.round((withPlan.overtimePay - without.overtimePay) * 100) / 100,
+    extraOvertimePay: toRupees(toPaise(withPlan.overtimePay) - toPaise(without.overtimePay)),
     verdict: clashes.length > 0 ? 'clash' : newFlags.length > 0 ? 'risky' : 'ok',
   };
 }

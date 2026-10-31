@@ -83,7 +83,10 @@ export function PinPad({
         aria-live="polite"
         aria-label={t('pad.entered', { n: value.length, total: length })}
         data-testid="pin-display"
-        className="mb-4 flex flex-wrap justify-center gap-2"
+        className={length > 6 ? 'mb-4 grid gap-1.5' : 'mb-4 flex flex-wrap justify-center gap-2'}
+        style={
+          length > 6 ? { gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))` } : undefined
+        }
       >
         {cells.map((c, i) => (
           <span
@@ -91,7 +94,7 @@ export function PinPad({
             aria-hidden="true"
             className={
               'flex h-12 items-center justify-center rounded-[6px] border-2 border-graphite bg-card font-mono text-xl tabular-nums ' +
-              (length > 6 ? 'w-8' : 'w-12')
+              (length > 6 ? 'min-w-0' : 'w-12')
             }
           >
             {c ? (masked ? '●' : c) : ''}

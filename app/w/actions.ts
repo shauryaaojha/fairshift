@@ -268,7 +268,7 @@ export async function explainPayAction(): Promise<{ text: string; isAi: boolean 
 
 export type AskResult = { ok: true; answer: AssistantAnswer } | ActionFailure;
 
-/** Ask FairShift. Answers only from this worker's own records (see src/server/assistant). */
+/** Urima, the assistant. Answers only from this worker's own records (see src/server/assistant). */
 export async function askAction(question: string, history: ChatTurn[] = []): Promise<AskResult> {
   // 8 questions a minute per worker keeps AI cost bounded and stops scripted abuse.
   return runWorkerAction('ask', { max: 8, windowMs: MINUTE }, async (ctx) => {

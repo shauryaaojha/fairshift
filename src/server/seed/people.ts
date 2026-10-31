@@ -174,5 +174,11 @@ export async function generatePeople(): Promise<{ workers: Worker[]; admins: Adm
     },
   ];
 
+  // Demo UPI IDs on a bank handle that does not exist: a UPI app opens with the payee and amount
+  // filled in, but no real person can receive a payment made from the demo.
+  for (const worker of workers) {
+    worker.upiId = `${worker.name.toLowerCase().replace(/[^a-z]+/g, '.')}@fairshiftdemo`;
+  }
+
   return { workers, admins };
 }

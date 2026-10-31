@@ -88,6 +88,8 @@ export interface Worker {
   team: string;
   locale: Locale;
   active: boolean;
+  /** UPI ID wages are paid to (handle@bank). */
+  upiId?: string;
 }
 
 // ── Admin ───────────────────────────────────────────────────
@@ -130,6 +132,8 @@ export interface Shift {
   method: 'qr' | 'gps' | 'manual';
   clientId?: string;
   checkOutClientId?: string;
+  /** Signed at check-out, so a later change to the times shows (see domain/shiftReceipt.ts). */
+  receipt?: string;
 }
 
 // ── Overtime ────────────────────────────────────────────────
@@ -417,4 +421,23 @@ export interface OverviewKPIs {
   openHazards: number;
   fatigueFlags: number;
   highQuitRisk: number;
+}
+
+// ── Wage payments ───────────────────────────────────────────
+/** A month's wages paid by UPI, with the bank's reference. One per worker and month. */
+export interface WagePayment {
+  /** `wage_<workerId>_<YYYY-MM>`: the store refuses a second one. */
+  id: string;
+  orgId: string;
+  siteId: string;
+  workerId: string;
+  /** `YYYY-MM`. */
+  period: string;
+  /** ₹, the payslip net computed on the server when it was paid. */
+  amount: number;
+  /** 12-digit UPI reference from the employer's bank. */
+  utr: string;
+  upiId: string;
+  paidAt: string;
+  paidBy: string;
 }

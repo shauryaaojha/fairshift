@@ -117,11 +117,34 @@ body {
   font-weight: 450;
 }
 
+.link {
+  color: var(--ink);
+  /* Underlined so a link inside a sentence never depends on colour alone (WCAG 1.4.1). */
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 .text-mono {
   font-size: 0.882rem;
   line-height: 1.176rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+/* A big figure set in mono keeps its heading size: .text-mono only adds tabular digits. */
+.text-display.text-mono {
+  font-size: 2.353rem;
+  line-height: 2.588rem;
+  font-weight: 700;
+}
+.text-h1.text-mono {
+  font-size: 1.647rem;
+  line-height: 2rem;
+  font-weight: 650;
+}
+.text-h2.text-mono {
+  font-size: 1.294rem;
+  line-height: 1.647rem;
+  font-weight: 600;
 }
 
 /* ── Focus Ring ────────────────────────────────────────────── */

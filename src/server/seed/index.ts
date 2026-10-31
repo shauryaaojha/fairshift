@@ -2,6 +2,7 @@
  * Deterministic demo data, anchored to today: a seeded PRNG builds the same organisations, people
  * and records on every start.
  */
+import type { FeedbackBallot } from '../domain/feedbackBallot';
 import type {
   Org,
   Site,
@@ -12,11 +13,14 @@ import type {
   FeedbackSubmission,
   SkillRecord,
   PayQuery,
+  WagePayment,
 } from '../../shared/types';
 import { DAY_MS } from '../domain/time';
 import { generateOrgs, generateSites } from './orgs';
 import { generatePeople } from './people';
 import { generateShifts } from './shifts';
+import { receiptSecret } from '../auth/receiptKey';
+import { sealShift } from '../domain/shiftReceipt';
 import { generateRecords } from './records';
 import { generatePayQueries } from './payQueries';
 
@@ -34,8 +38,12 @@ export interface SeedDataResult {
   shifts: Shift[];
   hazards: HazardReport[];
   feedback: FeedbackSubmission[];
+  /** Empty: seeded answers predate ballots and are already one per person. */
+  feedbackBallots: FeedbackBallot[];
   skills: SkillRecord[];
   payQueries: PayQuery[];
+  /** Empty: the demo starts with this month unpaid, so paying it can be shown. */
+  wagePayments: WagePayment[];
 }
 
 /** Computed when the seed runs, never at import (Next.js prerendering forbids Date.now() there). */
@@ -67,7 +75,9 @@ export async function generateSeedData(): Promise<SeedDataResult> {
   const orgs = generateOrgs();
   const sites = generateSites();
   const { workers, admins } = await generatePeople();
-  const shifts = generateShifts(workers, anchorMs, rand);
+  // Closed demo shifts carry receipts, as if each was sealed at its own check-out.
+  const secret = receiptSecret();
+  const shifts = generateShifts(workers, anchorMs, rand).map((s) => sealShift(s, secret));
   const { hazards, feedback, skills } = generateRecords(anchorMs);
 
   return {
@@ -78,7 +88,9 @@ export async function generateSeedData(): Promise<SeedDataResult> {
     shifts,
     hazards,
     feedback,
+    feedbackBallots: [],
     skills,
     payQueries: generatePayQueries(anchorMs),
+    wagePayments: [],
   };
 }

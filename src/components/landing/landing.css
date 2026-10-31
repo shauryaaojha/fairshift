@@ -132,6 +132,104 @@
   gap: 8px;
 }
 
+/* Product shots: the console as a sheet on the desk, the phone laid over its corner. */
+.product {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+.product figure {
+  margin: 0;
+}
+.product img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.product-console {
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--shadow-paper);
+}
+.product-phone {
+  width: min(260px, 64vw);
+  padding: 8px;
+  border-radius: 30px;
+  background: var(--graphite);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.22);
+}
+.product-phone img {
+  border-radius: 22px;
+}
+@media (min-width: 768px) {
+  .product {
+    display: block;
+    padding: 0 0 48px 140px;
+  }
+  .product-phone {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+  }
+}
+
+.proof {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .proof {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+.proof li {
+  display: grid;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 3px solid var(--ink);
+}
+.proof strong {
+  font-size: 1.2rem;
+  font-stretch: 108%;
+}
+.proof span {
+  color: var(--muted);
+}
+
+.demo-box {
+  display: grid;
+  gap: 12px;
+  padding: 20px 24px;
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--card);
+}
+.demo-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.demo-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.demo-list dt {
+  font-weight: 650;
+}
+.demo-list dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .intro-overlay {
     display: none;

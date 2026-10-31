@@ -37,7 +37,7 @@ export function PaidCheck({ net }: { net: number }) {
   return (
     <section
       aria-labelledby={`${inputId}-title`}
-      className="flex flex-col gap-3 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
+      className="flex flex-col gap-3 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]"
     >
       <h2 id={`${inputId}-title`} className="text-h2">
         {t('pay.check.title')}
@@ -55,7 +55,7 @@ export function PaidCheck({ net }: { net: number }) {
           onChange={(e) => setValue(e.target.value)}
           aria-invalid={invalid || undefined}
           aria-describedby={`${inputId}-note`}
-          className="text-mono min-h-14 rounded-[6px] border-2 border-graphite bg-paper px-3 text-[1.25rem]"
+          className="text-mono min-h-14 rounded-[10px] border-2 border-graphite bg-paper px-3 text-[1.25rem]"
         />
         <p id={`${inputId}-note`} className="text-small text-muted">
           {t('pay.check.note')}

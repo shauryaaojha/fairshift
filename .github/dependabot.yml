@@ -6,6 +6,11 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      # react and react-dom must move together (React refuses mismatched versions).
+      react:
+        patterns:
+          - react
+          - react-dom
       dev-dependencies:
         dependency-type: development
   - package-ecosystem: github-actions

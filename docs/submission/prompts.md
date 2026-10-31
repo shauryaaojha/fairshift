@@ -64,7 +64,7 @@ These are the prompts that shaped FairShift, in the order they were given. They 
 > "ai chatbot kaha hai app mei??"
 > _(where is the AI chatbot in the app?)_
 
-**What it changed:** "Ask FairShift". It was deliberately not a free-form chatbot: it is grounded in tools that cannot read anyone else's data (see "Ask FairShift" in the README).
+**What it changed:** "Ask FairShift" (since renamed Urima). It was deliberately not a free-form chatbot: it is grounded in tools that cannot read anyone else's data (see "Urima" in the README).
 
 ## 6. Finals: production-ready for a human panel
 
@@ -75,7 +75,7 @@ These are the prompts that shaped FairShift, in the order they were given. They 
 - **Typed errors:** `AppError` codes replaced string matching, and internals no longer reach the browser.
 - **Validation:** a zod-validated environment and tighter input schemas.
 - **Error pages:** boundaries, a 404 page, loading states and `/api/health`.
-- **Ask FairShift:** for workers and supervisors, with Gemini function calling, a rule-based fallback in three languages, a circuit breaker and a briefing cache.
+- **Urima (then "Ask FairShift"):** for workers and supervisors, with Gemini function calling, a rule-based fallback in three languages, a circuit breaker and a briefing cache.
 - **Efficiency:** the supervisor overview went from about three full data loads per request to one.
 - **Bug fixes:**
   - The offline banner was server-rendered on every worker page.

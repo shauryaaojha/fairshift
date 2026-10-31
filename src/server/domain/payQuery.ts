@@ -5,6 +5,7 @@
  */
 
 import { HOUR_MS } from './time';
+import { toPaise, toRupees } from '../../shared/money';
 import type { PayQuery, PayQueryAnswer, PayQueryVerdict } from '../../shared/types';
 
 /** The employer answers a new query within 2 days, a reopened one within 1. */
@@ -39,9 +40,11 @@ export function canGivePayVerdict(
   return q.workerId === workerId && payQueryState(q) === 'awaiting_worker';
 }
 
-/** Rupees short by the worker's own count (positive means they got less), or null. */
+/** Rupees short by the worker's own count (positive means they got less), exact to the paisa, or null. */
 export function payGap(q: Pick<PayQuery, 'payslipNet' | 'receivedAmount'>): number | null {
-  return q.receivedAmount === null ? null : Math.round(q.payslipNet - q.receivedAmount);
+  return q.receivedAmount === null
+    ? null
+    : toRupees(toPaise(q.payslipNet) - toPaise(q.receivedAmount));
 }
 
 /**

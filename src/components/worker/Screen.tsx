@@ -32,7 +32,9 @@ export function Screen({
         transitionName={transitionName}
       />
       <div className="flex flex-1 flex-col gap-4 px-4 pb-4 pt-2">{children}</div>
-      {action ? <div className="sticky bottom-0 bg-paper px-4 pb-3 pt-2">{action}</div> : null}
+      {action ? (
+        <div className="screen-action sticky bottom-0 bg-paper px-4 pb-3 pt-2">{action}</div>
+      ) : null}
     </div>
   );
 }

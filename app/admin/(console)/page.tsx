@@ -10,6 +10,7 @@ import { FeedbackHeatmap } from '@/src/components/admin/FeedbackHeatmap';
 import { RiskTable } from '@/src/components/admin/RiskTable';
 import { StatusStamp } from '@/src/components/admin/StatusStamp';
 import { HeatBanner } from '@/src/components/admin/HeatBanner';
+import { NeedsAction } from '@/src/components/admin/NeedsAction';
 import { fmtDateTime } from '@/src/components/admin/format';
 
 async function Overview() {
@@ -29,6 +30,7 @@ async function Overview() {
       </header>
 
       <StateSentence segments={buildStateSegments(kpis)} />
+      <NeedsAction items={data.actions} />
       <HeatBanner heat={data.heat} place={ctx.sector.place} />
 
       <div className="grid-2 section">

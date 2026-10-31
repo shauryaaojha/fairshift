@@ -35,7 +35,7 @@ export function PayActions() {
         </p>
       ) : null}
       {result ? (
-        <div aria-live="polite" className="rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+        <div aria-live="polite" className="rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
           <p className="text-body">{result.text}</p>
           <p className="text-small mt-2 text-muted">
             {result.isAi ? t('pay.aiLabel') : t('pay.rulesLabel')}

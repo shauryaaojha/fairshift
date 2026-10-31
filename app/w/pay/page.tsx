@@ -13,6 +13,7 @@ import {
   formatRupees,
   getLocale,
   listMyPayQueries,
+  loadMyWages,
   loadPay,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
@@ -22,10 +23,13 @@ const ROW_STEP_MS = 80;
 export default async function PayPage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
-  const [payslip, queries] = await Promise.all([
+  const [payslip, queries, wages] = await Promise.all([
     loadPay(ctx.worker.id),
     listMyPayQueries(ctx.worker.id),
+    loadMyWages(ctx.worker),
   ]);
+  // This month is stamped PAID only once the employer has recorded the payment.
+  const paidNow = wages[0].payment !== null;
 
   const speech = buildPayslipSpeech(payslip, locale);
   const rows = payslip.lines;
@@ -47,7 +51,7 @@ export default async function PayPage() {
         })}
       </p>
 
-      <section className="rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]">
+      <section className="rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]">
         <ul className="flex flex-col">
           {rows.map((line, i) => {
             const isNet = line.key === 'payslip.net';
@@ -103,10 +107,60 @@ export default async function PayPage() {
         </svg>
 
         <div className="mt-4 flex justify-end">
-          <Stamp announce variant="cleared" id={`pay-${payslip.periodEnd}`} delayMs={stampDelay}>
-            {t(locale, 'pay.paid')}
+          <Stamp
+            announce
+            variant={paidNow ? 'cleared' : 'hivis'}
+            id={`pay-${payslip.periodEnd}`}
+            delayMs={stampDelay}
+          >
+            {t(locale, paidNow ? 'pay.paid' : 'pay.due')}
           </Stamp>
         </div>
+      </section>
+
+      <section aria-labelledby="wages-paid" className="flex flex-col gap-2">
+        <h2 id="wages-paid" className="text-h2">
+          {t(locale, 'wage.title')}
+        </h2>
+        <ul className="flex flex-col gap-2">
+          {wages.map((w) => (
+            <li
+              key={w.period}
+              className="rounded-[10px] bg-card px-4 py-3 shadow-[var(--shadow-paper)]"
+            >
+              {w.payment ? (
+                <>
+                  <p className="text-body font-semibold">
+                    {t(locale, 'wage.paid', {
+                      month: formatMonth(w.period, locale),
+                      amount: `₹${formatRupees(w.payment.amount)}`,
+                      date: formatDay(w.payment.paidAt, locale),
+                    })}
+                  </p>
+                  <p className="text-small">{t(locale, 'wage.utr', { utr: w.payment.utr })}</p>
+                </>
+              ) : (
+                <>
+                  <p
+                    className={
+                      'text-body ' + (w.state === 'overdue' ? 'font-semibold text-escalated' : '')
+                    }
+                  >
+                    {t(locale, w.state === 'overdue' ? 'wage.overdue' : 'wage.due', {
+                      month: formatMonth(w.period, locale),
+                      date: formatDay(w.dueBy, locale),
+                    })}
+                  </p>
+                  {w.state === 'overdue' ? (
+                    <Link href="/w/pay/query" className="min-h-12 font-semibold text-ink underline">
+                      {t(locale, 'wage.askLate')}
+                    </Link>
+                  ) : null}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <PayActions />
@@ -122,7 +176,7 @@ export default async function PayPage() {
               <li key={q.id}>
                 <Link
                   href={`/w/pay/query/${q.id}`}
-                  className="flex min-h-14 flex-col justify-center rounded-[6px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
+                  className="flex min-h-14 flex-col justify-center rounded-[10px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
                 >
                   <span className="text-body font-semibold">
                     {t(locale, `payq.reason.${q.reason}`)}

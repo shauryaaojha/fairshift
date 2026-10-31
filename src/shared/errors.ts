@@ -20,6 +20,8 @@ export type AppErrorCode =
   | 'severity_locked'
   | 'verdict_not_allowed'
   | 'answer_not_allowed'
+  | 'feedback_already_given'
+  | 'wages_already_paid'
   | 'rate_limited';
 
 /**
@@ -39,6 +41,8 @@ const PERMANENT: Record<AppErrorCode, boolean> = {
   severity_locked: true,
   verdict_not_allowed: true,
   answer_not_allowed: true,
+  feedback_already_given: true,
+  wages_already_paid: true,
   rate_limited: false,
 };
 

@@ -25,7 +25,7 @@ export default async function RightsPage() {
           return (
             <li
               key={r.id}
-              className="flex flex-col gap-2 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
+              className="flex flex-col gap-2 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]"
             >
               <h2 className="text-h2">{title}</h2>
               <p className="text-body">{body}</p>
@@ -50,7 +50,7 @@ export default async function RightsPage() {
             return (
               <li
                 key={c.id}
-                className="flex flex-col gap-1 rounded-[6px] bg-card p-4 shadow-[var(--shadow-paper)]"
+                className="flex flex-col gap-1 rounded-[10px] bg-card p-4 shadow-[var(--shadow-paper)]"
               >
                 <h3 className="text-body font-semibold">
                   <span className="text-mono">{i + 1}.</span> {title}
@@ -78,7 +78,7 @@ export default async function RightsPage() {
                 <a
                   href={`tel:${h.number}`}
                   aria-label={`${t(locale, `rights.help.${h.id}`)}. ${t(locale, 'rights.call', { number: shown })}`}
-                  className="flex min-h-14 items-center justify-between gap-3 rounded-[6px] border-2 border-graphite bg-card px-4 py-2"
+                  className="flex min-h-14 items-center justify-between gap-3 rounded-[10px] border-2 border-graphite bg-card px-4 py-2"
                 >
                   <span className="text-body">{t(locale, `rights.help.${h.id}`)}</span>
                   <span className="text-mono shrink-0 text-[1.25rem] font-semibold">{shown}</span>

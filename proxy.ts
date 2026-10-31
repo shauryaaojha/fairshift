@@ -5,7 +5,7 @@ import { verifySession, SESSION_COOKIE_NAME } from './src/server/auth/session';
 /**
  * Next.js 16 proxy (replaces middleware.ts).
  * Protects /w/* and /admin/* routes by checking for a verified session cookie.
- * Public routes: /, /w/login, /admin/login, /passport/*
+ * Public routes: /, /w/login, /admin/login, /passport/*, /verify/*
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,6 +16,7 @@ export function proxy(request: NextRequest) {
     pathname === '/w/login' ||
     pathname === '/admin/login' ||
     pathname.startsWith('/passport/') ||
+    pathname.startsWith('/verify/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon')
   ) {

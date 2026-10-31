@@ -12,7 +12,9 @@ import type {
   FeedbackSubmission,
   SkillRecord,
   PayQuery,
+  WagePayment,
 } from '../../shared/types';
+import type { FeedbackBallot } from '../domain/feedbackBallot';
 
 export interface OrgRepo {
   get(id: string): Promise<Org | null>;
@@ -67,6 +69,20 @@ export interface FeedbackRepo {
   listBySiteAndWeek(siteId: string, isoWeek: string): Promise<FeedbackSubmission[]>;
 }
 
+/** Ballots that hold feedback to one per worker, team and week (see domain/feedbackBallot). */
+export interface FeedbackBallotRepo {
+  /** Stores the ballot; false when this id was already claimed (atomic). */
+  claim(ballot: FeedbackBallot): Promise<boolean>;
+  has(id: string): Promise<boolean>;
+}
+
+export interface WagePaymentRepo {
+  /** Stores the payment; false when this worker's month is already paid (atomic). */
+  record(payment: WagePayment): Promise<boolean>;
+  get(workerId: string, period: string): Promise<WagePayment | null>;
+  listBySite(siteId: string): Promise<WagePayment[]>;
+}
+
 export interface SkillRepo {
   create(skill: SkillRecord): Promise<SkillRecord>;
   getById(id: string): Promise<SkillRecord | null>;
@@ -92,6 +108,8 @@ export interface FairShiftDatabase {
   shifts: ShiftRepo;
   hazards: HazardRepo;
   feedback: FeedbackRepo;
+  feedbackBallots: FeedbackBallotRepo;
   skills: SkillRepo;
   payQueries: PayQueryRepo;
+  wagePayments: WagePaymentRepo;
 }

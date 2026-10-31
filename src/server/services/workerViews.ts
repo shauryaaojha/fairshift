@@ -11,11 +11,26 @@ import { workerService } from './workerService';
 import { getDatabase } from '../repos';
 import { SESSION_COOKIE_NAME, verifySession } from '../auth/session';
 import { explainPayslip } from '../ai/gemini';
-import { calculateShiftHours, calculateShiftsOvertime } from '../domain/overtime';
-import { WEEK_MS } from '../domain/time';
-import { closureState, type ClosureState } from '../domain/hazardClosure';
+import {
+  DEFAULT_DAILY_HOURS_LIMIT,
+  calculateShiftHours,
+  calculateShiftsOvertime,
+} from '../domain/overtime';
+import { DAY_MS, WEEK_MS, istDateKey } from '../domain/time';
+import { receiptCode } from '../domain/shiftReceipt';
+import {
+  buildLabourLetter,
+  canWriteLetter,
+  letterPeriod,
+  type LabourLetter,
+} from '../domain/labourLetter';
+import { shiftsInPeriod } from '../domain/registers';
+import { signPeriod } from './receipts';
+import QRCode from 'qrcode';
+import { canGiveVerdict, closureState, type ClosureState } from '../domain/hazardClosure';
 import { policyForDate } from '../domain/payRules';
-import { payQueryState, type PayQueryState } from '../domain/payQuery';
+import { payQueryState, wagesDueBy, type PayQueryState } from '../domain/payQuery';
+import { payablePeriods, payslipForMonth, wageState, type WageState } from '../domain/wagePayment';
 import { LOCALE_COOKIE, SPEECH_LANG, parseLocale, t } from '../../i18n';
 import type {
   FatigueFlag,
@@ -27,6 +42,7 @@ import type {
   PayslipResult,
   Shift,
   Site,
+  WagePayment,
   Worker,
 } from '../../shared/types';
 
@@ -71,7 +87,10 @@ export function formatMonth(period: string, locale: Locale): string {
 }
 
 export function formatRupees(amount: number): string {
-  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount);
+  return new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 /** The stamp a pay query shows: who it is waiting for, or settled. */
@@ -184,6 +203,8 @@ export interface DayRow {
   checkOut: string | null;
   hours: number;
   open: boolean;
+  /** The shift's receipt, sealed at check-out: a short code and the token for /verify. */
+  receipt: { code: string; token: string } | null;
 }
 export interface WeekSummary {
   rows: DayRow[];
@@ -208,6 +229,7 @@ export function summarizeWeek(
     checkOut: s.checkOut ? formatClock(s.checkOut) : null,
     hours: Math.round(calculateShiftHours(s.checkIn, s.checkOut) * 10) / 10,
     open: s.checkOut === null,
+    receipt: s.receipt ? { code: receiptCode(s.receipt), token: s.receipt } : null,
   }));
   const overtime = calculateShiftsOvertime(week, 0, policy);
   const totalHours = Math.round((overtime.regularHours + overtime.overtimeHours) * 10) / 10;
@@ -263,8 +285,102 @@ export async function loadHome(workerId: string) {
   };
 }
 
+/** One day of the home screen's muster strip, oldest first, ending today (IST). */
+export interface MusterDay {
+  date: string;
+  hours: number;
+  present: boolean;
+  today: boolean;
+}
+
+/** The last seven IST days, each with the hours of the shifts that started on it. Pure. */
+export function musterDays(rows: Pick<DayRow, 'date' | 'hours'>[], now: Date): MusterDay[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = istDateKey(new Date(now.getTime() - (6 - i) * DAY_MS));
+    const worked = rows.filter((r) => istDateKey(r.date) === date);
+    const hours = Math.round(worked.reduce((sum, r) => sum + r.hours, 0) * 10) / 10;
+    return { date, hours, present: worked.length > 0, today: i === 6 };
+  });
+}
+
+/** Something waiting on the worker, newest kind first. Each links to where it is answered. */
+export type TodoItem =
+  | { kind: 'letter_ready' | 'pay_answered' | 'hazard_fixed'; href: string }
+  | { kind: 'wages_overdue'; href: string; period: string };
+
+/** The home screen: the week at a glance, and whatever needs the worker's answer. */
+export async function loadHomeBoard(worker: WorkerContext['worker'], now: Date = new Date()) {
+  const [{ week }, hazards, queries, wages, org] = await Promise.all([
+    loadHours(worker),
+    listMyHazards(worker, 20),
+    listMyPayQueries(worker.id),
+    loadMyWages(worker, now),
+    getDatabase().orgs.get(worker.orgId),
+  ]);
+  const rules = policyForDate(org)(istDateKey(now));
+  const todo: TodoItem[] = [];
+  for (const q of queries) {
+    const href = `/w/pay/query/${encodeURIComponent(q.id)}`;
+    if (canWriteLetter(q, now)) todo.push({ kind: 'letter_ready', href: `${href}/letter` });
+    else if (payQueryState(q, now) === 'awaiting_worker') todo.push({ kind: 'pay_answered', href });
+  }
+  for (const h of hazards) {
+    if (canGiveVerdict(h, worker.id)) {
+      todo.push({ kind: 'hazard_fixed', href: `/w/hazard/${encodeURIComponent(h.id)}` });
+    }
+  }
+  for (const w of wages) {
+    if (w.state === 'overdue') {
+      todo.push({ kind: 'wages_overdue', href: '/w/pay', period: w.period });
+    }
+  }
+  return {
+    days: musterDays(week.rows, now),
+    totalHours: week.totalHours,
+    overtimeHours: Math.round(week.overtime.overtimeHours * 10) / 10,
+    dayHours: rules?.dailyHoursLimit ?? DEFAULT_DAILY_HOURS_LIMIT,
+    todo,
+  };
+}
+
 export async function loadPay(workerId: string): Promise<PayslipResult> {
   return workerService.getMyPayslip(workerId);
+}
+
+export interface MyWageMonth {
+  period: string;
+  state: WageState;
+  dueBy: string;
+  payment: WagePayment | null;
+}
+
+/**
+ * Whether this month's and last month's wages were paid, with the UTR to show the bank. Last
+ * month is left out when nothing was earned in it.
+ */
+export async function loadMyWages(
+  worker: Pick<Worker, 'id' | 'orgId' | 'basePay' | 'allowances' | 'payType'>,
+  now: Date = new Date(),
+): Promise<MyWageMonth[]> {
+  const db = getDatabase();
+  const [previous, current] = payablePeriods(now);
+  const [shifts, org, paidBefore, paidNow] = await Promise.all([
+    db.shifts.listByWorker(worker.id),
+    db.orgs.get(worker.orgId),
+    db.wagePayments.get(worker.id, previous),
+    db.wagePayments.get(worker.id, current),
+  ]);
+  const month = (period: string, payment: WagePayment | null): MyWageMonth => ({
+    period,
+    payment,
+    state: wageState(period, payment, now),
+    dueBy: wagesDueBy(period),
+  });
+  const earnedBefore =
+    (payslipForMonth(worker, shifts, previous, now, policyForDate(org))?.net ?? 0) > 0;
+  return paidBefore || earnedBefore
+    ? [month(current, paidNow), month(previous, paidBefore)]
+    : [month(current, paidNow)];
 }
 
 /** Plain-language explanation. AI first, deterministic fallback inside explainPayslip. */
@@ -319,4 +435,53 @@ export async function loadPayQuery(
 ): Promise<(PayQuery & { state: PayQueryState }) | null> {
   const q = await workerService.getMyPayQuery(workerId, queryId);
   return q ? { ...q, state: payQueryState(q) } : null;
+}
+
+export interface LabourLetterView {
+  letter: LabourLetter;
+  worker: { name: string; phone: string };
+  employer: string;
+  site: string;
+  /** The period receipt's link, and its QR as SVG, for the officer to check the hours. */
+  verifyUrl: string;
+  qrSvg: string;
+}
+
+/**
+ * The letter to the labour office for one of the worker's own pay queries. Null when the query is
+ * not theirs; `not_ready` while the employer still has time to answer, or the query is settled.
+ */
+export async function loadLabourLetter(
+  worker: Pick<Worker, 'id' | 'orgId' | 'siteId' | 'name' | 'phone'>,
+  queryId: string,
+  origin: string,
+): Promise<LabourLetterView | 'not_ready' | null> {
+  const q = await workerService.getMyPayQuery(worker.id, queryId);
+  if (!q) return null;
+  if (!canWriteLetter(q)) return 'not_ready';
+
+  const db = getDatabase();
+  const [org, site, allShifts] = await Promise.all([
+    db.orgs.get(worker.orgId),
+    db.sites.get(q.siteId),
+    db.shifts.listByWorker(worker.id),
+  ]);
+  const period = letterPeriod(q);
+  const counted = shiftsInPeriod(allShifts, period);
+  const { overtimeHours } = calculateShiftsOvertime(counted, 0, policyForDate(org));
+  const verifyUrl = `${origin}/verify/${signPeriod(worker.id, period.start, period.end, allShifts)}`;
+  const qrSvg = await QRCode.toString(verifyUrl, {
+    type: 'svg',
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#1C1D1A', light: '#FFFFFF' },
+  });
+  return {
+    letter: buildLabourLetter(q, counted, overtimeHours),
+    worker: { name: worker.name, phone: worker.phone },
+    employer: org?.name ?? '',
+    site: site?.name ?? '',
+    verifyUrl,
+    qrSvg,
+  };
 }

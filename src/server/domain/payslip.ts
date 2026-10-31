@@ -1,11 +1,16 @@
 /**
  * Payslip lines from shifts: base pay, overtime, allowances, PF (12% of basic up to Rs 15,000) and
- * ESI (0.75% when gross is Rs 21,000 or less). Pure.
+ * ESI (0.75% when gross is Rs 21,000 or less). Every sum is in whole paise; PF and ESI are rounded
+ * to the rupee. Lines come out in rupees. Pure.
  */
 
 import { istDateKey } from './time';
 import type { PayslipInput, PayslipResult, PayslipLine } from '../../shared/types';
-import { calculateShiftsOvertime, policyAt } from './overtime';
+import { hoursOf, policyAt, shiftsOvertimeMinutes } from './overtime';
+import { toPaise, toRupees } from '../../shared/money';
+
+/** A share of an amount in paise, rounded to a whole rupee. */
+const wholeRupees = (paise: number, rate: number) => Math.round((paise * rate) / 100) * 100;
 
 export const DEFAULT_PF_RATE = 0.12;
 export const DEFAULT_PF_CEILING = 15000;
@@ -38,38 +43,37 @@ export function calculatePayslip(input: PayslipInput): PayslipResult {
   const esiCeiling = policy?.esiCeiling ?? DEFAULT_ESI_CEILING;
 
   const hourlyRate = deriveHourlyRate(worker.basePay, worker.payType);
-  const otResult = calculateShiftsOvertime(shifts, hourlyRate, input.policy);
+  const ot = shiftsOvertimeMinutes(shifts, hourlyRate, input.policy);
 
-  // Compute base pay for the period
-  let baseEarnings = 0;
+  // Base pay for the period: a day's pay per day worked, or the month's pay.
+  let basePaise = toPaise(worker.basePay);
   if (worker.payType === 'daily') {
-    // Count unique days or completed shifts
     const uniqueDays = new Set(
       shifts.filter((s) => s.checkOut !== null).map((s) => istDateKey(s.checkIn)),
     );
-    baseEarnings = uniqueDays.size * worker.basePay;
-  } else {
-    baseEarnings = worker.basePay;
+    basePaise *= uniqueDays.size;
   }
+  const overtimePaise = ot.overtimePaise;
+  const allowancesPaise = toPaise(Math.max(0, worker.allowances));
+  const grossPaise = basePaise + overtimePaise + allowancesPaise;
 
-  const overtimeEarnings = otResult.overtimePay;
-  const allowancesEarnings = Math.max(0, worker.allowances);
+  // Statutory deductions. PF: 12% of basic wage up to the ₹15,000 ceiling.
+  const pfPaise = wholeRupees(Math.min(basePaise, toPaise(pfCeiling)), pfRate);
+  // ESI: 0.75% of gross, only when gross is ₹21,000 or less.
+  const esiPaise =
+    grossPaise > 0 && grossPaise <= toPaise(esiCeiling) ? wholeRupees(grossPaise, esiRate) : 0;
 
-  const gross = Math.round((baseEarnings + overtimeEarnings + allowancesEarnings) * 100) / 100;
+  const deductionsPaise = pfPaise + esiPaise;
+  const netPaise = Math.max(0, grossPaise - deductionsPaise);
 
-  // Statutory Deductions
-  // PF: 12% of basic wage capped at ₹15,000 ceiling
-  const eligiblePfWage = Math.min(baseEarnings, pfCeiling);
-  const pfDeduction = Math.round(eligiblePfWage * pfRate);
-
-  // ESI: 0.75% of gross earnings if gross <= ₹21,000
-  let esiDeduction = 0;
-  if (gross > 0 && gross <= esiCeiling) {
-    esiDeduction = Math.round(gross * esiRate);
-  }
-
-  const totalDeductions = pfDeduction + esiDeduction;
-  const net = Math.max(0, Math.round((gross - totalDeductions) * 100) / 100);
+  const baseEarnings = toRupees(basePaise);
+  const overtimeEarnings = toRupees(overtimePaise);
+  const allowancesEarnings = toRupees(allowancesPaise);
+  const gross = toRupees(grossPaise);
+  const pfDeduction = toRupees(pfPaise);
+  const esiDeduction = toRupees(esiPaise);
+  const totalDeductions = toRupees(deductionsPaise);
+  const net = toRupees(netPaise);
 
   const lines: PayslipLine[] = [
     {
@@ -83,7 +87,7 @@ export function calculatePayslip(input: PayslipInput): PayslipResult {
   if (overtimeEarnings > 0) {
     lines.push({
       key: 'payslip.overtime',
-      label: `Overtime (${otResult.overtimeHours}h @ 2x)`,
+      label: `Overtime (${hoursOf(ot.overtimeMinutes)}h @ 2x)`,
       amount: overtimeEarnings,
       type: 'earning',
     });

@@ -56,8 +56,14 @@
     padding: 12px 32px;
   }
   .rail {
-    display: block;
-    padding: 24px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    min-height: calc(100dvh - 72px);
+    padding: 20px 12px;
     border-right: 1px solid var(--rule);
     background: var(--card);
   }
@@ -91,6 +97,121 @@
 }
 .rail-link[data-active] {
   background: var(--ink);
+  color: #fff;
+}
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rail-heading {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rail-who {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 12px 4px;
+  border-top: 1px solid var(--rule);
+}
+.rail-who-name {
+  font-weight: 650;
+}
+.rail-who form {
+  margin-top: 8px;
+}
+
+/* ── Needs action: one ruled row per kind of waiting work ──── */
+.needs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-paper);
+  overflow: hidden;
+}
+.needs li + li {
+  border-top: 1px solid var(--rule);
+}
+.needs a {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-left: 5px solid var(--ink);
+  color: var(--graphite);
+  text-decoration: none;
+}
+.needs a:hover {
+  background: var(--paper);
+}
+.needs a[data-urgent] {
+  border-left-color: var(--escalated);
+}
+.needs-count {
+  font-size: 1.75rem;
+  font-weight: 650;
+  text-align: right;
+  color: var(--ink);
+}
+.needs a[data-urgent] .needs-count {
+  color: var(--escalated);
+}
+.needs-detail {
+  display: block;
+}
+.needs-go {
+  font-size: 1.6rem;
+  color: var(--muted);
+}
+
+/* ── Page tabs (Pay) ───────────────────────────────────────── */
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  margin-bottom: -1px;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.page-tab:hover {
+  color: var(--graphite);
+}
+.page-tab[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.page-tab-count {
+  min-width: 1.5rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, var(--card));
+  color: var(--ink);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.page-tab-count[data-urgent] {
+  background: var(--escalated);
   color: #fff;
 }
 
@@ -503,12 +624,6 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.link {
-  color: var(--ink);
-  /* Underlined so a link inside a sentence never depends on colour alone (WCAG 1.4.1). */
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
 .link-btn {
   background: none;
   border: 0;
@@ -715,6 +830,60 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--rule);
 }
+/* Fair-site score: a total, then each part as a bar with the count behind it. */
+.site-score {
+  --band: var(--ink);
+  display: grid;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.site-score[data-band='good'] {
+  --band: var(--cleared);
+}
+.site-score[data-band='fair'] {
+  --band: var(--hivis);
+}
+.site-score[data-band='poor'] {
+  --band: var(--escalated);
+}
+.site-score-total {
+  margin: 0;
+  font-weight: 700;
+}
+.site-score-total .mono {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.site-score-parts {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.site-score-parts p {
+  margin: 4px 0 0;
+}
+.site-score-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+}
+.site-score-bar {
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.site-score-bar span {
+  display: block;
+  height: 100%;
+  background: var(--band);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .register-grid {
@@ -760,7 +929,7 @@
   font-weight: 600;
 }
 
-/* ── Ask the console ───────────────────────────────────────── */
+/* ── Ask Urima (console) ───────────────────────────────────────── */
 .console-ask {
   display: flex;
   flex-direction: column;
@@ -817,4 +986,27 @@
 .heat-banner[data-level='danger'],
 .heat-banner[data-level='extreme_danger'] {
   border-color: var(--escalated);
+}
+
+/* Paying a month's wages by UPI: QR to scan, then the UTR. */
+.upi-pay summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+.upi-pay[open] {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.upi-qr {
+  width: 180px;
+  max-width: 100%;
+}
+.upi-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }

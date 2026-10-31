@@ -7,7 +7,10 @@
 
 import { getDatabase } from '../repos';
 import { verifySecret } from '../auth/password';
-import { signSession } from '../auth/session';
+import { deriveServerSecret, signSession } from '../auth/session';
+import { receiptSecret } from '../auth/receiptKey';
+import { sealShift } from '../domain/shiftReceipt';
+import { ballotId } from '../domain/feedbackBallot';
 import { verifySiteQrCode, verifySiteQrCodeAt } from '../domain/qrCode';
 import { validateCapturedAt } from '../domain/offline';
 import { verifyGeofence } from '../domain/geofence';
@@ -162,7 +165,7 @@ export class WorkerService {
     // supervisor can correct the record.
     let open = await this.db.shifts.getActiveForWorker(workerId);
     if (open && Date.now() - Date.parse(open.checkIn) > STALE_OPEN_SHIFT_MS) {
-      await this.db.shifts.update({ ...open, checkOut: open.checkIn });
+      await this.db.shifts.update(sealShift({ ...open, checkOut: open.checkIn }, receiptSecret()));
       open = null;
     }
     if (open) return { shift: open, message: 'Already checked in' };
@@ -205,7 +208,10 @@ export class WorkerService {
     throw new AppError('no_checkin_method', 'Provide a valid QR code or GPS location to check in');
   }
 
-  /** Close a shift. Idempotent: closing an already closed shift returns it unchanged. */
+  /**
+   * Close a shift and seal its receipt. Idempotent: closing an already closed shift returns it
+   * unchanged.
+   */
   async checkOut(workerId: string, input: CheckOutInput = {}): Promise<Shift> {
     if (input.clientId) {
       const shifts = await this.db.shifts.listByWorker(workerId);
@@ -230,11 +236,16 @@ export class WorkerService {
     }
     if (shift.checkOut !== null) return shift;
 
-    return this.db.shifts.update({
-      ...shift,
-      checkOut: checkOutAt,
-      ...(input.clientId ? { checkOutClientId: input.clientId } : {}),
-    });
+    return this.db.shifts.update(
+      sealShift(
+        {
+          ...shift,
+          checkOut: checkOutAt,
+          ...(input.clientId ? { checkOutClientId: input.clientId } : {}),
+        },
+        receiptSecret(),
+      ),
+    );
   }
 
   /** The open shift, the latest shifts, and fatigue flags for the last 7 days. */
@@ -394,7 +405,8 @@ export class WorkerService {
 
   /**
    * Stores anonymous feedback: no worker id, the team and ISO week only, and names on the site
-   * roster (plus phones, emails and ID numbers) scrubbed from the comment.
+   * roster (plus phones, emails and ID numbers) scrubbed from the comment. One answer per worker,
+   * team and week (a ballot claimed first), so one person cannot open the team's comments alone.
    */
   async submitFeedback(workerId: string, input: FeedbackInput): Promise<FeedbackSubmission> {
     const worker = await this.requireWorker(workerId);
@@ -403,6 +415,15 @@ export class WorkerService {
     if (replay) return replay;
 
     const isoWeek = calculateIsoWeek(new Date(resolveCapturedAt(input.capturedAt)));
+    const claimed = await this.db.feedbackBallots.claim({
+      id: feedbackBallotId(worker.id, worker.team, isoWeek),
+      siteId: site.id,
+      team: worker.team,
+      isoWeek,
+    });
+    if (!claimed) {
+      throw new AppError('feedback_already_given', 'Feedback already given this week');
+    }
     const roster = (await this.db.workers.listBySite(site.id)).map((w) => w.name);
 
     return this.db.feedback.create({
@@ -418,6 +439,14 @@ export class WorkerService {
       comment: input.comment ? scrubPii(input.comment, roster) : null,
       ...(input.clientId ? { clientId: input.clientId } : {}),
     });
+  }
+
+  /** Whether this worker has already answered for their team this week. */
+  async hasGivenFeedback(workerId: string, at: Date = new Date()): Promise<boolean> {
+    const worker = await this.requireWorker(workerId);
+    return this.db.feedbackBallots.has(
+      feedbackBallotId(worker.id, worker.team, calculateIsoWeek(at)),
+    );
   }
 
   /** Shifts of the last 14 days with overtime, and fatigue flags for the last 7. */
@@ -448,6 +477,10 @@ export class WorkerService {
   async getMySkills(workerId: string): Promise<SkillRecord[]> {
     return this.db.skills.listByWorker(workerId);
   }
+}
+
+function feedbackBallotId(workerId: string, team: string, isoWeek: string): string {
+  return ballotId(deriveServerSecret('feedback-ballot'), workerId, team, isoWeek);
 }
 
 export const workerService = new WorkerService();

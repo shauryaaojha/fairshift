@@ -16,7 +16,9 @@ import type {
   FeedbackSubmission,
   SkillRecord,
   PayQuery,
+  WagePayment,
 } from '../../shared/types';
+import type { FeedbackBallot } from '../domain/feedbackBallot';
 import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
 
@@ -28,8 +30,10 @@ const COLLECTIONS = {
   shifts: 'shifts',
   hazards: 'hazards',
   feedback: 'feedback',
+  feedbackBallots: 'feedbackBallots',
   skills: 'skills',
   payQueries: 'payQueries',
+  wagePayments: 'wagePayments',
 } as const;
 
 /** Never return Mongo's internal _id to callers. */
@@ -46,6 +50,7 @@ const INDEXES: Record<string, string[]> = {
   feedback: ['id', 'siteId', 'orgId'],
   skills: ['id', 'workerId', 'verifyToken'],
   payQueries: ['id', 'workerId', 'orgId'],
+  wagePayments: ['id', 'workerId', 'siteId'],
 };
 
 function byCheckInDesc(a: Shift, b: Shift): number {
@@ -238,6 +243,29 @@ class MongoFairShiftDb implements FairShiftDatabase {
       ),
   };
 
+  /**
+   * The ballot id is used as Mongo's _id, so the unique _id index makes the claim atomic and no
+   * ObjectId (which embeds a timestamp) can line a ballot up with the answer stored beside it.
+   */
+  feedbackBallots = {
+    claim: async (ballot: FeedbackBallot) => {
+      await this.ensureSeeded();
+      try {
+        await (
+          await this.getDb()
+        )
+          .collection<Document>(COLLECTIONS.feedbackBallots)
+          .insertOne({ _id: ballot.id as unknown as Document['_id'], ...ballot });
+        return true;
+      } catch (err) {
+        if ((err as { code?: number }).code === 11000) return false;
+        throw err;
+      }
+    },
+    has: async (id: string) =>
+      (await this.getDoc<FeedbackBallot>(COLLECTIONS.feedbackBallots, id)) !== null,
+  };
+
   skills = {
     create: (skill: SkillRecord) => this.put(COLLECTIONS.skills, skill),
     getById: (id: string) => this.getDoc<SkillRecord>(COLLECTIONS.skills, id),
@@ -255,6 +283,30 @@ class MongoFairShiftDb implements FairShiftDatabase {
       (await this.query<PayQuery>(COLLECTIONS.payQueries, 'workerId', workerId)).sort(byRaisedDesc),
     listByOrg: async (orgId: string) =>
       (await this.query<PayQuery>(COLLECTIONS.payQueries, 'orgId', orgId)).sort(byRaisedDesc),
+  };
+
+  /** The unique index on `id` (one per worker and month) makes a second payment fail atomically. */
+  wagePayments = {
+    record: async (payment: WagePayment) => {
+      await this.ensureSeeded();
+      try {
+        await (await this.getDb()).collection(COLLECTIONS.wagePayments).insertOne({ ...payment });
+        return true;
+      } catch (err) {
+        if ((err as { code?: number }).code === 11000) return false;
+        throw err;
+      }
+    },
+    get: async (workerId: string, period: string) => {
+      await this.ensureSeeded();
+      return (await (
+        await this.getDb()
+      )
+        .collection(COLLECTIONS.wagePayments)
+        .findOne({ workerId, period }, NO_ID)) as WagePayment | null;
+    },
+    listBySite: (siteId: string) =>
+      this.query<WagePayment>(COLLECTIONS.wagePayments, 'siteId', siteId),
   };
 }
 

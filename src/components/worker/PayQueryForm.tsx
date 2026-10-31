@@ -58,7 +58,7 @@ export function PayQueryForm({
         {PAY_QUERY_REASONS.map((r) => (
           <label
             key={r}
-            className="flex min-h-14 items-center gap-3 rounded-[6px] border-2 border-graphite bg-card px-4 py-2 has-[:checked]:bg-ink has-[:checked]:text-paper"
+            className="flex min-h-14 items-center gap-3 rounded-[10px] border-2 border-graphite bg-card px-4 py-2 has-[:checked]:bg-ink has-[:checked]:text-paper"
           >
             <input
               type="radio"
@@ -86,7 +86,7 @@ export function PayQueryForm({
           onChange={(e) => setReceived(e.target.value)}
           aria-invalid={error === 'amount' || undefined}
           aria-describedby={error === 'amount' ? `${id}-err` : undefined}
-          className="text-mono min-h-14 rounded-[6px] border-2 border-graphite bg-paper px-3 text-[1.25rem]"
+          className="text-mono min-h-14 rounded-[10px] border-2 border-graphite bg-paper px-3 text-[1.25rem]"
         />
       </div>
 
@@ -100,7 +100,7 @@ export function PayQueryForm({
           maxLength={500}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="rounded-[6px] border-2 border-graphite bg-paper px-3 py-2 text-body"
+          className="rounded-[10px] border-2 border-graphite bg-paper px-3 py-2 text-body"
         />
       </div>
 

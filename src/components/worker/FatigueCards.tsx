@@ -12,7 +12,7 @@ export function FatigueCards({ title, notes }: { title: string; notes: FatigueNo
       {notes.map((n, i) => (
         <li
           key={`${n.type}-${i}`}
-          className="flex gap-3 rounded-[6px] border-2 border-graphite bg-hivis p-4 text-graphite"
+          className="flex gap-3 rounded-[10px] border-2 border-graphite bg-hivis p-4 text-graphite"
         >
           <span className="mt-0.5 shrink-0">
             <ConeIcon />

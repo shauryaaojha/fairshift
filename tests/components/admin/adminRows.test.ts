@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest';
 import {
   buildAttendanceRows,
   buildHeatmapRows,
+  buildNeedsAction,
   buildStateSegments,
   filterHazards,
   filterRiskRows,
   toHazardRows,
   type RiskRow,
 } from '@/src/server/services/adminRows';
-import { confirmHazardSeverity } from '@/src/server/services/adminPages';
+import { confirmHazardSeverity, getOverviewData } from '@/src/server/services/adminPages';
 import { resolveSector, sectorForOrg } from '@/src/server/services/sectors';
 import { getDatabase } from '@/src/server/repos';
 import type { HazardReport, Shift, Worker } from '@/src/shared/types';
@@ -221,5 +222,55 @@ describe('confirmHazardSeverity', () => {
 
     const updated = await confirmHazardSeverity('h-non-esc-lower', 'org-construction', 'low');
     expect(updated.severity).toBe('low');
+  });
+});
+
+describe('buildNeedsAction', () => {
+  const none = {
+    escalated: 0,
+    newHazards: 0,
+    payWaiting: 0,
+    payOverdue: 0,
+    wagesOverdue: 0,
+    fatigue: 0,
+    highRisk: 0,
+  };
+
+  it('is empty when nothing waits', () => {
+    expect(buildNeedsAction(none)).toEqual([]);
+  });
+
+  it('puts missed hazard deadlines first and keeps only kinds with work', () => {
+    const items = buildNeedsAction({ ...none, escalated: 2, highRisk: 3, wagesOverdue: 1 });
+    expect(items.map((i) => i.key)).toEqual(['escalated', 'wages', 'risk']);
+    expect(items[0]).toMatchObject({
+      count: 2,
+      urgent: true,
+      href: '/admin/safety?status=escalated',
+    });
+    expect(items[1].href).toBe('/admin/pay?tab=wages');
+    expect(items[2].urgent).toBe(false);
+  });
+
+  it('marks pay questions urgent only once one is past its deadline', () => {
+    const open = buildNeedsAction({ ...none, payWaiting: 2 })[0];
+    expect(open).toMatchObject({ key: 'pay', count: 2, urgent: false });
+    const late = buildNeedsAction({ ...none, payWaiting: 2, payOverdue: 1 })[0];
+    expect(late.urgent).toBe(true);
+    expect(late.detail).toMatch(/1 past/);
+  });
+});
+
+describe('overview needs-action list', () => {
+  it('matches the KPIs it is built from and links into the console', async () => {
+    const data = await getOverviewData('construction');
+    const byKey = Object.fromEntries(data.actions.map((a) => [a.key, a]));
+    expect(byKey.escalated?.count ?? 0).toBe(data.escalated.length);
+    expect(byKey.fatigue?.count ?? 0).toBe(data.kpis.fatigueFlags);
+    expect(byKey.risk?.count ?? 0).toBe(data.kpis.highQuitRisk);
+    for (const a of data.actions) {
+      expect(a.count).toBeGreaterThan(0);
+      expect(a.href.startsWith('/admin/')).toBe(true);
+    }
   });
 });

@@ -4,6 +4,49 @@ import { getAdminContext } from '../../_lib/context';
 import { SECTORS } from '@/src/server/services/sectors';
 import { getSitesData } from '@/src/server/services/adminPages';
 import { LineReveal } from '@/src/components/motion/LineReveal';
+import type { ScoreBand, SiteScore } from '@/src/server/domain/siteScore';
+
+const BAND: Record<ScoreBand, string> = {
+  good: 'Fair to its workers',
+  fair: 'Needs attention',
+  poor: 'Needs a visit',
+};
+
+function SiteScoreCard({ score, id }: { score: SiteScore; id: string }) {
+  if (score.score === null || score.band === null) {
+    return <p className="muted">Not enough records yet to score this site.</p>;
+  }
+  return (
+    <div className="site-score" data-band={score.band}>
+      <p id={`${id}-score`} className="site-score-total">
+        <span className="mono">{score.score}</span>
+        <span className="text-small"> / 100 · {BAND[score.band]}</span>
+      </p>
+      <ul className="site-score-parts">
+        {score.parts.map((p) => (
+          <li key={p.key}>
+            <div className="site-score-head">
+              <span>{p.label}</span>
+              <span className="mono">{p.value}</span>
+            </div>
+            <div className="site-score-bar" aria-hidden="true">
+              <span style={{ width: `${p.value}%` }} />
+            </div>
+            <p className="text-small muted">{p.detail}</p>
+          </li>
+        ))}
+      </ul>
+      {score.missing.length > 0 ? (
+        <p className="text-small muted">
+          Not counted:{' '}
+          {score.missing
+            .map((m) => `${m.label.toLowerCase()} (${m.reason.toLowerCase()})`)
+            .join('; ')}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 async function Sites() {
   const ctx = await getAdminContext();
@@ -17,8 +60,9 @@ async function Sites() {
           Sites and gate kiosks
         </LineReveal>
         <p className="page-sub">
-          Open a kiosk on a tablet or screen at the gate. Its QR code changes every 60 seconds, so a
-          photo of it cannot be used later.
+          Each site&apos;s fair-site score is the average of five parts, each out of 100, worked out
+          from the records below it. Open a kiosk on a tablet or screen at the gate. Its QR code
+          changes every 60 seconds, so a photo of it cannot be used later.
         </p>
       </header>
 
@@ -30,6 +74,7 @@ async function Sites() {
               {g.sector === ctx.sector.key ? ' (viewing)' : ''}
             </span>
           </LineReveal>
+          <SiteScoreCard score={g.score} id={`sites-${g.sector}`} />
           {g.sites.map((s) => (
             <div key={s.id} className="site-row">
               <div>

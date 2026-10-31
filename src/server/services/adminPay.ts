@@ -1,9 +1,10 @@
 /**
- * The console's pay page: worker pay queries with their answer deadlines, and the versioned pay
- * rules. Everything is scoped to the sector the session may view; ids from forms are re-checked
+ * The console's pay page: wages to pay by UPI, worker pay queries with their answer deadlines,
+ * and the versioned pay rules. Everything is scoped to the sector the session may view; ids from forms are re-checked
  * against that organisation.
  */
 
+import QRCode from 'qrcode';
 import { SECTORS } from './sectors';
 import { getDatabase } from '../repos';
 import { formatSlaRemaining } from '../domain/hazardSla';
@@ -20,13 +21,23 @@ import {
 import {
   addRuleVersion,
   checkRuleChange,
+  policyForDate,
   rulesOn,
   upcomingMondays,
   type RuleChangeInput,
 } from '../domain/payRules';
+import {
+  payablePeriods,
+  payslipForMonth,
+  UTR_PATTERN,
+  upiPayUri,
+  wagePaymentId,
+  wageState,
+  type WageState,
+} from '../domain/wagePayment';
 import { newRecordId } from '../ids';
 import { AppError } from '../../shared/errors';
-import type { PayQuery, PayRuleVersion, PayRules, Sector } from '../../shared/types';
+import type { PayQuery, PayRuleVersion, PayRules, Sector, WagePayment } from '../../shared/types';
 
 export interface PayQueryRow extends PayQuery {
   workerName: string;
@@ -160,4 +171,164 @@ export async function schedulePayRulesForOrg(
   };
   await db.orgs.save({ ...org, payRuleHistory: addRuleVersion(org, version) });
   return version;
+}
+
+// ── Wages by UPI ────────────────────────────────────────────
+
+export interface WageRow {
+  workerId: string;
+  workerName: string;
+  team: string;
+  /** The payslip net for the month, from the server's own calculation. */
+  net: number;
+  state: WageState;
+  payment: WagePayment | null;
+  upiId: string | null;
+  /** `upi://pay` link with payee and amount filled in; null when paid or there is no UPI ID. */
+  payUri: string | null;
+  /** The same link as a QR code, to scan with the employer's phone. */
+  qrSvg: string | null;
+}
+
+export interface WageMonth {
+  period: string;
+  /** Legal last day to pay (the 7th of the next month). */
+  dueBy: string;
+  rows: WageRow[];
+  paidCount: number;
+  overdueCount: number;
+}
+
+const monthLabel = (period: string) =>
+  new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
+    new Date(`${period}-01T00:00:00Z`),
+  );
+
+/**
+ * This month and last month, for every active worker at the sector's site who earned something.
+ * Without QR codes; `getWagesData` adds them for the pay page.
+ */
+export async function getWageMonths(sector: Sector, now: Date = new Date()): Promise<WageMonth[]> {
+  const { orgId, siteId } = SECTORS[sector];
+  const db = getDatabase();
+  const [workers, shifts, org, payments] = await Promise.all([
+    db.workers.listBySite(siteId),
+    db.shifts.listBySite(siteId),
+    db.orgs.get(orgId),
+    db.wagePayments.listBySite(siteId),
+  ]);
+  const policy = policyForDate(org);
+  const paid = new Map(payments.map((p) => [p.id, p]));
+  const active = workers.filter((w) => w.active).sort((a, b) => a.name.localeCompare(b.name));
+
+  return payablePeriods(now)
+    .reverse()
+    .map((period): WageMonth => {
+      const rows = active.map((w): WageRow | null => {
+        const payment = paid.get(wagePaymentId(w.id, period)) ?? null;
+        const net = payslipForMonth(w, shifts, period, now, policy)?.net ?? 0;
+        if (net <= 0 && !payment) return null;
+        return {
+          workerId: w.id,
+          workerName: w.name,
+          team: w.team,
+          net,
+          state: wageState(period, payment, now),
+          payment,
+          upiId: w.upiId ?? null,
+          payUri: payment
+            ? null
+            : upiPayUri({
+                vpa: w.upiId ?? '',
+                payeeName: w.name,
+                amount: net,
+                note: `FairShift wages ${monthLabel(period)}`,
+              }),
+          qrSvg: null,
+        };
+      });
+      const listed = rows.filter((r): r is WageRow => r !== null);
+      return {
+        period,
+        dueBy: wagesDueBy(period),
+        rows: listed,
+        paidCount: listed.filter((r) => r.state === 'paid').length,
+        overdueCount: listed.filter((r) => r.state === 'overdue').length,
+      };
+    });
+}
+
+/** The wage months with each unpaid row's UPI link drawn as a QR code to scan. */
+export async function getWagesData(sector: Sector, now: Date = new Date()): Promise<WageMonth[]> {
+  const months = await getWageMonths(sector, now);
+  return Promise.all(
+    months.map(async (m) => ({
+      ...m,
+      rows: await Promise.all(
+        m.rows.map(async (r) => ({
+          ...r,
+          qrSvg: r.payUri
+            ? await QRCode.toString(r.payUri, {
+                type: 'svg',
+                margin: 1,
+                errorCorrectionLevel: 'M',
+                color: { dark: '#1C1D1A', light: '#FFFFFF' },
+              })
+            : null,
+        })),
+      ),
+    })),
+  );
+}
+
+export interface WagePaymentInput {
+  workerId: string;
+  period: string;
+  utr: string;
+}
+
+/**
+ * Records that a worker's month was paid by UPI. The amount is worked out again here, never taken
+ * from the form, and a month can be recorded once.
+ */
+export async function recordWagePaymentForOrg(
+  orgId: string,
+  siteId: string,
+  adminId: string,
+  input: WagePaymentInput,
+  now: Date = new Date(),
+): Promise<WagePayment> {
+  const db = getDatabase();
+  const worker = await db.workers.getById(input.workerId);
+  if (!worker || worker.orgId !== orgId || worker.siteId !== siteId) {
+    throw new AppError('not_found', 'Worker not found');
+  }
+  if (!payablePeriods(now).includes(input.period)) {
+    throw new AppError('validation', 'Only last month and this month can be paid here.');
+  }
+  if (!UTR_PATTERN.test(input.utr)) {
+    throw new AppError('validation', 'The UTR is the 12-digit reference your UPI app shows.');
+  }
+  if (!worker.upiId) throw new AppError('validation', 'This worker has no UPI ID on file.');
+
+  const [shifts, org] = await Promise.all([db.shifts.listByWorker(worker.id), db.orgs.get(orgId)]);
+  const net = payslipForMonth(worker, shifts, input.period, now, policyForDate(org))?.net ?? 0;
+  if (net <= 0) throw new AppError('validation', 'Nothing is owed for this month.');
+
+  const payment: WagePayment = {
+    id: wagePaymentId(worker.id, input.period),
+    orgId,
+    siteId,
+    workerId: worker.id,
+    period: input.period,
+    amount: net,
+    utr: input.utr,
+    upiId: worker.upiId,
+    paidAt: now.toISOString(),
+    paidBy: await adminName(adminId),
+  };
+  if (!(await db.wagePayments.record(payment))) {
+    throw new AppError('wages_already_paid', 'This month is already recorded as paid.');
+  }
+  return payment;
 }

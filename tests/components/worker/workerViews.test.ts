@@ -12,6 +12,7 @@ import {
   formatClock,
   formatDay,
   hazardTimeline,
+  musterDays,
   summarizeWeek,
   validateWorkerNext,
 } from '@/src/server/services/workerViews';
@@ -244,5 +245,42 @@ describe('validateWorkerNext', () => {
 
   it('rejects /w itself (must start with /w/ to go to subpaths, or falls back to /w)', () => {
     expect(validateWorkerNext('/w')).toBe('/w');
+  });
+});
+
+describe('musterDays', () => {
+  // 2026-10-31 15:00 IST.
+  const now = new Date('2026-10-31T09:30:00.000Z');
+
+  it('lists the last seven IST days, oldest first, ending today', () => {
+    const days = musterDays([], now);
+    expect(days.map((d) => d.date)).toEqual([
+      '2026-10-25',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+    ]);
+    expect(days.filter((d) => d.today).map((d) => d.date)).toEqual(['2026-10-31']);
+    expect(days.every((d) => !d.present && d.hours === 0)).toBe(true);
+  });
+
+  it('adds up the hours of every shift that started that day, by site time', () => {
+    const days = musterDays(
+      [
+        // 05:00 IST on the 29th, and a second short shift the same evening.
+        { date: '2026-10-28T23:30:00.000Z', hours: 8.25 },
+        { date: '2026-10-29T12:30:00.000Z', hours: 2 },
+        // Older than the strip: ignored.
+        { date: '2026-10-20T03:00:00.000Z', hours: 9 },
+      ],
+      now,
+    );
+    const byDate = Object.fromEntries(days.map((d) => [d.date, d]));
+    expect(byDate['2026-10-29']).toMatchObject({ present: true, hours: 10.3 });
+    expect(byDate['2026-10-28']).toMatchObject({ present: false, hours: 0 });
+    expect(days.filter((d) => d.present)).toHaveLength(1);
   });
 });

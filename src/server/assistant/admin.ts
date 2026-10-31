@@ -1,5 +1,5 @@
 /**
- * Ask the console: the supervisor's assistant. Tools are bound to the sector the admin is viewing,
+ * Urima in the console: the supervisor's assistant. Tools are bound to the sector the admin is viewing,
  * which getAdminContext only allows for organisations in the signed session. Feedback goes through
  * the same k ≥ 3 aggregation as the heatmap, so the assistant cannot de-anonymise a small team.
  */
@@ -183,7 +183,7 @@ export async function adminFallback(question: string, run: (name: string) => Pro
 }
 
 export function adminSystemInstruction(sector: SectorConfig): string {
-  return `You are "Ask the console", an assistant for a supervisor of ${sector.place} (${sector.label} sector) in the FairShift console.
+  return `You are Urima, an assistant for a supervisor of ${sector.place} (${sector.label} sector) in the FairShift console.
 Answer in English, in at most 5 short sentences or a short list. Lead with what needs action now. Plain text only: no markdown, no asterisks; start list lines with "• ".
 Always call a tool before stating any fact about workers, hazards, attendance or feedback.
 Use only numbers that a tool returned; never invent one. Escalated hazards mean a response deadline was missed.

@@ -221,3 +221,82 @@ export function filterRiskRows(
   if (team && team !== 'all') out = out.filter((r) => r.team === team);
   return out;
 }
+
+// ── Needs action (overview) ─────────────────────────────────
+
+export interface ActionCounts {
+  escalated: number;
+  newHazards: number;
+  payWaiting: number;
+  payOverdue: number;
+  wagesOverdue: number;
+  fatigue: number;
+  highRisk: number;
+}
+
+export interface ActionItem {
+  key: string;
+  count: number;
+  label: string;
+  detail: string;
+  href: string;
+  urgent: boolean;
+}
+
+/** What the supervisor should do next, most urgent first. Only items with something to do. */
+export function buildNeedsAction(c: ActionCounts): ActionItem[] {
+  const items: ActionItem[] = [
+    {
+      key: 'escalated',
+      count: c.escalated,
+      label: 'Hazards past their deadline',
+      detail: 'Reported dangers that were not dealt with in time. Start here.',
+      href: '/admin/safety?status=escalated',
+      urgent: true,
+    },
+    {
+      key: 'pay',
+      count: c.payWaiting,
+      label: 'Pay questions waiting for your answer',
+      detail:
+        c.payOverdue > 0
+          ? `${c.payOverdue} past the 2-day deadline.`
+          : 'Answer within 2 days of the question.',
+      href: '/admin/pay',
+      urgent: c.payOverdue > 0,
+    },
+    {
+      key: 'wages',
+      count: c.wagesOverdue,
+      label: 'Workers whose wages are overdue',
+      detail: 'Wages were due by the 7th. Pay by UPI and record the UTR.',
+      href: '/admin/pay?tab=wages',
+      urgent: true,
+    },
+    {
+      key: 'reported',
+      count: c.newHazards,
+      label: 'New hazard reports to acknowledge',
+      detail: 'Acknowledge each one before its deadline and record the fix.',
+      href: '/admin/safety?status=reported',
+      urgent: false,
+    },
+    {
+      key: 'fatigue',
+      count: c.fatigue,
+      label: 'Workers over the hours limits',
+      detail: 'Long shifts, short rests or more than 48 h in a week.',
+      href: '/admin/risk?filter=fatigue',
+      urgent: false,
+    },
+    {
+      key: 'risk',
+      count: c.highRisk,
+      label: 'Workers likely to leave',
+      detail: 'Quit-risk score above 50. See the reasons before they go.',
+      href: '/admin/risk?filter=high',
+      urgent: false,
+    },
+  ];
+  return items.filter((i) => i.count > 0);
+}

@@ -11,8 +11,14 @@ import {
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
 
-export default async function HazardPage() {
-  const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
+type Search = { category?: string; severity?: string; text?: string };
+
+export default async function HazardPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const [ctx, cookieLocale, initial] = await Promise.all([
+    requireWorkerContext(),
+    getLocale(),
+    searchParams,
+  ]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const earlier = await listMyHazards(ctx.worker);
 
@@ -24,7 +30,7 @@ export default async function HazardPage() {
         backLabel={t(locale, 'common.back')}
         transitionName="tile-hazard"
       />
-      <HazardForm />
+      <HazardForm initial={initial} />
       {earlier.length > 0 ? (
         <section className="px-4 pb-4" aria-label={t(locale, 'hazard.earlier')}>
           <h2 className="text-h2 mb-2">{t(locale, 'hazard.earlier')}</h2>
@@ -33,7 +39,7 @@ export default async function HazardPage() {
               <li key={h.id}>
                 <Link
                   href={`/w/hazard/${h.id}`}
-                  className="flex min-h-14 flex-col justify-center rounded-[6px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
+                  className="flex min-h-14 flex-col justify-center rounded-[10px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
                 >
                   <span className="text-body font-semibold">{h.category}</span>
                   {closureState(h) === 'awaiting_reporter' ? (

@@ -1,21 +1,18 @@
 import { Suspense } from 'react';
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminContext } from '../../../_lib/context';
 import { SECTORS } from '@/src/server/services/sectors';
 import { getKioskView } from '@/src/server/services/adminPages';
+import { requestOrigin } from '@/src/server/origin';
 import { KioskRefresher } from '@/src/components/admin/KioskRefresher';
 
 async function Kiosk({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAdminContext();
   const { id } = await params;
-  const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
   const view = await getKioskView(
     decodeURIComponent(id),
-    `${proto}://${host}`,
+    await requestOrigin(),
     ctx.allowedSectors.map((key) => SECTORS[key].orgId),
   );
   if (!view) notFound();

@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, dictionaries, t } from '@/src/i18n';
 import { getLocale, getWorkerContext } from '@/src/server/services/workerViews';
 import { HtmlLang } from '@/src/components/worker/HtmlLang';
 import { OfflineSync } from '@/src/components/worker/OfflineSync';
+import { WorkerTabs } from '@/src/components/worker/WorkerTabs';
 import '@/src/components/ui/ui.css';
 import '@/src/components/worker/worker.css';
 
@@ -41,6 +42,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
         <OfflineSync workerId={workerId} />
         {children}
         <p className="text-small py-4 text-center text-muted">{t(locale, 'common.demoData')}</p>
+        {workerId ? <WorkerTabs /> : null}
       </div>
     </I18nProvider>
   );

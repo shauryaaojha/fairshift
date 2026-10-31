@@ -79,7 +79,8 @@ export function AttendanceChart({ days }: { days: DailyAttendance[] }) {
         aria-labelledby="att-title att-desc"
         className="chart-svg"
       >
-        <title id="att-title">Workers on site per day, last {days.length} days</title>
+        {/* One string: React treats <title> children specially and a mixed array breaks hydration. */}
+        <title id="att-title">{`Workers on site per day, last ${days.length} days`}</title>
         <desc id="att-desc">
           {days.length > 0
             ? `From ${formatDay(days[0].date)} to ${formatDay(days[days.length - 1].date)}. Roster of ${roster}. Latest day: ${last?.present ?? 0} present.`

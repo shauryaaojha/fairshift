@@ -10,6 +10,7 @@ import {
   hazardSeveritySchema,
   payAnswerSchema,
   payRulesSchema,
+  wagePaymentSchema,
 } from '@/src/shared/schemas';
 import { checkRateLimit } from '@/src/server/auth/rateLimit';
 import { askAsAdmin } from '@/src/server/assistant/admin';
@@ -24,7 +25,11 @@ import {
   confirmHazardSeverity,
   resolveHazardForOrg,
 } from '@/src/server/services/adminPages';
-import { answerPayQueryForOrg, schedulePayRulesForOrg } from '@/src/server/services/adminPay';
+import {
+  answerPayQueryForOrg,
+  recordWagePaymentForOrg,
+  schedulePayRulesForOrg,
+} from '@/src/server/services/adminPay';
 import { getAdminContext } from './_lib/context';
 
 export interface LoginState {
@@ -180,6 +185,31 @@ export async function answerPayQueryAction(
   });
 }
 
+/** Records a month's wages as paid by UPI, with the bank's 12-digit reference. */
+export async function recordWagePaymentAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return runConsoleForm('wagepay', async (ctx) => {
+    const parsed = wagePaymentSchema.safeParse({
+      workerId: formData.get('workerId'),
+      period: formData.get('period'),
+      utr: String(formData.get('utr') ?? '').replace(/\s/g, ''),
+    });
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the UTR.' };
+    }
+    const paid = await recordWagePaymentForOrg(
+      ctx.sector.orgId,
+      ctx.sector.siteId,
+      ctx.userId,
+      parsed.data,
+    );
+    const amount = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(paid.amount);
+    return { ok: true, message: `Recorded ₹${amount} as paid. The worker can see the UTR.` };
+  });
+}
+
 /** Schedule new pay rules from a coming Monday. */
 export async function schedulePayRulesAction(
   _prev: FormState,
@@ -202,7 +232,7 @@ export async function schedulePayRulesAction(
 
 export type AskConsoleResult = { ok: true; answer: AssistantAnswer } | ActionFailure;
 
-/** Ask the console, scoped to the sector this admin is viewing (and allowed to view). */
+/** Urima in the console, scoped to the sector this admin is viewing (and allowed to view). */
 export async function askConsoleAction(
   question: string,
   history: ChatTurn[] = [],
