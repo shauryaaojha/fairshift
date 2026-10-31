@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { PaidCheck } from '@/src/components/worker/PaidCheck';
@@ -17,10 +18,11 @@ import {
   loadPay,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
 const ROW_STEP_MS = 80;
 
-export default async function PayPage() {
+async function PayScreen() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const [payslip, queries, wages] = await Promise.all([
@@ -203,5 +205,15 @@ export default async function PayPage() {
         </Link>
       </section>
     </Screen>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function PayPage() {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <PayScreen />
+    </Suspense>
   );
 }

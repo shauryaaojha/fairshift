@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { FatigueCards } from '@/src/components/worker/FatigueCards';
 import { Screen } from '@/src/components/worker/Screen';
@@ -9,8 +10,9 @@ import {
   loadHours,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
-export default async function HoursPage() {
+async function HoursScreen() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const { week, fatigueFlags } = await loadHours(ctx.worker);
@@ -82,5 +84,15 @@ export default async function HoursPage() {
         </ul>
       )}
     </Screen>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function HoursPage() {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <HoursScreen />
+    </Suspense>
   );
 }

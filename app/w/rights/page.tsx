@@ -1,11 +1,13 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ReadAloud } from '@/src/components/ui/ReadAloud';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import { getLocale, requireWorkerContext } from '@/src/server/services/workerViews';
 import { COMPLAINT_STEPS, HELPLINES, RIGHTS, formatHelpline } from '@/src/shared/rights';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
-export default async function RightsPage() {
+async function RightsScreen() {
   const [, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
 
@@ -111,5 +113,15 @@ function StepLink({ href, label }: { href: string; label: string }) {
     >
       {label}
     </a>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function RightsPage() {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <RightsScreen />
+    </Suspense>
   );
 }

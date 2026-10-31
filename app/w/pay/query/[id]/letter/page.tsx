@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ButtonLink } from '@/src/components/ui/Button';
@@ -14,6 +15,7 @@ import {
   loadLabourLetter,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -25,7 +27,7 @@ interface Props {
  * the instructions in their app language and can print the letter itself in English, Hindi or
  * Tamil, whichever the office reads.
  */
-export default async function LabourLetterPage({ params, searchParams }: Props) {
+async function LabourLetterScreen({ params, searchParams }: Props) {
   const [{ id }, { lang }, ctx, cookieLocale, origin] = await Promise.all([
     params,
     searchParams,
@@ -207,5 +209,15 @@ export default async function LabourLetterPage({ params, searchParams }: Props) 
         <p className="letter-footer text-small">{t(locale, 'letter.footer')}</p>
       </article>
     </div>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function LabourLetterPage(props: Props) {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <LabourLetterScreen {...props} />
+    </Suspense>
   );
 }

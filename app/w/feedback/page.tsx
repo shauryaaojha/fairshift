@@ -1,15 +1,13 @@
+import { Suspense } from 'react';
 import { TopBar } from '@/src/components/ui/TopBar';
 import { FeedbackForm } from '@/src/components/worker/FeedbackForm';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import { ButtonLink } from '@/src/components/ui/Button';
 import { workerService } from '@/src/server/services/workerService';
 import { getLocale, requireWorkerContext } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
-export default async function FeedbackPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ comment?: string }>;
-}) {
+async function FeedbackScreen({ searchParams }: { searchParams: Promise<{ comment?: string }> }) {
   const [ctx, cookieLocale, { comment }] = await Promise.all([
     requireWorkerContext(),
     getLocale(),
@@ -34,5 +32,15 @@ export default async function FeedbackPage({
         <FeedbackForm initialComment={typeof comment === 'string' ? comment : undefined} />
       )}
     </div>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function FeedbackPage(props: { searchParams: Promise<{ comment?: string }> }) {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <FeedbackScreen {...props} />
+    </Suspense>
   );
 }

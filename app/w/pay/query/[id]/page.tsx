@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { ButtonLink } from '@/src/components/ui/Button';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { PayVerdict } from '@/src/components/worker/PayVerdict';
@@ -16,10 +17,11 @@ import {
 import { wagesDueBy } from '@/src/server/domain/payQuery';
 import { canWriteLetter } from '@/src/server/domain/labourLetter';
 import type { Locale } from '@/src/shared/types';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
 const when = (iso: string, locale: Locale) => `${formatDay(iso, locale)} ${formatClock(iso)}`;
 
-export default async function PayQueryStatusPage({ params }: { params: Promise<{ id: string }> }) {
+async function PayQueryStatusScreen({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, ctx, cookieLocale] = await Promise.all([
     params,
     requireWorkerContext(),
@@ -130,5 +132,15 @@ export default async function PayQueryStatusPage({ params }: { params: Promise<{
         </section>
       ) : null}
     </Screen>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function PayQueryStatusPage(props: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <PayQueryStatusScreen {...props} />
+    </Suspense>
   );
 }

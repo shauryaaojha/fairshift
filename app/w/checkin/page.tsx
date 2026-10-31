@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { TopBar } from '@/src/components/ui/TopBar';
 import { CheckinPanel } from '@/src/components/worker/CheckinPanel';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
@@ -7,8 +8,9 @@ import {
   loadHome,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
-export default async function CheckinPage({
+async function CheckinScreen({
   searchParams,
 }: {
   searchParams: Promise<{ site?: string; code?: string }>;
@@ -37,5 +39,17 @@ export default async function CheckinPage({
         initialCode={code}
       />
     </div>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function CheckinPage(props: {
+  searchParams: Promise<{ site?: string; code?: string }>;
+}) {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <CheckinScreen {...props} />
+    </Suspense>
   );
 }

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { TopBar } from '@/src/components/ui/TopBar';
 import { HazardForm } from '@/src/components/worker/HazardForm';
@@ -10,10 +11,11 @@ import {
   listMyHazards,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
 type Search = { category?: string; severity?: string; text?: string };
 
-export default async function HazardPage({ searchParams }: { searchParams: Promise<Search> }) {
+async function HazardScreen({ searchParams }: { searchParams: Promise<Search> }) {
   const [ctx, cookieLocale, initial] = await Promise.all([
     requireWorkerContext(),
     getLocale(),
@@ -58,5 +60,15 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
         </section>
       ) : null}
     </div>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function HazardPage(props: { searchParams: Promise<Search> }) {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <HazardScreen {...props} />
+    </Suspense>
   );
 }

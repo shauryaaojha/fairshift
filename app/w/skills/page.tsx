@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { Screen } from '@/src/components/worker/Screen';
@@ -9,8 +10,9 @@ import {
   loadSkills,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
+import { ScreenSkeleton } from '@/src/components/worker/ScreenSkeleton';
 
-export default async function SkillsPage() {
+async function SkillsScreen() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const skills = await loadSkills(ctx.worker.id);
@@ -56,5 +58,15 @@ export default async function SkillsPage() {
         </ul>
       )}
     </Screen>
+  );
+}
+
+// Worker data comes from the session cookie, so the screen streams into a skeleton and a
+// navigation between worker screens shows something at once.
+export default function SkillsPage() {
+  return (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <SkillsScreen />
+    </Suspense>
   );
 }
