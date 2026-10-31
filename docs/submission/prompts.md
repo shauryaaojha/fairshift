@@ -3,9 +3,21 @@
 FairShift was built from two kinds of prompts:
 
 1. **What I typed.** Short prompts, often in Hinglish, quoted as typed with an English gloss. Each is followed by what it changed in the app.
-2. **Build briefs for the coding agent.** Long, precise briefs written from those prompts and given to the Antigravity agent (`agy`), which split each one across parallel subagents. All five are reproduced in full in [section 7](#7-build-briefs-given-to-the-antigravity-agent) (also in [`docs/build/`](../build/)).
+2. **Build briefs for the coding agent.** Long, precise briefs written from those prompts and given to the Antigravity agent (`agy`), which split each one across parallel subagents. All five are reproduced in full in [section 8](#8-build-briefs-given-to-the-antigravity-agent) (also in [`docs/build/`](../build/)).
 
-## 1. Decide the architecture and the UI first
+## 1. Start: gather the context
+
+> "this is the working folder for our todays hackathon, i have added 2 docs, read them. now research about everything about prompt wars by google, and gather the context, of what we are going to build"
+
+**What it changed:** the two documents became the spec. The problem statement asked for:
+
+- a worker interface and an employer interface
+- at least 3 working features
+- at least 2 sectors
+
+The submission guide listed the six criteria the AI evaluator scores: code quality, security, efficiency, testing, accessibility and problem alignment. Every later prompt was measured against these.
+
+## 2. Decide the architecture and the UI first
 
 > "pehle plan kar, mujhe architectural decision le, and build phases ka decision le, ui ka le. then we would build it. google cloud run pe kya deploy ho skta, full nextjs with workers ho sakte hai, ya hum better backend banaye"
 > _(plan first: decide the architecture, the build phases and the UI, then build; can a full Next.js app run on Cloud Run, or do we need a separate backend?)_
@@ -17,12 +29,12 @@ FairShift was built from two kinds of prompts:
 
 **What it changed:** the "honest muster roll" design system in `DESIGN.md` and `docs/design-system.md`: rubber stamps, a register grid, Anek type for Indic scripts, a ban list of generic AI-UI patterns, and no animation library on worker phones.
 
-## 2. Build with agents in parallel
+## 3. Build with agents in parallel
 
 > "/agy ko build krne ka poora kaam dede ... usko boldena ki subagents se kaam karwa le"
 > _(give the whole build to the Antigravity agent and tell it to split the work across subagents)_
 
-**What it changed:** the spec became a build brief with file ownership per agent (`docs/build/AGY_TASK.md`, `OWNERSHIP.md`; see 7.1 and 7.2), so parallel agents never edited the same files.
+**What it changed:** the spec became a build brief with file ownership per agent (`docs/build/AGY_TASK.md`, `OWNERSHIP.md`; see 8.1 and 8.2), so parallel agents never edited the same files.
 
 > "nice, merge everything, check for bugs and errors and do testing and complete the project"
 
@@ -33,19 +45,19 @@ FairShift was built from two kinds of prompts:
 - a rate-limit IP spoof
 - overtime counted per ISO week (it had shown 88 h of overtime)
 
-## 3. Improve from the evaluator's feedback
+## 4. Improve from the evaluator's feedback
 
 > "bhai hum 2nd aaye hai. aur better karo"
 > _(we came 2nd; make it better)_
 
-**What it changed:** the per-criterion scores showed Code Quality at 89. A brief for `agy` (7.4) raised only that criterion, without changing behaviour: remove the duplicate REST layer, add strict lint rules and Prettier, and split services from views. Attempt 2 scored **97.15** and ranked **#1**.
+**What it changed:** the per-criterion scores showed Code Quality at 89. A brief for `agy` (8.4) raised only that criterion, without changing behaviour: remove the duplicate REST layer, add strict lint rules and Prettier, and split services from views. Attempt 2 scored **97.15** and ranked **#1**.
 
-## 4. Make it real for the worker
+## 5. Make it real for the worker
 
 > "aur aisa app bana do, ki agar offline bhi hojaye laboru, tab bhi kaam hojaye, and jaise hi net aaye, sab server pe chala jae"
 > _(make it work even when the labourer goes offline, and send everything to the server as soon as the network is back)_
 
-**What it changed:** an IndexedDB outbox, built from the offline brief (7.5):
+**What it changed:** an IndexedDB outbox, built from the offline brief (8.5):
 
 - Queued actions keep their original capture time.
 - The server checks that time: at most 24 h old, at most 2 minutes of clock skew.
@@ -62,7 +74,7 @@ FairShift was built from two kinds of prompts:
 
 **What it changed:** "Ask FairShift", since renamed Urima. It is deliberately not a free-form chatbot: it is grounded in tools that cannot read anyone else's data (see "Urima" in the README).
 
-## 5. Finals: production-ready for a human panel
+## 6. Finals: production-ready for a human panel
 
 > "first of all gather some context about evaluation from previous chats. do some more research and create a better version of this app. i wanna win and standout. write the best code, with the best test, security, efficiency all those stuff."
 
@@ -80,7 +92,7 @@ FairShift was built from two kinds of prompts:
 - **Testing:** coverage widened from the rule engines to all server code, with the jsdom and node projects split.
 - **Delivery:** `SECURITY.md`, Docker, CodeQL, Dependabot and a rewritten README.
 
-## 6. Finals: code quality, protection for the worker, and the interface
+## 7. Finals: code quality, protection for the worker, and the interface
 
 > "they would still use the ai to score us. so based on the 6 fields, have you touched 100% in all? maybe? our lowest was the code quality."
 
@@ -124,13 +136,13 @@ FairShift was built from two kinds of prompts:
 
 **What it changed:** the release was checked, committed and deployed. The worker screens now stream into a skeleton, so moving between them never blocks on the server.
 
-## 7. Build briefs given to the Antigravity agent
+## 8. Build briefs given to the Antigravity agent
 
 These are the complete prompts given to the Antigravity agent (`agy`), in the order they were given. Each one is copied in full from [`docs/build/`](../build/); only the heading levels are shifted down to fit this page.
 
 Every brief names the files each subagent owns, lists hard rules (no installs, commits, deploys or secrets) and ends with a definition of done the agent had to run and report.
 
-### 7.1 Build FairShift end to end: [`AGY_TASK.md`](../build/AGY_TASK.md)
+### 8.1 Build FairShift end to end: [`AGY_TASK.md`](../build/AGY_TASK.md)
 
 _Given first, on 27 Oct; this is the second run, after the first stopped on a quota limit._
 
@@ -435,7 +447,7 @@ Also check `du -sh` without `node_modules` and `.next`: it must be under 10 MB.
 
 ---
 
-### 7.2 Parallel ownership between three agents: [`OWNERSHIP.md`](../build/OWNERSHIP.md)
+### 8.2 Parallel ownership between three agents: [`OWNERSHIP.md`](../build/OWNERSHIP.md)
 
 _Given to agy and two Claude agents working in the same tree at the same time._
 
@@ -467,7 +479,7 @@ Three agents work in the same working tree at the same time. **Only edit files y
 
 ---
 
-### 7.3 Four targeted bug fixes: [`AGY_TASK_FIXES.md`](../build/AGY_TASK_FIXES.md)
+### 8.3 Four targeted bug fixes: [`AGY_TASK_FIXES.md`](../build/AGY_TASK_FIXES.md)
 
 _One subagent per fix._
 
@@ -559,7 +571,7 @@ All three must pass.
 
 ---
 
-### 7.4 Raise Code Quality without regressing anything: [`AGY_TASK_ROUND2.md`](../build/AGY_TASK_ROUND2.md)
+### 8.4 Raise Code Quality without regressing anything: [`AGY_TASK_ROUND2.md`](../build/AGY_TASK_ROUND2.md)
 
 _After the first AI evaluation (96.94, Code Quality 89)._
 
@@ -696,7 +708,7 @@ DATA_BACKEND=memory npx next build
 
 ---
 
-### 7.5 Offline-first worker app: [`AGY_TASK_OFFLINE.md`](../build/AGY_TASK_OFFLINE.md)
+### 8.5 Offline-first worker app: [`AGY_TASK_OFFLINE.md`](../build/AGY_TASK_OFFLINE.md)
 
 _The offline prompt in section 4, turned into a brief._
 
