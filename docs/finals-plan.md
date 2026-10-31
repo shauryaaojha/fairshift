@@ -118,3 +118,33 @@ Bugs found and fixed along the way:
 - **Build needed a secret.** `next build` failed without `SESSION_SECRET`.
 - **Fallback routing missed suggested questions.** The keyword router did not match "How much will I get this month?" or "checked in".
 - **Quota errors slowed every request.** The free Gemini tier (5 requests a minute) caused 429s; a circuit breaker and a briefing cache now handle them.
+
+## P7: Worker power (added 2026-10-30)
+
+Each closes a gap between what a worker is owed and what they can prove or enforce:
+
+| Feature                         | What it does                                                                                                                           | Code                                                 |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Two-key hazard closure          | A supervisor's "resolved" waits for the named reporter; "not fixed" reopens it as escalated                                            | `src/server/domain/hazardClosure.ts`                 |
+| "Did you get the right amount?" | The worker types what they got in hand and sees the gap against the payslip. Reads Devanagari and Tamil digits, stores nothing         | `src/shared/payCheck.ts`                             |
+| Know your rights                | Eight rights cards citing the Code on Wages 2019 (s. 3, 13, 14, 17, 18) checked against the Act's text; tap-to-call national helplines | `src/shared/rights.ts`, `app/w/rights`               |
+| Statutory registers             | Monthly attendance (muster roll) and wage register CSV from the payslip engine; formula-injection-safe                                 | `src/server/domain/registers.ts`                     |
+| Heat stress                     | NWS heat index from live Open-Meteo weather, NDMA advice for workers, an action banner for the site lead                               | `src/server/domain/heat.ts`, `src/server/weather.ts` |
+
+**Exit:** `npm run verify` passes with 419 tests in 58 files at 94.3% statement coverage.
+
+## P8: Pay disputes, pay rules, shift planning (added 2026-10-31)
+
+The same idea applied to pay disputes and scheduling:
+
+| Feature                  | What it does                                                                                                                                                                        | Code                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Pay query (two keys)     | The worker raises short pay, unpaid overtime, a wrong deduction or late pay. The employer answers within 48 h; only the worker's "settled" closes it, "not yet" reopens it for 24 h | `src/server/domain/payQuery.ts`, `app/w/pay/query`, `/admin/pay` |
+| Versioned overtime rules | Changes start on a coming Monday, need a reason, are refused below the OSH Code / Code on Wages floor; every week is paid under its own rules                                       | `src/server/domain/payRules.ts`                                  |
+| Plan a shift             | Before a supervisor adds a shift: the new fatigue warnings, clashes and overtime cost it would bring                                                                                | `src/server/domain/shiftPlan.ts`, `/admin/plan`                  |
+| Anonymity and severity   | Anonymous hazard times kept to the hour; danger words in 3 languages set a severity floor before AI                                                                                 | `src/server/domain/hazardSignals.ts`                             |
+| Where to complain        | Employer → SAMADHAN portal → district labour office → free legal aid (NALSA 15100), on the rights page and in the assistant                                                         | `src/shared/rights.ts`                                           |
+
+**Exit:** `npm run verify` passes with 486 tests in 66 files at 95.0% statement coverage (rule engines 100% lines).
+
+**Still open:** axe re-audit including `/w/rights`, `/w/pay/query`, `/admin/pay` and `/admin/plan`; fresh screenshots.

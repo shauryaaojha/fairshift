@@ -20,7 +20,15 @@ vi.mock('@/src/server/services/workerViews', async (importOriginal) => {
   };
 });
 
-import { askAction, checkInAction, reportHazardAction } from '@/app/w/actions';
+import {
+  askAction,
+  checkInAction,
+  hazardVerdictAction,
+  payQueryVerdictAction,
+  raisePayQueryAction,
+  reportHazardAction,
+} from '@/app/w/actions';
+import { answerPayQueryForOrg } from '@/src/server/services/adminPay';
 import { workerService } from '@/src/server/services/workerService';
 import { getDatabase } from '@/src/server/repos';
 import { resetRateLimits } from '@/src/server/auth/rateLimit';
@@ -100,5 +108,102 @@ describe('worker action error handling', () => {
 
   it('rejects a check-in with neither a code nor a location', async () => {
     expect(await checkInAction({})).toMatchObject({ ok: false, code: 'no_checkin_method' });
+  });
+});
+
+describe('hazardVerdictAction', () => {
+  it('lets the reporter confirm a resolved report from the seed', async () => {
+    const res = await hazardVerdictAction('hazard-5', 'fixed');
+    expect(res).toEqual({ ok: true, reopened: false });
+    expect((await getDatabase().hazards.getById('hazard-5'))?.reporterVerdict).toBe('fixed');
+  });
+
+  it('validates the id and the verdict before touching the store', async () => {
+    const spy = vi.spyOn(workerService, 'giveHazardVerdict');
+    expect(await hazardVerdictAction('../etc', 'fixed')).toMatchObject({
+      ok: false,
+      code: 'validation',
+    });
+    expect(await hazardVerdictAction('hazard-5', 'maybe' as unknown as 'fixed')).toMatchObject({
+      ok: false,
+      code: 'validation',
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a report that is not waiting for this worker', async () => {
+    expect(await hazardVerdictAction('hazard-1', 'fixed')).toMatchObject({
+      ok: false,
+      code: 'verdict_not_allowed',
+      permanent: true,
+    });
+  });
+});
+
+describe('pay query actions', () => {
+  it('raises a query, trimming an empty note away, and replays a duplicate', async () => {
+    const res = await raisePayQueryAction({
+      reason: 'unpaid_overtime',
+      receivedAmount: 12000,
+      note: '   ',
+    });
+    expect(res).toMatchObject({ ok: true, already: false });
+    if (!res.ok) return;
+    const stored = await getDatabase().payQueries.getById(res.id);
+    expect(stored).toMatchObject({ workerId: 'worker-ramesh', note: null, receivedAmount: 12000 });
+
+    const again = await raisePayQueryAction({
+      reason: 'unpaid_overtime',
+      receivedAmount: null,
+      note: null,
+    });
+    expect(again).toEqual({ ok: true, id: res.id, already: true });
+  });
+
+  it('validates the reason and the amount', async () => {
+    const spy = vi.spyOn(workerService, 'raisePayQuery');
+    expect(
+      await raisePayQueryAction({
+        reason: 'bonus' as unknown as 'late_pay',
+        receivedAmount: null,
+        note: null,
+      }),
+    ).toMatchObject({ ok: false, code: 'validation' });
+    expect(
+      await raisePayQueryAction({ reason: 'late_pay', receivedAmount: -5, note: null }),
+    ).toMatchObject({ ok: false, code: 'validation' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('requires a session', async () => {
+    ctx = null;
+    expect(
+      await raisePayQueryAction({ reason: 'late_pay', receivedAmount: null, note: null }),
+    ).toMatchObject({ ok: false, code: 'auth' });
+  });
+
+  it('takes the worker’s verdict only after an answer', async () => {
+    const res = await raisePayQueryAction({
+      reason: 'wrong_deduction',
+      receivedAmount: null,
+      note: null,
+    });
+    if (!res.ok) throw new Error('raise failed');
+    expect(await payQueryVerdictAction(res.id, 'settled')).toMatchObject({
+      ok: false,
+      code: 'verdict_not_allowed',
+    });
+    await answerPayQueryForOrg(res.id, 'org-construction', 'admin-skyline', {
+      text: 'The deduction was a mistake.',
+      correctedNet: null,
+    });
+    expect(await payQueryVerdictAction(res.id, 'not_settled')).toEqual({
+      ok: true,
+      reopened: true,
+    });
+    expect(await payQueryVerdictAction('../x', 'settled')).toMatchObject({
+      ok: false,
+      code: 'validation',
+    });
   });
 });

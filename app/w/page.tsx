@@ -6,12 +6,15 @@ import {
   ConeIcon,
   QrIcon,
   RupeeNoteIcon,
+  ScalesIcon,
   SpeechLockIcon,
 } from '@/src/components/icons';
 import { ButtonLink } from '@/src/components/ui/Button';
 import { Stamp } from '@/src/components/ui/Stamp';
 import { Tile } from '@/src/components/ui/Tile';
 import { FatigueCards } from '@/src/components/worker/FatigueCards';
+import { HeatCard } from '@/src/components/worker/HeatCard';
+import { getSiteHeat } from '@/src/server/weather';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import {
@@ -29,7 +32,10 @@ export default async function WorkerHomePage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
   const { worker, site } = ctx;
-  const { activeShift, fatigueFlags } = await loadHome(worker.id);
+  const [{ activeShift, fatigueFlags }, heat] = await Promise.all([
+    loadHome(worker.id),
+    getSiteHeat(site),
+  ]);
 
   const firstName = worker.name.split(' ')[0];
   const today = formatDay(new Date().toISOString(), locale, true);
@@ -73,6 +79,7 @@ export default async function WorkerHomePage() {
         ) : null}
       </section>
 
+      <HeatCard heat={heat} locale={locale} />
       <FatigueCards title={t(locale, 'home.fatigueTitle')} notes={notes} />
 
       <nav aria-label={t(locale, 'home.today')}>
@@ -126,7 +133,15 @@ export default async function WorkerHomePage() {
               transitionName="tile-skills"
             />
           </li>
-          <li className="col-span-2">
+          <li>
+            <Tile
+              href="/w/rights"
+              label={t(locale, 'tile.rights')}
+              icon={<ScalesIcon size={36} />}
+              transitionName="tile-rights"
+            />
+          </li>
+          <li>
             <Tile
               href="/w/ask"
               label={t(locale, 'tile.ask')}

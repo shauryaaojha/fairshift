@@ -5,7 +5,7 @@
 
 import { istDateKey } from './time';
 import type { PayslipInput, PayslipResult, PayslipLine } from '../../shared/types';
-import { calculateShiftsOvertime } from './overtime';
+import { calculateShiftsOvertime, policyAt } from './overtime';
 
 export const DEFAULT_PF_RATE = 0.12;
 export const DEFAULT_PF_CEILING = 15000;
@@ -30,14 +30,15 @@ export function deriveHourlyRate(basePay: number, payType: 'daily' | 'monthly'):
  * Generates an itemized payslip.
  */
 export function calculatePayslip(input: PayslipInput): PayslipResult {
-  const { worker, shifts, periodStart, periodEnd, policy } = input;
+  const { worker, shifts, periodStart, periodEnd } = input;
+  const policy = policyAt(input.policy, periodEnd);
   const pfRate = policy?.pfRate ?? DEFAULT_PF_RATE;
   const pfCeiling = policy?.pfCeiling ?? DEFAULT_PF_CEILING;
   const esiRate = policy?.esiRate ?? DEFAULT_ESI_RATE;
   const esiCeiling = policy?.esiCeiling ?? DEFAULT_ESI_CEILING;
 
   const hourlyRate = deriveHourlyRate(worker.basePay, worker.payType);
-  const otResult = calculateShiftsOvertime(shifts, hourlyRate, policy);
+  const otResult = calculateShiftsOvertime(shifts, hourlyRate, input.policy);
 
   // Compute base pay for the period
   let baseEarnings = 0;

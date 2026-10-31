@@ -26,7 +26,10 @@ export function getSlaHours(
  * If not acknowledged within SLA window, automatically marks status as 'escalated'.
  */
 export function computeHazardStatus(
-  hazard: Pick<HazardReport, 'status' | 'severity' | 'reportedAt' | 'acknowledgedAt'>,
+  hazard: Pick<
+    HazardReport,
+    'status' | 'severity' | 'reportedAt' | 'acknowledgedAt' | 'reopenedAt'
+  >,
   nowInput?: Date | string,
   config: HazardSlaConfig = DEFAULT_HAZARD_SLA,
 ): HazardStatus {
@@ -38,6 +41,11 @@ export function computeHazardStatus(
   // If acknowledged, status is acknowledged
   if (hazard.acknowledgedAt !== null) {
     return 'acknowledged';
+  }
+
+  // The reporter said a "fix" did not work: that goes straight to the manager.
+  if (hazard.reopenedAt) {
+    return 'escalated';
   }
 
   // If not acknowledged, evaluate against SLA window

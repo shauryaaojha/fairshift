@@ -69,6 +69,7 @@ export function generateRecords(demoAnchorMs: number): {
         'A/C condensation runoff on stairs; anti-slip mats deployed and pipe re-insulated.',
       aiSuggestedSeverity: 'medium',
       anonymous: false,
+      reporterVerdict: null, // resolved by the supervisor, waiting for Murugan to confirm
     },
     {
       id: 'hazard-4',
@@ -85,6 +86,23 @@ export function generateRecords(demoAnchorMs: number): {
       aiSummary: 'Basement ventilation issue in storage room, low immediate risk.',
       aiSuggestedSeverity: 'low',
       anonymous: true,
+    },
+    {
+      id: 'hazard-5',
+      orgId: 'org-construction',
+      siteId: 'site-skyline-chennai',
+      reporterId: 'worker-ramesh',
+      category: 'Fall Protection',
+      description: 'Broken rung on the steel ladder to the Tower A stair core, second landing.',
+      severity: 'high',
+      status: 'resolved',
+      reportedAt: atAnchor(-26 * 60),
+      acknowledgedAt: atAnchor(-25 * 60),
+      resolvedAt: atAnchor(-3 * 60),
+      aiSummary: 'Damaged ladder rung at height on the stair core access route.',
+      aiSuggestedSeverity: 'high',
+      anonymous: false,
+      reporterVerdict: null, // resolved by the supervisor, waiting for Ramesh to confirm
     },
   ];
 

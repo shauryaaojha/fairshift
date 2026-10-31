@@ -14,6 +14,8 @@ export interface Org {
   sector: Sector;
   /** Per-org policy overrides */
   policy?: OrgPolicy;
+  /** Every change to the pay rules, oldest first. Each applies from its Monday onwards. */
+  payRuleHistory?: PayRuleVersion[];
 }
 
 export interface OrgPolicy {
@@ -25,6 +27,32 @@ export interface OrgPolicy {
   esiRate?: number; // default 0.0075
   esiCeiling?: number; // default 21000
   anonymityK?: number; // default 3
+}
+
+/**
+ * Where a calculation gets its rules: one fixed policy, or the policy in force on an IST day
+ * (`YYYY-MM-DD`), so a shift is always paid under the rules of the week it was worked.
+ */
+export type PolicySource = OrgPolicy | ((dateKey: string) => OrgPolicy | undefined);
+
+/** The pay rules an admin may change. PF and ESI rates are statutory and stay fixed. */
+export interface PayRules {
+  dailyHoursLimit: number;
+  weeklyHoursLimit: number;
+  otMultiplier: number;
+}
+
+export interface PayRuleVersion {
+  id: string;
+  /** IST date (`YYYY-MM-DD`, always a Monday) from which these rules apply. */
+  effectiveFrom: string;
+  rules: PayRules;
+  /** Why the rules changed, written by the admin; shown to auditors. */
+  reason: string;
+  /** Name of the admin who made the change. */
+  changedBy: string;
+  /** ISO datetime of the change. */
+  changedAt: string;
 }
 
 export interface Site {
@@ -134,7 +162,8 @@ export interface PayslipInput {
   shifts: Shift[];
   periodStart: string; // ISO date
   periodEnd: string; // ISO date
-  policy?: OrgPolicy;
+  /** Overtime uses the rules of each shift's week; PF and ESI use those in force at period end. */
+  policy?: PolicySource;
 }
 
 export interface PayslipLine {
@@ -237,6 +266,67 @@ export interface HazardReport {
   /** AI-suggested severity */
   aiSuggestedSeverity: HazardSeverity | null;
   anonymous: boolean;
+  clientId?: string;
+  /**
+   * The named reporter's answer after a supervisor marks the report resolved (two-key closure).
+   * Null while waiting; reset to null each time the report is resolved again.
+   */
+  reporterVerdict?: ReporterVerdict | null;
+  /** ISO datetime of the reporter's last answer. */
+  verdictAt?: string | null;
+  /** ISO datetime the reporter last reopened it by saying "not fixed". */
+  reopenedAt?: string | null;
+  /** How many times the reporter has reopened it. */
+  reopenCount?: number;
+}
+
+export type ReporterVerdict = 'fixed' | 'not_fixed';
+
+// ── Pay query ───────────────────────────────────────────────
+export type PayQueryReason = 'short_pay' | 'unpaid_overtime' | 'wrong_deduction' | 'late_pay';
+export type PayQueryVerdict = 'settled' | 'not_settled';
+
+export interface PayQueryAnswer {
+  /** The employer's explanation, as written. */
+  text: string;
+  /** Corrected take-home pay in ₹, when the employer changes the amount. */
+  correctedNet: number | null;
+  /** Name of the admin who answered. */
+  by: string;
+  /** ISO datetime */
+  at: string;
+}
+
+/**
+ * A worker's question about their pay. Named by design: the employer cannot fix a payment
+ * without knowing whose it is. It closes only when the worker says it is settled.
+ */
+export interface PayQuery {
+  id: string;
+  orgId: string;
+  siteId: string;
+  workerId: string;
+  reason: PayQueryReason;
+  /** Pay month, `YYYY-MM` (IST). */
+  period: string;
+  /** Take-home pay on the payslip when the query was raised, from the payslip engine. */
+  payslipNet: number;
+  /** What the worker says they got in hand, in ₹, if they typed it. */
+  receivedAmount: number | null;
+  /** The worker's own words, if any. */
+  note: string | null;
+  /** ISO datetime */
+  raisedAt: string;
+  /** ISO datetime the employer must answer by; set again when the worker reopens it. */
+  answerDueAt: string;
+  /** Every answer, oldest first. */
+  answers: PayQueryAnswer[];
+  /** The worker's reply to the latest answer; null while there is none. */
+  workerVerdict: PayQueryVerdict | null;
+  /** ISO datetime of the worker's latest reply. */
+  verdictAt: string | null;
+  /** How many times the worker has said "not settled". */
+  reopenCount: number;
   clientId?: string;
 }
 

@@ -71,7 +71,13 @@ describe('describeFatigue', () => {
 });
 
 describe('hazardTimeline', () => {
-  const base = { reportedAt: '2026-10-27T05:00:00Z', acknowledgedAt: null, resolvedAt: null };
+  // Anonymous by default: no reporter, so no "confirmed" step.
+  const base = {
+    reportedAt: '2026-10-27T05:00:00Z',
+    acknowledgedAt: null,
+    resolvedAt: null,
+    reporterId: null,
+  };
 
   it('a new report is logged with only the first step done', () => {
     const tl = hazardTimeline({ ...base, status: 'reported' });
@@ -94,13 +100,63 @@ describe('hazardTimeline', () => {
 
   it('a resolved report has every step done and a cleared stamp', () => {
     const tl = hazardTimeline({
+      ...base,
       status: 'resolved',
-      reportedAt: base.reportedAt,
       acknowledgedAt: '2026-10-27T05:30:00Z',
       resolvedAt: '2026-10-27T08:00:00Z',
     });
     expect(tl.steps.every((s) => s.done)).toBe(true);
     expect(tl.stamp.variant).toBe('cleared');
+    expect(tl.closure).toBe('closed');
+  });
+
+  const resolvedNamed = {
+    ...base,
+    reporterId: 'worker-1',
+    status: 'resolved' as const,
+    acknowledgedAt: '2026-10-27T05:30:00Z',
+    resolvedAt: '2026-10-27T08:00:00Z',
+  };
+
+  it('a resolved named report waits for the reporter before the last step is done', () => {
+    const tl = hazardTimeline({ ...resolvedNamed, reporterVerdict: null });
+    expect(tl.steps.map((s) => s.key)).toEqual([
+      'reported',
+      'acknowledged',
+      'resolved',
+      'confirmed',
+    ]);
+    expect(tl.steps.at(-1)?.done).toBe(false);
+    expect(tl.closure).toBe('awaiting_reporter');
+    expect(tl.stamp.labelKey).toBe('hazard.stamp.resolved');
+  });
+
+  it('a confirmed fix completes the timeline with a confirmed stamp', () => {
+    const tl = hazardTimeline({
+      ...resolvedNamed,
+      reporterVerdict: 'fixed',
+      verdictAt: '2026-10-27T09:00:00Z',
+    });
+    expect(tl.steps.at(-1)).toEqual({ key: 'confirmed', at: '2026-10-27T09:00:00Z', done: true });
+    expect(tl.stamp).toEqual({ variant: 'cleared', labelKey: 'hazard.stamp.confirmed' });
+  });
+
+  it('a reopened report shows a reopened node instead of a plain escalation', () => {
+    const tl = hazardTimeline({
+      ...base,
+      reporterId: 'worker-1',
+      status: 'escalated',
+      reporterVerdict: 'not_fixed',
+      reopenedAt: '2026-10-27T09:00:00Z',
+    });
+    expect(tl.steps.map((s) => s.key)).toEqual([
+      'reported',
+      'reopened',
+      'acknowledged',
+      'resolved',
+      'confirmed',
+    ]);
+    expect(tl.stamp.variant).toBe('escalated');
   });
 });
 

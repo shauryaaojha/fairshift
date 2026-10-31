@@ -18,6 +18,8 @@ export type AppErrorCode =
   | 'invalid_capture_time'
   | 'checkout_before_checkin'
   | 'severity_locked'
+  | 'verdict_not_allowed'
+  | 'answer_not_allowed'
   | 'rate_limited';
 
 /**
@@ -35,6 +37,8 @@ const PERMANENT: Record<AppErrorCode, boolean> = {
   invalid_capture_time: true,
   checkout_before_checkin: true,
   severity_locked: true,
+  verdict_not_allowed: true,
+  answer_not_allowed: true,
   rate_limited: false,
 };
 

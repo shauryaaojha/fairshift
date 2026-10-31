@@ -7,6 +7,7 @@
 import type { PayslipResult, HazardSeverity, Locale } from '../../shared/types';
 import type { WeeklyStats } from './gemini';
 import { higherSeverity } from '../../shared/severity';
+import { suggestSeverityFromText } from '../domain/hazardSignals';
 
 /**
  * Deterministic explanation of a payslip in English, Hindi, or Tamil.
@@ -58,26 +59,6 @@ export function explainPayslipFallback(payslip: PayslipResult, locale: Locale = 
     msg += ` Statutory contributions of ₹${pf} for PF and ₹${esi} for ESI healthcare were deposited to your official welfare accounts.`;
   }
   return msg;
-}
-
-/**
- * Words that signal danger to life, in English, Hindi and Tamil (as workers type or speak them).
- * Matching is deliberately conservative: it only ever raises a rating, and a supervisor confirms.
- */
-const SEVERITY_SIGNALS: Array<{ severity: HazardSeverity; pattern: RegExp }> = [
-  {
-    severity: 'critical',
-    pattern:
-      /live wire|electrocut|shock|collapse|fell from|fall from|no harness|\bfire\b|gas leak|unconscious|bijli|करंट|बिजली|गिर|आग|गैस|மின்|தீ|விழு/i,
-  },
-  {
-    severity: 'high',
-    pattern: /crack|loose scaffold|no helmet|exposed|sharp|bleed|चोट|दरार|हेलमेट|காயம்|விரிசல்/i,
-  },
-];
-
-export function suggestSeverityFromText(description: string): HazardSeverity | null {
-  return SEVERITY_SIGNALS.find((s) => s.pattern.test(description))?.severity ?? null;
 }
 
 /**

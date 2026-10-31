@@ -5,12 +5,17 @@
 
 import { getDatabase } from '../repos';
 import { computeHazardStatus, getSlaHours } from '../domain/hazardSla';
-import { getSkillStatus } from '../domain/skills';
+import { closureState } from '../domain/hazardClosure';
 import {
-  DEFAULT_DAILY_HOURS_LIMIT,
-  DEFAULT_OT_MULTIPLIER,
-  DEFAULT_WEEKLY_HOURS_LIMIT,
-} from '../domain/overtime';
+  COMPLAINT_STEPS,
+  HELPLINES,
+  LABOUR_CODES_IN_FORCE,
+  RIGHTS,
+  formatHelpline,
+} from '../../shared/rights';
+import { getSkillStatus } from '../domain/skills';
+import { rulesOn } from '../domain/payRules';
+import { istDateKey } from '../domain/time';
 import {
   DEFAULT_ESI_CEILING,
   DEFAULT_ESI_RATE,
@@ -93,7 +98,7 @@ export function buildWorkerTools({ worker, site }: WorkerContext, locale: Locale
     {
       name: 'get_my_hazard_reports',
       description:
-        "The worker's own named hazard reports, newest first, with status (logged, seen by supervisor, resolved, escalated) and the response deadline. Anonymous reports are never linked to anyone.",
+        "The worker's own named hazard reports, newest first, with status (logged, seen by supervisor, resolved, escalated, or marked fixed and waiting for the worker to confirm on the report page) and the response deadline. Anonymous reports are never linked to anyone.",
       source: { labelKey: 'ask.src.hazards', href: '/w/hazard' },
       run: async () => {
         const reports = await listMyHazards(worker, 5);
@@ -104,7 +109,10 @@ export function buildWorkerTools({ worker, site }: WorkerContext, locale: Locale
               category: h.category,
               severity: h.severity,
               reportedOn: formatDay(h.reportedAt, locale),
-              status: t(locale, `hazard.status.${computeHazardStatus(h, now)}`),
+              status:
+                closureState(h) === 'awaiting_reporter'
+                  ? t(locale, 'hazard.status.awaiting')
+                  : t(locale, `hazard.status.${computeHazardStatus(h, now)}`),
               responseDeadlineHours: getSlaHours(h.severity),
             };
           }),
@@ -131,15 +139,16 @@ export function buildWorkerTools({ worker, site }: WorkerContext, locale: Locale
     {
       name: 'get_pay_and_safety_rules',
       description:
-        "The employer's pay rules (overtime limits and rate, PF, ESI) and hazard response deadlines, as applied by FairShift.",
-      source: { labelKey: 'ask.src.rules', href: '/w/pay' },
+        "The employer's pay rules (overtime limits and rate, PF, ESI), hazard response deadlines, and the worker's legal rights (overtime pay, payday, final wages, deduction limit, equal pay, rest day, PF/ESI, safe workplace) with the law and section for each, helplines, and where to complain about unpaid wages.",
+      source: { labelKey: 'ask.src.rules', href: '/w/rights' },
       run: async () => {
         const org = await getDatabase().orgs.get(worker.orgId);
         const p = org?.policy ?? {};
+        const rules = rulesOn(org ?? {}, istDateKey(new Date()));
         return {
-          overtimeAfterHoursPerDay: p.dailyHoursLimit ?? DEFAULT_DAILY_HOURS_LIMIT,
-          overtimeAfterHoursPerWeek: p.weeklyHoursLimit ?? DEFAULT_WEEKLY_HOURS_LIMIT,
-          overtimeRateMultiplier: p.otMultiplier ?? DEFAULT_OT_MULTIPLIER,
+          overtimeAfterHoursPerDay: rules.dailyHoursLimit,
+          overtimeAfterHoursPerWeek: rules.weeklyHoursLimit,
+          overtimeRateMultiplier: rules.otMultiplier,
           pfPercentOfBasic: (p.pfRate ?? DEFAULT_PF_RATE) * 100,
           pfWageCeilingRupees: p.pfCeiling ?? DEFAULT_PF_CEILING,
           esiPercent: (p.esiRate ?? DEFAULT_ESI_RATE) * 100,
@@ -152,6 +161,10 @@ export function buildWorkerTools({ worker, site }: WorkerContext, locale: Locale
           },
           basis:
             'Occupational Safety, Health and Working Conditions Code 2020, Code on Wages 2019, Code on Social Security 2020',
+          labourCodesInForceSince: LABOUR_CODES_IN_FORCE,
+          rights: RIGHTS.map((r) => ({ right: r.fact, law: r.source })),
+          helplines: HELPLINES.map((h) => ({ for: h.id, number: formatHelpline(h.number) })),
+          whereToComplain: COMPLAINT_STEPS.map((c) => c.fact),
         };
       },
     },

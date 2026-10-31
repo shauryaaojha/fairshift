@@ -8,11 +8,13 @@ import {
   askSchema,
   hazardIdSchema,
   hazardSeveritySchema,
+  payAnswerSchema,
+  payRulesSchema,
 } from '@/src/shared/schemas';
 import { checkRateLimit } from '@/src/server/auth/rateLimit';
 import { askAsAdmin } from '@/src/server/assistant/admin';
 import type { AssistantAnswer, ChatTurn } from '@/src/server/assistant/engine';
-import { failure, toActionFailure, type ActionFailure } from '@/src/shared/errors';
+import { failure, isAppError, toActionFailure, type ActionFailure } from '@/src/shared/errors';
 import { adminService } from '@/src/server/services/adminService';
 import { checkLoginLimit, recordLoginFailure } from '@/src/server/auth/rateLimit';
 import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/src/server/auth/session';
@@ -22,6 +24,7 @@ import {
   confirmHazardSeverity,
   resolveHazardForOrg,
 } from '@/src/server/services/adminPages';
+import { answerPayQueryForOrg, schedulePayRulesForOrg } from '@/src/server/services/adminPay';
 import { getAdminContext } from './_lib/context';
 
 export interface LoginState {
@@ -129,6 +132,72 @@ export async function confirmSeverityAction(formData: FormData): Promise<void> {
   if (!id || !severity.success) return;
   await confirmHazardSeverity(id, ctx.sector.orgId, severity.data);
   revalidatePath('/admin', 'layout');
+}
+
+/** Result of a console form that reports back inline (useActionState). */
+export interface FormState {
+  ok: boolean;
+  error?: string;
+  message?: string;
+}
+
+/** Runs a console form: rate limit per admin, then a safe message for any failure. */
+async function runConsoleForm(
+  scope: string,
+  run: (ctx: Awaited<ReturnType<typeof getAdminContext>>) => Promise<FormState>,
+): Promise<FormState> {
+  const ctx = await getAdminContext();
+  if (!checkRateLimit(`${scope}:${ctx.userId}`, 20, 60 * 1000).allowed) {
+    return { ok: false, error: 'Too many changes. Wait a minute and try again.' };
+  }
+  try {
+    const state = await run(ctx);
+    if (state.ok) revalidatePath('/admin', 'layout');
+    return state;
+  } catch (err) {
+    if (isAppError(err)) return { ok: false, error: err.message };
+    return { ok: false, error: toActionFailure(err, scope).reason };
+  }
+}
+
+/** The employer answers a worker's pay query; the worker then says whether it is settled. */
+export async function answerPayQueryAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return runConsoleForm('payanswer', async (ctx) => {
+    const parsed = payAnswerSchema.safeParse({
+      id: formData.get('id'),
+      text: String(formData.get('text') ?? ''),
+      correctedNet: String(formData.get('correctedNet') ?? '').replace(/[₹,\s]/g, ''),
+    });
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the answer.' };
+    }
+    const { id, ...answer } = parsed.data;
+    await answerPayQueryForOrg(id, ctx.sector.orgId, ctx.userId, answer);
+    return { ok: true, message: 'Answer sent. The worker will be asked if it is settled.' };
+  });
+}
+
+/** Schedule new pay rules from a coming Monday. */
+export async function schedulePayRulesAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return runConsoleForm('payrules', async (ctx) => {
+    const parsed = payRulesSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the rules.' };
+    }
+    const { effectiveFrom, reason, ...rules } = parsed.data;
+    const version = await schedulePayRulesForOrg(ctx.sector.orgId, ctx.userId, {
+      rules,
+      effectiveFrom,
+      reason,
+    });
+    return { ok: true, message: `Scheduled from Monday ${version.effectiveFrom}.` };
+  });
 }
 
 export type AskConsoleResult = { ok: true; answer: AssistantAnswer } | ActionFailure;

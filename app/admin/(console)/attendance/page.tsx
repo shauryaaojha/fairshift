@@ -5,6 +5,7 @@ import { LineReveal } from '@/src/components/motion/LineReveal';
 import { AttendanceChart } from '@/src/components/admin/AttendanceChart';
 import { fmtDay, fmtTime } from '@/src/components/admin/format';
 import { Stamp } from '@/src/components/ui/Stamp';
+import { istDateKey } from '@/src/server/domain/time';
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -16,6 +17,7 @@ export async function Attendance({ searchParams }: { searchParams: SP }) {
   const team = pick(sp.team) ?? 'all';
   const ctx = await getAdminContext();
   const { rows, teams, trend } = await getAttendanceData(ctx.sector.key, { status, team });
+  const thisMonth = istDateKey(new Date()).slice(0, 7);
 
   return (
     <>
@@ -31,6 +33,26 @@ export async function Attendance({ searchParams }: { searchParams: SP }) {
       <div className="panel">
         <AttendanceChart days={trend} />
       </div>
+
+      <form method="get" className="filters section" aria-labelledby="registers-title">
+        <h2 id="registers-title" className="section-title">
+          Statutory registers
+        </h2>
+        <p className="text-small muted">
+          Attendance (muster roll) and wage register for {ctx.sector.place}, as CSV. The wage
+          register uses the same payslip engine the workers see.
+        </p>
+        <div className="field">
+          <label htmlFor="month">Month</label>
+          <input id="month" name="month" type="month" defaultValue={thisMonth} max={thisMonth} />
+        </div>
+        <button type="submit" className="btn-quiet" formAction="/admin/registers/attendance">
+          Download attendance register
+        </button>
+        <button type="submit" className="btn-quiet" formAction="/admin/registers/wages">
+          Download wage register
+        </button>
+      </form>
 
       <form method="get" className="filters section" aria-label="Filter attendance">
         <div className="field">

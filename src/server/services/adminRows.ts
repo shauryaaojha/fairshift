@@ -10,6 +10,7 @@ import {
   formatSlaRemaining,
 } from '../domain/hazardSla';
 import { istDateKey } from '../domain/time';
+import { closureState, type ClosureState } from '../domain/hazardClosure';
 import type {
   AggregatedFeedback,
   HazardReport,
@@ -107,6 +108,7 @@ export function buildHeatmapRows(feedback: AggregatedFeedback[], k = 3): Heatmap
 
 export interface HazardRow extends HazardReport {
   liveStatus: HazardStatus;
+  closure: ClosureState;
   remainingSeconds: number;
   slaLabel: string;
 }
@@ -130,7 +132,7 @@ export function toHazardRows(hazards: HazardReport[], now: Date = new Date()): H
           : h.acknowledgedAt
             ? 'Acknowledged'
             : formatSlaRemaining(remainingSeconds);
-      return { ...h, liveStatus, remainingSeconds, slaLabel };
+      return { ...h, liveStatus, closure: closureState(h), remainingSeconds, slaLabel };
     })
     .sort(
       (a, b) =>

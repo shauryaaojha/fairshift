@@ -560,6 +560,65 @@
 .sla[data-late] {
   color: var(--escalated);
 }
+.closure {
+  font-weight: 600;
+  padding-left: 10px;
+  border-left: 4px solid var(--rule);
+}
+.closure[data-state='reopened'] {
+  color: var(--escalated);
+  border-left-color: var(--escalated);
+}
+.closure[data-state='confirmed'] {
+  border-left-color: var(--cleared);
+}
+.pay-form {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--rule);
+  padding-top: 12px;
+}
+.pay-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: start;
+}
+.pay-form textarea {
+  padding: 8px 12px;
+  border: 2px solid var(--graphite);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  font: inherit;
+  color: var(--graphite);
+  resize: vertical;
+}
+.form-ok {
+  margin: 0;
+  min-height: 1.4em;
+  font-weight: 600;
+}
+.pay-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0;
+}
+.pay-figures div {
+  display: grid;
+}
+.pay-figures dt {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.pay-figures dd {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+}
+.pay-figures dd[data-short] {
+  color: var(--escalated);
+}
 .ai-note {
   border-top: 1px solid var(--rule);
   padding-top: 12px;
@@ -744,4 +803,18 @@
 .console-error {
   color: var(--escalated);
   font-weight: 600;
+}
+
+.heat-banner {
+  border: 2px solid var(--graphite);
+  border-left-width: 8px;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: grid;
+  gap: 6px;
+  background: var(--card);
+}
+.heat-banner[data-level='danger'],
+.heat-banner[data-level='extreme_danger'] {
+  border-color: var(--escalated);
 }

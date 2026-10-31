@@ -94,28 +94,36 @@ All demo data is generated in `src/server/seed/`. These are not real people.
 1. Log in as the Hindi worker.
 2. Open **FairShift से पूछें** and tap "इस महीने मुझे कितने पैसे मिलेंगे?".
 3. Open **Pay** and tap read-aloud.
-4. Report a hazard by voice.
-5. Log in as the regional admin and see the hazard in **Safety** with its deadline.
-6. Ask the console "What needs my attention today?".
-7. Open a site's gate QR kiosk and scan it with a phone.
+4. Open **खतरा बताएँ** → the earlier ladder report says "marked fixed". Answer "No, still dangerous" and it reopens as escalated (two-key closure).
+5. In **Pay**, type less than the payslip in "Did you get the right amount?" and tap "Ask your employer about this": a pay query goes to the employer with a 48-hour deadline. Open **मेरे अधिकार** for where to complain next.
+6. Log in as the regional admin: the reopened report is at the top of **Safety**, marked "Reopened by the reporter".
+7. Open **Pay** in the console: answer the query (the worker must then say "settled"), and try to schedule overtime at 1.5×. It is refused, citing the Code on Wages.
+8. Open **Plan a shift**, pick a worker and a late-night shift: it lists the fatigue warnings and overtime that one shift would add.
+9. Ask the console "What needs my attention today?".
+10. In **Attendance**, download this month's attendance and wage registers as CSV.
+11. Open a site's gate QR kiosk and scan it with a phone.
 
 ---
 
 ## What it does
 
-The problem statement asks for 3+ features, 2 user interfaces and 2+ sectors. FairShift ships **nine** features, **two** interfaces (a worker phone app and a supervisor console) and **two** live sectors.
+The problem statement asks for 3+ features, 2 user interfaces and 2+ sectors. FairShift ships **fourteen** features, **two** interfaces (a worker phone app and a supervisor console) and **two** live sectors.
 
-| Feature                 | Worker (`/w`, phone, EN / HI / TA)                                                               | Supervisor (`/admin`, desktop)                                           | Core code                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------ |
-| Shift tracking          | Scan the rotating gate QR with the phone camera, or use GPS                                      | Live on-site count, 14-day attendance chart, gate QR kiosk               | `domain/{qrCode,geofence,overtime}.ts`     |
-| Transparent payslip     | Line-by-line payslip, read aloud, plain-words explanation                                        | Pay rules per organisation                                               | `domain/payslip.ts`                        |
-| Safety reporting        | Speak or type a report, optionally anonymous; track its status                                   | Queue sorted by urgency, response deadlines, auto-escalation, AI summary | `domain/hazardSla.ts`                      |
-| Honest feedback         | Four face-scale questions; no identity is stored                                                 | Team heatmap, hidden below 3 answers, names scrubbed                     | `domain/anonymity.ts`                      |
-| Fatigue alerts          | Warnings for > 48 h a week, > 10 h shifts, < 10 h rest                                           | Fatigue flags per worker                                                 | `domain/fatigue.ts`                        |
-| Quit-risk early warning | –                                                                                                | 0–100 score with its top 3 reasons in real numbers                       | `domain/{quitRisk,workforceSignals}.ts`    |
-| Skill passport          | Verified certificates and a public link to share with employers                                  | Verified records                                                         | `domain/skills.ts`, `app/passport/[token]` |
-| **Ask FairShift** (new) | Ask about your own pay, hours, reports or rights, by voice                                       | "Ask the console" about hazards, risk, morale and attendance             | `src/server/assistant/*`                   |
-| Works offline           | Check-ins, check-outs, hazards and feedback queue on the phone and sync with their original time | Records arrive with the time they happened                               | `src/lib/offline/*`, `domain/offline.ts`   |
+| Feature                 | Worker (`/w`, phone, EN / HI / TA)                                                                                                                                                                                                                                | Supervisor (`/admin`, desktop)                                                                                                                    | Core code                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Shift tracking          | Scan the rotating gate QR with the phone camera, or use GPS                                                                                                                                                                                                       | Live on-site count, 14-day attendance chart, gate QR kiosk                                                                                        | `domain/{qrCode,geofence,overtime}.ts`               |
+| Transparent payslip     | Line-by-line payslip, read aloud, plain-words explanation; **"Did you get the right amount?"** shows the gap against what you got in hand (nothing is stored)                                                                                                     | **Versioned overtime rules**: changes start on a coming Monday, need a reason, and are refused below the legal floor; past weeks keep their rules | `domain/{payslip,payRules}.ts`, `shared/payCheck.ts` |
+| **Pay query**           | Ask the employer about short pay, unpaid overtime, a wrong deduction or late pay. **Two keys:** it closes only when the worker says "settled"; "not yet" reopens it with a 1-day deadline                                                                         | Queue with payslip vs received gap, 48 h answer deadline, overdue first, legal pay day (7th of next month)                                        | `domain/payQuery.ts`, `app/w/pay/query`              |
+| Safety reporting        | Speak or type a report, optionally anonymous (time kept only to the hour); track its status. **Two-key closure:** a fix counts only when the reporter agrees; "not fixed" reopens it as escalated. Danger words in 3 languages raise the severity even without AI | Queue sorted by urgency, response deadlines, auto-escalation, AI summary, reporter's verdict                                                      | `domain/{hazardSla,hazardClosure}.ts`                |
+| Honest feedback         | Four face-scale questions; no identity is stored                                                                                                                                                                                                                  | Team heatmap, hidden below 3 answers, names scrubbed                                                                                              | `domain/anonymity.ts`                                |
+| Fatigue alerts          | Warnings for > 48 h a week, > 10 h shifts, < 10 h rest                                                                                                                                                                                                            | Fatigue flags per worker; **Plan a shift** shows the warnings, clashes and overtime one more shift would add, before it is given                  | `domain/{fatigue,shiftPlan}.ts`                      |
+| Quit-risk early warning | –                                                                                                                                                                                                                                                                 | 0–100 score with its top 3 reasons in real numbers                                                                                                | `domain/{quitRisk,workforceSignals}.ts`              |
+| Skill passport          | Verified certificates and a public link to share with employers                                                                                                                                                                                                   | Verified records                                                                                                                                  | `domain/skills.ts`, `app/passport/[token]`           |
+| **Know your rights**    | Eight rights cards citing the Code on Wages 2019 section by section, read aloud; tap-to-call helplines incl. free legal aid (15100); **where to complain**, step by step: employer, SAMADHAN portal, labour office, free lawyer                                   | –                                                                                                                                                 | `shared/rights.ts`, `app/w/rights`                   |
+| **Statutory registers** | –                                                                                                                                                                                                                                                                 | Attendance (muster roll) and wage register per month as CSV, from the same payslip engine the worker sees                                         | `domain/registers.ts`                                |
+| **Heat stress alert**   | "Feels like" heat index at the site with NDMA heat-wave advice, read aloud                                                                                                                                                                                        | Banner telling the site lead what to change (e.g. no heavy outdoor work 12–3 pm)                                                                  | `domain/heat.ts`, `server/weather.ts`                |
+| **Ask FairShift** (new) | Ask about your own pay, hours, reports or rights, by voice                                                                                                                                                                                                        | "Ask the console" about hazards, risk, morale and attendance                                                                                      | `src/server/assistant/*`                             |
+| Works offline           | Check-ins, check-outs, hazards and feedback queue on the phone and sync with their original time                                                                                                                                                                  | Records arrive with the time they happened                                                                                                        | `src/lib/offline/*`, `domain/offline.ts`             |
 
 **The rule that shapes everything:** every number is computed by a pure, unit-tested function in `src/server/domain`. The rules cover:
 
@@ -164,7 +172,7 @@ Tamil and English screens are in [docs/screenshots](docs/screenshots).
 | AI            | **Google Gemini** via `@google/genai` (function calling, JSON schema output) | Explains, summarises and answers questions; never computes a number                            |
 | Offline       | Service worker + IndexedDB outbox                                            | Basements and remote sites have patchy signal                                                  |
 | Motion        | GSAP (landing page and console only)                                         | The worker app ships no animation library                                                      |
-| Tests         | **Vitest** (node + jsdom projects), Testing Library, fake-indexeddb          | 360+ tests, coverage thresholds enforced in CI                                                 |
+| Tests         | **Vitest** (node + jsdom projects), Testing Library, fake-indexeddb          | 410+ tests, coverage thresholds enforced in CI                                                 |
 | Quality gates | ESLint (zero warnings), Prettier, GitHub Actions, CodeQL, Dependabot         | Every push is formatted, typed, linted, tested, audited and built                              |
 | Hosting       | Vercel (live demo), Docker image for any container host                      | `output: standalone` image on `node:22-alpine`, running as a non-root user with a health check |
 
@@ -250,19 +258,19 @@ npm run test:coverage  # with coverage thresholds (CI fails below them)
 npm run verify         # format + typecheck + lint + coverage + build, exactly as CI
 ```
 
-Measured on 2026-10-29 with `npm run verify`:
+Measured on 2026-10-31 with `npm run verify`:
 
-| Check                                                 | Result                                                                                                   |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Tests                                                 | **360 passed**, 0 failed, in 50 files                                                                    |
-| Coverage of all server, shared and offline code       | **93.7% statements · 88.7% branches · 90.9% functions · 94.3% lines** (thresholds 90/85/90/90)           |
-| Coverage of the rule engines (`src/server/domain`)    | 99.4% statements · 97.5% branches · 100% functions                                                       |
-| TypeScript strict                                     | 0 errors                                                                                                 |
-| ESLint `--max-warnings 0`                             | 0 problems                                                                                               |
-| Prettier                                              | clean                                                                                                    |
-| Accessibility (axe-core, WCAG 2.1 AA + best practice) | **0 violations on 25 pages**, worker pages in Hindi and Tamil, both Ask pages before and after an answer |
-| `npm audit --omit=dev`                                | 0 vulnerabilities                                                                                        |
-| Production build                                      | passes                                                                                                   |
+| Check                                                 | Result                                                                                                                                                                                                                                  |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tests                                                 | **486 passed**, 0 failed, in 66 files                                                                                                                                                                                                   |
+| Coverage of all server, shared and offline code       | **95.0% statements · 90.4% branches · 93.1% functions · 95.4% lines** (thresholds 90/85/90/90)                                                                                                                                          |
+| Coverage of the rule engines (`src/server/domain`)    | 100% lines · 98.3% branches · 100% functions                                                                                                                                                                                            |
+| TypeScript strict                                     | 0 errors                                                                                                                                                                                                                                |
+| ESLint `--max-warnings 0`                             | 0 problems                                                                                                                                                                                                                              |
+| Prettier                                              | clean                                                                                                                                                                                                                                   |
+| Accessibility (axe-core, WCAG 2.1 AA + best practice) | **0 violations on 25 pages** (audited 2026-10-29), worker pages in Hindi and Tamil, both Ask pages before and after an answer. Pages added on 2026-10-30/31 (rights, pay query, console Pay and Plan a shift) are not yet in that audit |
+| `npm audit --omit=dev`                                | 0 vulnerabilities                                                                                                                                                                                                                       |
+| Production build                                      | passes                                                                                                                                                                                                                                  |
 
 | Suite                          | What it proves                                                                                                                                                                                 |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -297,14 +305,15 @@ The threat model and every control, with file paths, are in **[SECURITY.md](SECU
 
 Copy `.env.example` to `.env.local`. **All are optional for local development.**
 
-| Name             | Required          | Purpose                                                                                                 | Default            |
-| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------- | ------------------ |
-| `SESSION_SECRET` | **In production** | Signs session cookies and derives QR and passport keys. At least 16 characters (`openssl rand -hex 32`) | local dev secret   |
-| `MONGODB_URI`    | No                | MongoDB connection string. An empty database is seeded on first use                                     | in-memory store    |
-| `MONGODB_DB`     | No                | Database name                                                                                           | `fairshift`        |
-| `DATA_BACKEND`   | No                | `memory` forces the in-memory store even with a URI                                                     | –                  |
-| `GEMINI_API_KEY` | No                | Enables Gemini explanations, summaries and the assistant (server-only)                                  | rule-based answers |
-| `GEMINI_MODEL`   | No                | Gemini model id                                                                                         | `gemini-2.5-flash` |
+| Name               | Required          | Purpose                                                                                                 | Default            |
+| ------------------ | ----------------- | ------------------------------------------------------------------------------------------------------- | ------------------ |
+| `SESSION_SECRET`   | **In production** | Signs session cookies and derives QR and passport keys. At least 16 characters (`openssl rand -hex 32`) | local dev secret   |
+| `MONGODB_URI`      | No                | MongoDB connection string. An empty database is seeded on first use                                     | in-memory store    |
+| `MONGODB_DB`       | No                | Database name                                                                                           | `fairshift`        |
+| `DATA_BACKEND`     | No                | `memory` forces the in-memory store even with a URI                                                     | –                  |
+| `GEMINI_API_KEY`   | No                | Enables Gemini explanations, summaries and the assistant (server-only)                                  | rule-based answers |
+| `GEMINI_MODEL`     | No                | Gemini model id                                                                                         | `gemini-2.5-flash` |
+| `WEATHER_DISABLED` | No                | `1` turns off the live heat-stress lookup (Open-Meteo, free, no key)                                    | on                 |
 
 ---
 
@@ -328,8 +337,8 @@ vercel deploy --prod
 
 ```
 app/                      routes
-  w/                      worker app: home, check-in, pay, hours, hazard, feedback, skills, ask
-  admin/                  supervisor console: overview, attendance, safety, feedback, risk, sites, ask
+  w/                      worker app: home, check-in, pay (+ pay queries), hours, hazard, feedback, skills, rights, ask
+  admin/                  supervisor console: overview, attendance, safety, pay, plan a shift, feedback, risk, sites, ask
   api/health/             liveness and readiness
   passport/[token]/       public skill verification
 src/
@@ -356,7 +365,7 @@ docs/                     plan, design system, flows, novelty, research, screens
 ## Assumptions
 
 - **Place and time:** workers and sites are in India, and a "day" is an IST calendar day.
-- **Pay:** overtime starts after 8 h a day or 48 h a week at 2×, and each organisation can change this. PF is 12% of basic pay up to ₹15,000. ESI is 0.75% when gross pay is ₹21,000 or less. A daily-wage worker's hourly rate is the day rate ÷ 8.
+- **Pay:** overtime starts after 8 h a day or 48 h a week at 2×. An organisation can only make this more generous (start earlier, pay up to 3×), from a coming Monday, with a reason. A pay query must be answered within 48 h (24 h once reopened); this is FairShift's service level, not a legal deadline. PF is 12% of basic pay up to ₹15,000. ESI is 0.75% when gross pay is ₹21,000 or less. A daily-wage worker's hourly rate is the day rate ÷ 8.
 - **Check-in:** the gate QR rotates every 60 s and accepts ±1 window. A shift open for more than 16 h is treated as a missed check-out and closed at 0 h.
 - **Offline:** queued actions must be less than 24 h old and at most 2 minutes in the future, and keep their original time.
 - **Anonymity:** a team's feedback is shown only with 3 or more answers in the week.

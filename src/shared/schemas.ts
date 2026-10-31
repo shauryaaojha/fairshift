@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ASK_MAX_HISTORY, ASK_MAX_QUESTION } from './limits';
 import { HAZARD_SEVERITIES } from './severity';
+import { MAX_RUPEES, PAY_QUERY_REASONS } from './payCheck';
 
 /**
  * Input schemas for every Server Action. Every client value is parsed here before a service sees it.
@@ -74,6 +75,49 @@ export const feedbackSchema = z.object({
 // ── Admin Schemas ───────────────────────────────────────────
 export const hazardIdSchema = recordId;
 export const hazardSeveritySchema = z.enum(HAZARD_SEVERITIES);
+
+export const hazardVerdictSchema = z.object({
+  hazardId: hazardIdSchema,
+  verdict: z.enum(['fixed', 'not_fixed']),
+});
+
+// ── Pay query & pay rules ───────────────────────────────────
+const rupees = z.number().min(0).max(MAX_RUPEES);
+
+export const payQueryRaiseSchema = z.object({
+  reason: z.enum(PAY_QUERY_REASONS),
+  receivedAmount: rupees.nullable().default(null),
+  note: z.string().trim().max(500).nullable().default(null),
+  clientId,
+});
+
+export const payQueryVerdictSchema = z.object({
+  queryId: recordId,
+  verdict: z.enum(['settled', 'not_settled']),
+});
+
+/** The console's answer form. An empty corrected amount means the amount is unchanged. */
+export const payAnswerSchema = z.object({
+  id: recordId,
+  text: z
+    .string()
+    .trim()
+    .min(10, 'Write at least 10 characters so the worker understands.')
+    .max(1000),
+  correctedNet: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    rupees.nullable(),
+  ),
+});
+
+/** The console's pay rules form; the law is checked again by the domain. */
+export const payRulesSchema = z.object({
+  dailyHoursLimit: z.coerce.number(),
+  weeklyHoursLimit: z.coerce.number(),
+  otMultiplier: z.coerce.number(),
+  effectiveFrom: z.iso.date(),
+  reason: z.string().trim().min(10, 'Write a reason of at least 10 characters.').max(500),
+});
 
 // ── Assistant Schema ────────────────────────────────────────
 

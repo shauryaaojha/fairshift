@@ -210,6 +210,23 @@ export const InstallIcon = (p: IconProps) => (
   </Base>
 );
 
+export const SunIcon = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </Base>
+);
+
+export const ScalesIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 4v16" />
+    <path d="M8 20h8" />
+    <path d="M5 7h14" />
+    <path d="M5 7l-3 6a3 3 0 0 0 6 0L5 7z" />
+    <path d="M19 7l-3 6a3 3 0 0 0 6 0l-3-6z" />
+  </Base>
+);
+
 export const AskIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M4 5h16v11H9l-5 4V5z" />

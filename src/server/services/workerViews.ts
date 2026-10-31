@@ -13,6 +13,9 @@ import { SESSION_COOKIE_NAME, verifySession } from '../auth/session';
 import { explainPayslip } from '../ai/gemini';
 import { calculateShiftHours, calculateShiftsOvertime } from '../domain/overtime';
 import { WEEK_MS } from '../domain/time';
+import { closureState, type ClosureState } from '../domain/hazardClosure';
+import { policyForDate } from '../domain/payRules';
+import { payQueryState, type PayQueryState } from '../domain/payQuery';
 import { LOCALE_COOKIE, SPEECH_LANG, parseLocale, t } from '../../i18n';
 import type {
   FatigueFlag,
@@ -20,6 +23,7 @@ import type {
   HazardStatus,
   Locale,
   OvertimeResult,
+  PayQuery,
   PayslipResult,
   Shift,
   Site,
@@ -55,9 +59,31 @@ export function formatDay(isoOrDate: string, locale: Locale, withWeekday = false
   }).format(d);
 }
 
+/** "October 2026" style month for a locale, from `YYYY-MM`. */
+export function formatMonth(period: string, locale: Locale): string {
+  const d = new Date(`${period}-01T00:00:00Z`);
+  if (isNaN(d.getTime())) return period;
+  return new Intl.DateTimeFormat(SPEECH_LANG[locale], {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(d);
+}
+
 export function formatRupees(amount: number): string {
   return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount);
 }
+
+/** The stamp a pay query shows: who it is waiting for, or settled. */
+export const PAY_QUERY_STAMP: Record<
+  PayQueryState,
+  { variant: 'hivis' | 'ink' | 'cleared' | 'escalated'; labelKey: string }
+> = {
+  open: { variant: 'ink', labelKey: 'payq.state.open' },
+  overdue: { variant: 'escalated', labelKey: 'payq.state.overdue' },
+  awaiting_worker: { variant: 'hivis', labelKey: 'payq.state.awaiting_worker' },
+  settled: { variant: 'cleared', labelKey: 'payq.state.settled' },
+};
 
 export interface FatigueNote {
   type: FatigueFlag['type'];
@@ -73,7 +99,8 @@ export function describeFatigue(flags: FatigueFlag[], locale: Locale): FatigueNo
   });
 }
 
-export type TimelineKey = 'reported' | 'escalated' | 'acknowledged' | 'resolved';
+export type TimelineKey =
+  'reported' | 'reopened' | 'escalated' | 'acknowledged' | 'resolved' | 'confirmed';
 export interface TimelineStep {
   key: TimelineKey;
   at: string | null;
@@ -83,16 +110,37 @@ export interface HazardTimeline {
   steps: TimelineStep[];
   /** Stamp to show for the current state. */
   stamp: { variant: 'hivis' | 'ink' | 'cleared' | 'escalated'; labelKey: string };
+  /** Where the two-key closure stands; `awaiting_reporter` means the worker should answer. */
+  closure: ClosureState;
 }
 
-/** Reported -> Acknowledged -> Resolved, with an extra Escalated node when the SLA was missed. */
+/**
+ * Reported -> Acknowledged -> Resolved, then "Confirmed" for a named report (two-key closure).
+ * A report the worker reopened shows a Reopened node; one that missed its SLA shows Escalated.
+ */
 export function hazardTimeline(
-  h: Pick<HazardReport, 'status' | 'reportedAt' | 'acknowledgedAt' | 'resolvedAt'>,
+  h: Pick<
+    HazardReport,
+    | 'status'
+    | 'reportedAt'
+    | 'acknowledgedAt'
+    | 'resolvedAt'
+    | 'reporterId'
+    | 'reporterVerdict'
+    | 'verdictAt'
+    | 'reopenedAt'
+  >,
 ): HazardTimeline {
   const steps: TimelineStep[] = [{ key: 'reported', at: h.reportedAt, done: true }];
-  if (h.status === 'escalated') steps.push({ key: 'escalated', at: null, done: true });
+  if (h.reopenedAt) steps.push({ key: 'reopened', at: h.reopenedAt, done: true });
+  else if (h.status === 'escalated') steps.push({ key: 'escalated', at: null, done: true });
   steps.push({ key: 'acknowledged', at: h.acknowledgedAt, done: h.acknowledgedAt !== null });
   steps.push({ key: 'resolved', at: h.resolvedAt, done: h.resolvedAt !== null });
+  const closure = closureState(h);
+  if (h.reporterId !== null) {
+    const confirmed = closure === 'confirmed';
+    steps.push({ key: 'confirmed', at: confirmed ? (h.verdictAt ?? null) : null, done: confirmed });
+  }
 
   const stampByStatus: Record<HazardStatus, HazardTimeline['stamp']> = {
     reported: { variant: 'hivis', labelKey: 'hazard.stamp.logged' },
@@ -100,7 +148,11 @@ export function hazardTimeline(
     resolved: { variant: 'cleared', labelKey: 'hazard.stamp.resolved' },
     escalated: { variant: 'escalated', labelKey: 'hazard.stamp.escalated' },
   };
-  return { steps, stamp: stampByStatus[h.status] };
+  const stamp =
+    closure === 'confirmed'
+      ? { variant: 'cleared' as const, labelKey: 'hazard.stamp.confirmed' }
+      : stampByStatus[h.status];
+  return { steps, stamp, closure };
 }
 
 /** Sentence read aloud for "Hear my payslip". Uses only numbers from the engine. */
@@ -229,7 +281,7 @@ export async function loadHours(worker: Pick<Worker, 'id' | 'orgId'>) {
     workerService.getMyHours(worker.id),
     getDatabase().orgs.get(worker.orgId),
   ]);
-  return { week: summarizeWeek(shifts, new Date(), org?.policy), fatigueFlags };
+  return { week: summarizeWeek(shifts, new Date(), policyForDate(org)), fatigueFlags };
 }
 
 /** A hazard the worker may see: their own, or an anonymous one from their site. */
@@ -251,4 +303,20 @@ export async function listMyHazards(worker: Pick<Worker, 'id' | 'siteId'>, limit
 
 export async function loadSkills(workerId: string) {
   return workerService.getMySkills(workerId);
+}
+
+/** The worker's pay queries, newest first, with where each one stands. */
+export async function listMyPayQueries(
+  workerId: string,
+): Promise<(PayQuery & { state: PayQueryState })[]> {
+  const queries = await workerService.listMyPayQueries(workerId);
+  return queries.map((q) => ({ ...q, state: payQueryState(q) }));
+}
+
+export async function loadPayQuery(
+  workerId: string,
+  queryId: string,
+): Promise<(PayQuery & { state: PayQueryState }) | null> {
+  const q = await workerService.getMyPayQuery(workerId, queryId);
+  return q ? { ...q, state: payQueryState(q) } : null;
 }

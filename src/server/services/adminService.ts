@@ -18,6 +18,7 @@ import {
   getRemainingSlaSeconds,
   formatSlaRemaining,
 } from '../domain/hazardSla';
+import { markResolved } from '../domain/hazardClosure';
 import { generateWeeklySafetySummary } from '../ai/gemini';
 import { AppError } from '../../shared/errors';
 import type {
@@ -267,7 +268,7 @@ export class AdminService {
   }
 
   /**
-   * Resolve a hazard report.
+   * Resolve a hazard report. A named reporter is then asked to confirm the fix (two-key closure).
    */
   async resolveHazard(hazardId: string, allowedOrgIds: string[]): Promise<HazardReport> {
     const hazard = await this.db.hazards.getById(hazardId);
@@ -275,9 +276,7 @@ export class AdminService {
       throw new AppError('not_found', 'Hazard not found');
     }
 
-    hazard.resolvedAt = new Date().toISOString();
-    hazard.status = 'resolved';
-    return await this.db.hazards.update(hazard);
+    return await this.db.hazards.update(markResolved(hazard));
   }
 
   /**

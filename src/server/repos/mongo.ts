@@ -15,6 +15,7 @@ import type {
   HazardReport,
   FeedbackSubmission,
   SkillRecord,
+  PayQuery,
 } from '../../shared/types';
 import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
@@ -28,6 +29,7 @@ const COLLECTIONS = {
   hazards: 'hazards',
   feedback: 'feedback',
   skills: 'skills',
+  payQueries: 'payQueries',
 } as const;
 
 /** Never return Mongo's internal _id to callers. */
@@ -43,10 +45,15 @@ const INDEXES: Record<string, string[]> = {
   hazards: ['id', 'siteId', 'orgId'],
   feedback: ['id', 'siteId', 'orgId'],
   skills: ['id', 'workerId', 'verifyToken'],
+  payQueries: ['id', 'workerId', 'orgId'],
 };
 
 function byCheckInDesc(a: Shift, b: Shift): number {
   return new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime();
+}
+
+function byRaisedDesc(a: PayQuery, b: PayQuery): number {
+  return Date.parse(b.raisedAt) - Date.parse(a.raisedAt);
 }
 
 type GlobalWithMongo = typeof globalThis & { __fairshiftMongo?: Promise<MongoClient> };
@@ -238,6 +245,16 @@ class MongoFairShiftDb implements FairShiftDatabase {
       (await this.query<SkillRecord>(COLLECTIONS.skills, 'verifyToken', token))[0] ?? null,
     listByWorker: (workerId: string) =>
       this.query<SkillRecord>(COLLECTIONS.skills, 'workerId', workerId),
+  };
+
+  payQueries = {
+    create: (query: PayQuery) => this.put(COLLECTIONS.payQueries, query),
+    update: (query: PayQuery) => this.put(COLLECTIONS.payQueries, query),
+    getById: (id: string) => this.getDoc<PayQuery>(COLLECTIONS.payQueries, id),
+    listByWorker: async (workerId: string) =>
+      (await this.query<PayQuery>(COLLECTIONS.payQueries, 'workerId', workerId)).sort(byRaisedDesc),
+    listByOrg: async (orgId: string) =>
+      (await this.query<PayQuery>(COLLECTIONS.payQueries, 'orgId', orgId)).sort(byRaisedDesc),
   };
 }
 

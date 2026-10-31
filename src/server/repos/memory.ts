@@ -13,6 +13,7 @@ import type {
   HazardRepo,
   FeedbackRepo,
   SkillRepo,
+  PayQueryRepo,
 } from './types';
 import type {
   Org,
@@ -23,6 +24,7 @@ import type {
   HazardReport,
   FeedbackSubmission,
   SkillRecord,
+  PayQuery,
 } from '../../shared/types';
 import { generateSeedData } from '../seed';
 import { withLiveHazardStatus, sortHazardsNewestFirst } from './hazardStatus';
@@ -39,6 +41,7 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
   private hazardsList: HazardReport[] = [];
   private feedbackList: FeedbackSubmission[] = [];
   private skillsList: SkillRecord[] = [];
+  private payQueriesList: PayQuery[] = [];
 
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
@@ -54,6 +57,7 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
       this.hazardsList = [...data.hazards];
       this.feedbackList = [...data.feedback];
       this.skillsList = [...data.skills];
+      this.payQueriesList = [...data.payQueries];
       this.initialized = true;
     })();
 
@@ -271,6 +275,38 @@ class InMemoryFairShiftDb implements FairShiftDatabase {
       return this.skillsList.filter((s) => s.workerId === workerId);
     },
   };
+
+  // ── Pay Query Repo ──────────────────────────────────────────
+  payQueries: PayQueryRepo = {
+    create: async (query: PayQuery) => {
+      await this.ensureInitialized();
+      this.payQueriesList.unshift(query);
+      return query;
+    },
+    update: async (query: PayQuery) => {
+      await this.ensureInitialized();
+      const idx = this.payQueriesList.findIndex((q) => q.id === query.id);
+      if (idx !== -1) this.payQueriesList[idx] = query;
+      else this.payQueriesList.unshift(query);
+      return query;
+    },
+    getById: async (id: string) => {
+      await this.ensureInitialized();
+      return this.payQueriesList.find((q) => q.id === id) ?? null;
+    },
+    listByWorker: async (workerId: string) => {
+      await this.ensureInitialized();
+      return newestFirst(this.payQueriesList.filter((q) => q.workerId === workerId));
+    },
+    listByOrg: async (orgId: string) => {
+      await this.ensureInitialized();
+      return newestFirst(this.payQueriesList.filter((q) => q.orgId === orgId));
+    },
+  };
+}
+
+function newestFirst(queries: PayQuery[]): PayQuery[] {
+  return [...queries].sort((a, b) => Date.parse(b.raisedAt) - Date.parse(a.raisedAt));
 }
 
 export const inMemoryDb = new InMemoryFairShiftDb();

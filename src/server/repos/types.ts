@@ -11,6 +11,7 @@ import type {
   HazardReport,
   FeedbackSubmission,
   SkillRecord,
+  PayQuery,
 } from '../../shared/types';
 
 export interface OrgRepo {
@@ -73,6 +74,16 @@ export interface SkillRepo {
   listByWorker(workerId: string): Promise<SkillRecord[]>;
 }
 
+export interface PayQueryRepo {
+  create(query: PayQuery): Promise<PayQuery>;
+  update(query: PayQuery): Promise<PayQuery>;
+  getById(id: string): Promise<PayQuery | null>;
+  /** Newest first. */
+  listByWorker(workerId: string): Promise<PayQuery[]>;
+  /** Newest first. */
+  listByOrg(orgId: string): Promise<PayQuery[]>;
+}
+
 export interface FairShiftDatabase {
   orgs: OrgRepo;
   sites: SiteRepo;
@@ -82,4 +93,5 @@ export interface FairShiftDatabase {
   hazards: HazardRepo;
   feedback: FeedbackRepo;
   skills: SkillRepo;
+  payQueries: PayQueryRepo;
 }

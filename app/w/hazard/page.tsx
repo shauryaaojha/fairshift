@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { TopBar } from '@/src/components/ui/TopBar';
 import { HazardForm } from '@/src/components/worker/HazardForm';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
+import { closureState } from '@/src/server/domain/hazardClosure';
 import {
   formatClock,
   formatDay,
@@ -35,6 +36,11 @@ export default async function HazardPage() {
                   className="flex min-h-14 flex-col justify-center rounded-[6px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
                 >
                   <span className="text-body font-semibold">{h.category}</span>
+                  {closureState(h) === 'awaiting_reporter' ? (
+                    <span className="text-body font-semibold text-escalated">
+                      {t(locale, 'hazard.verdict.pending')}
+                    </span>
+                  ) : null}
                   <span className="text-small text-muted">
                     {t(locale, `hazard.status.${h.status}`)} · {formatDay(h.reportedAt, locale)}{' '}
                     <span className="text-mono">{formatClock(h.reportedAt)}</span>

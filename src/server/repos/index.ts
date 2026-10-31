@@ -59,6 +59,7 @@ function deferredDatabase(): FairShiftDatabase {
     hazards: deferredRepo('hazards'),
     feedback: deferredRepo('feedback'),
     skills: deferredRepo('skills'),
+    payQueries: deferredRepo('payQueries'),
   };
 }
 

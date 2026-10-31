@@ -133,10 +133,89 @@ describe('reportHazard', () => {
     );
     expect(h.status).toBe('reported');
     expect(h.aiSummary).toContain('Live wire');
-    // The danger words raise the suggestion; the stored severity stays the worker's choice.
+    // Danger words start the 1-hour clock even though the worker tapped "medium".
     expect(h.aiSuggestedSeverity).toBe('critical');
-    expect(h.severity).toBe('medium');
+    expect(h.severity).toBe('critical');
     setGeminiForTests(undefined);
+  });
+
+  it('keeps an anonymous report time only to the IST hour, and a named one exactly', async () => {
+    setGeminiForTests(null);
+    const capturedAt = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const base = { siteId: site.id, category: 'Other', description: 'Water cooler empty' };
+    const anon = await workerService.reportHazard(worker.id, {
+      ...base,
+      severity: 'low',
+      anonymous: true,
+      capturedAt,
+    });
+    const named = await workerService.reportHazard(worker.id, {
+      ...base,
+      severity: 'low',
+      anonymous: false,
+      capturedAt,
+    });
+    expect(named.reportedAt).toBe(capturedAt);
+    expect(named.severity).toBe('low');
+    // Whole IST hour (IST is UTC+5:30, so :30 UTC), never later than the real time.
+    expect(new Date(anon.reportedAt).getUTCMinutes()).toBe(30);
+    expect(new Date(anon.reportedAt).getUTCSeconds()).toBe(0);
+    expect(Date.parse(anon.reportedAt)).toBeLessThanOrEqual(Date.parse(capturedAt));
+    expect(Date.parse(capturedAt) - Date.parse(anon.reportedAt)).toBeLessThan(60 * 60 * 1000);
+    setGeminiForTests(undefined);
+  });
+});
+
+describe('giveHazardVerdict (two-key closure)', () => {
+  async function resolvedReportBy(reporterId: string | null) {
+    const h = await workerService.reportHazard(worker.id, {
+      siteId: site.id,
+      category: 'Fall',
+      description: 'Broken ladder rung on the second landing',
+      severity: 'high',
+      anonymous: false,
+    });
+    return db.hazards.update({
+      ...h,
+      reporterId,
+      anonymous: reporterId === null,
+      status: 'resolved',
+      acknowledgedAt: new Date().toISOString(),
+      resolvedAt: new Date().toISOString(),
+      reporterVerdict: null,
+    });
+  }
+
+  it('closes the report when the reporter confirms the fix', async () => {
+    const h = await resolvedReportBy(worker.id);
+    const after = await workerService.giveHazardVerdict(worker.id, h.id, 'fixed');
+    expect(after).toMatchObject({ status: 'resolved', reporterVerdict: 'fixed' });
+    // A second answer is refused: the report no longer waits for one.
+    await expectCode(
+      workerService.giveHazardVerdict(worker.id, h.id, 'not_fixed'),
+      'verdict_not_allowed',
+    );
+  });
+
+  it('reopens the report as escalated when the reporter says it is not fixed', async () => {
+    const h = await resolvedReportBy(worker.id);
+    const after = await workerService.giveHazardVerdict(worker.id, h.id, 'not_fixed');
+    expect(after).toMatchObject({ status: 'escalated', resolvedAt: null, reopenCount: 1 });
+    expect((await db.hazards.getById(h.id))?.reopenedAt).toBeTruthy();
+  });
+
+  it("treats someone else's or an anonymous report as not found", async () => {
+    const mine = await resolvedReportBy(worker.id);
+    await expectCode(
+      workerService.giveHazardVerdict('worker-ramesh', mine.id, 'fixed'),
+      'not_found',
+    );
+    const anon = await resolvedReportBy(null);
+    await expectCode(workerService.giveHazardVerdict(worker.id, anon.id, 'fixed'), 'not_found');
+    await expectCode(
+      workerService.giveHazardVerdict(worker.id, 'hazard-nope', 'fixed'),
+      'not_found',
+    );
   });
 });
 

@@ -6,7 +6,7 @@ const X = 16;
 
 /**
  * A vertical register line drawn from Reported to the last reached step with
- * CSS stroke-dashoffset. An escalated node pulses once. Every node also has
+ * CSS stroke-dashoffset. An escalated or reopened node pulses once. Every node also has
  * a word label, so colour is never the only cue.
  */
 export function HazardTimelineView({
@@ -55,10 +55,10 @@ export function HazardTimelineView({
           />
         ) : null}
         {steps.map((s, i) => {
-          const escalated = s.key === 'escalated';
+          const escalated = s.key === 'escalated' || s.key === 'reopened';
           const color = escalated
             ? 'var(--escalated)'
-            : s.key === 'resolved'
+            : s.key === 'resolved' || s.key === 'confirmed'
               ? 'var(--cleared)'
               : 'var(--ink)';
           return (

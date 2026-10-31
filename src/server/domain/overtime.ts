@@ -11,6 +11,7 @@ import type {
   OvertimeResult,
   Shift,
   OrgPolicy,
+  PolicySource,
 } from '../../shared/types';
 
 export const DEFAULT_DAILY_HOURS_LIMIT = 8;
@@ -76,22 +77,24 @@ export function calculateShiftHours(checkInIso: string, checkOutIso: string | nu
   return Math.round(hours * 100) / 100;
 }
 
+/** The rules in force on an IST day, from a fixed policy or a dated history. */
+export function policyAt(source: PolicySource | undefined, dateKey: string): OrgPolicy | undefined {
+  return typeof source === 'function' ? source(dateKey) : source;
+}
+
 /**
  * Computes overtime for a pay period of any length.
  * Hours are grouped by IST calendar day, and days by ISO week (Mon–Sun). In each
  * week the worker gets the larger of (a) the sum of daily overtime beyond the daily
  * limit and (b) the week's hours beyond the weekly limit. Weeks are then summed, so a
- * month of normal 8 h days never turns into "overtime".
+ * month of normal 8 h days never turns into "overtime". Each week uses the rules in force
+ * that week; rule changes start on a Monday, so a week never mixes two sets of rules.
  */
 export function calculateShiftsOvertime(
   shifts: Shift[],
   hourlyRate: number,
-  policy?: OrgPolicy,
+  policy?: PolicySource,
 ): OvertimeResult {
-  const dailyLimit = policy?.dailyHoursLimit ?? DEFAULT_DAILY_HOURS_LIMIT;
-  const weeklyLimit = policy?.weeklyHoursLimit ?? DEFAULT_WEEKLY_HOURS_LIMIT;
-  const otMultiplier = policy?.otMultiplier ?? DEFAULT_OT_MULTIPLIER;
-
   const hoursByDate: Record<string, number> = {};
   for (const shift of shifts) {
     const hours = calculateShiftHours(shift.checkIn, shift.checkOut);
@@ -101,30 +104,39 @@ export function calculateShiftsOvertime(
     }
   }
 
-  const weeks: Record<string, { total: number; dailyOvertime: number }> = {};
+  const weeks: Record<string, { total: number; days: [string, number][] }> = {};
   for (const [date, dayHours] of Object.entries(hoursByDate)) {
-    const week = calculateIsoWeek(date);
-    const bucket = (weeks[week] ??= { total: 0, dailyOvertime: 0 });
+    const bucket = (weeks[calculateIsoWeek(date)] ??= { total: 0, days: [] });
     bucket.total += dayHours;
-    bucket.dailyOvertime += Math.max(0, dayHours - dailyLimit);
+    bucket.days.push([date, dayHours]);
   }
 
   let totalHours = 0;
-  let overtimeHours = 0;
-  for (const { total, dailyOvertime } of Object.values(weeks)) {
+  // Overtime hours per multiplier, so a week at 2.5x is never paid at 2x.
+  const overtimeByRate = new Map<number, number>();
+  for (const { total, days } of Object.values(weeks)) {
+    const rules = policyAt(policy, days[0][0]);
+    const dailyLimit = rules?.dailyHoursLimit ?? DEFAULT_DAILY_HOURS_LIMIT;
+    const weeklyLimit = rules?.weeklyHoursLimit ?? DEFAULT_WEEKLY_HOURS_LIMIT;
+    const otMultiplier = rules?.otMultiplier ?? DEFAULT_OT_MULTIPLIER;
+    const dailyOvertime = days.reduce((sum, [, h]) => sum + Math.max(0, h - dailyLimit), 0);
     totalHours += total;
     // Take the larger of the two rules in each week to protect worker rights.
-    overtimeHours += Math.max(dailyOvertime, total - weeklyLimit, 0);
+    const weekOvertime = Math.max(dailyOvertime, total - weeklyLimit, 0);
+    overtimeByRate.set(otMultiplier, (overtimeByRate.get(otMultiplier) ?? 0) + weekOvertime);
+  }
+  let overtimeHours = 0;
+  let overtimePay = 0;
+  for (const [multiplier, hours] of overtimeByRate) {
+    overtimeHours += hours;
+    overtimePay += Math.round(hours * hourlyRate * multiplier * 100) / 100;
   }
   const regularHours = Math.max(0, totalHours - overtimeHours);
-
-  const regularPay = Math.round(regularHours * hourlyRate * 100) / 100;
-  const overtimePay = Math.round(overtimeHours * hourlyRate * otMultiplier * 100) / 100;
 
   return {
     regularHours: Math.round(regularHours * 100) / 100,
     overtimeHours: Math.round(overtimeHours * 100) / 100,
-    regularPay,
-    overtimePay,
+    regularPay: Math.round(regularHours * hourlyRate * 100) / 100,
+    overtimePay: Math.round(overtimePay * 100) / 100,
   };
 }

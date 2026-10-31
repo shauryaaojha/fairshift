@@ -11,17 +11,20 @@ import type {
   HazardReport,
   FeedbackSubmission,
   SkillRecord,
+  PayQuery,
 } from '../../shared/types';
 import { DAY_MS } from '../domain/time';
 import { generateOrgs, generateSites } from './orgs';
 import { generatePeople } from './people';
 import { generateShifts } from './shifts';
 import { generateRecords } from './records';
+import { generatePayQueries } from './payQueries';
 
 export * from './orgs';
 export * from './people';
 export * from './shifts';
 export * from './records';
+export * from './payQueries';
 
 export interface SeedDataResult {
   orgs: Org[];
@@ -32,6 +35,7 @@ export interface SeedDataResult {
   hazards: HazardReport[];
   feedback: FeedbackSubmission[];
   skills: SkillRecord[];
+  payQueries: PayQuery[];
 }
 
 /** Computed when the seed runs, never at import (Next.js prerendering forbids Date.now() there). */
@@ -75,5 +79,6 @@ export async function generateSeedData(): Promise<SeedDataResult> {
     hazards,
     feedback,
     skills,
+    payQueries: generatePayQueries(anchorMs),
   };
 }

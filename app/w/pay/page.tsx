@@ -1,13 +1,18 @@
 import type { CSSProperties } from 'react';
+import Link from 'next/link';
 import { Stamp } from '@/src/components/ui/Stamp';
+import { PaidCheck } from '@/src/components/worker/PaidCheck';
 import { HearPayslipButton, PayActions } from '@/src/components/worker/PayActions';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
 import {
   buildPayslipSpeech,
+  PAY_QUERY_STAMP,
   formatDay,
+  formatMonth,
   formatRupees,
   getLocale,
+  listMyPayQueries,
   loadPay,
   requireWorkerContext,
 } from '@/src/server/services/workerViews';
@@ -17,7 +22,10 @@ const ROW_STEP_MS = 80;
 export default async function PayPage() {
   const [ctx, cookieLocale] = await Promise.all([requireWorkerContext(), getLocale()]);
   const locale = cookieLocale ?? DEFAULT_LOCALE;
-  const payslip = await loadPay(ctx.worker.id);
+  const [payslip, queries] = await Promise.all([
+    loadPay(ctx.worker.id),
+    listMyPayQueries(ctx.worker.id),
+  ]);
 
   const speech = buildPayslipSpeech(payslip, locale);
   const rows = payslip.lines;
@@ -102,6 +110,44 @@ export default async function PayPage() {
       </section>
 
       <PayActions />
+      <PaidCheck net={payslip.net} />
+
+      <section aria-labelledby="pay-queries" className="flex flex-col gap-2">
+        <h2 id="pay-queries" className="text-h2">
+          {t(locale, 'payq.mine')}
+        </h2>
+        {queries.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {queries.map((q) => (
+              <li key={q.id}>
+                <Link
+                  href={`/w/pay/query/${q.id}`}
+                  className="flex min-h-14 flex-col justify-center rounded-[6px] bg-card px-4 py-2 shadow-[var(--shadow-paper)]"
+                >
+                  <span className="text-body font-semibold">
+                    {t(locale, `payq.reason.${q.reason}`)}
+                  </span>
+                  <span
+                    className={
+                      'text-small ' +
+                      (q.state === 'awaiting_worker' || q.state === 'overdue'
+                        ? 'font-semibold text-escalated'
+                        : 'text-muted')
+                    }
+                  >
+                    {t(locale, PAY_QUERY_STAMP[q.state].labelKey)} · {formatMonth(q.period, locale)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-small text-muted">{t(locale, 'payq.none')}</p>
+        )}
+        <Link href="/w/pay/query" className="min-h-12 font-semibold text-ink underline">
+          {t(locale, 'payq.ask')}
+        </Link>
+      </section>
     </Screen>
   );
 }

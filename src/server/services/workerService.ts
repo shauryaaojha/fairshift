@@ -12,11 +12,21 @@ import { verifySiteQrCode, verifySiteQrCodeAt } from '../domain/qrCode';
 import { validateCapturedAt } from '../domain/offline';
 import { verifyGeofence } from '../domain/geofence';
 import { calculatePayslip } from '../domain/payslip';
+import { shiftsInPeriod } from '../domain/registers';
+import { policyForDate } from '../domain/payRules';
 import { calculateShiftsOvertime } from '../domain/overtime';
 import { istDateKey, istMonthStart, WEEK_MS } from '../domain/time';
 import { evaluateFatigue } from '../domain/fatigue';
 import { scrubPii, calculateIsoWeek } from '../domain/anonymity';
 import { summarizeHazard } from '../ai/gemini';
+import { applyReporterVerdict, canGiveVerdict } from '../domain/hazardClosure';
+import { coarsenToHour, severityFloor } from '../domain/hazardSignals';
+import {
+  applyPayVerdict,
+  canGivePayVerdict,
+  openPayQuery,
+  payQueryState,
+} from '../domain/payQuery';
 import { newRecordId } from '../ids';
 import { AppError } from '../../shared/errors';
 import type {
@@ -25,7 +35,11 @@ import type {
   HazardReport,
   HazardSeverity,
   OvertimeResult,
+  PayQuery,
+  PayQueryReason,
+  PayQueryVerdict,
   PayslipResult,
+  ReporterVerdict,
   Shift,
   Site,
   SkillRecord,
@@ -63,6 +77,13 @@ export interface HazardInput extends Replayable {
   description: string;
   severity: HazardSeverity;
   anonymous: boolean;
+}
+
+export interface PayQueryInput {
+  reason: PayQueryReason;
+  receivedAmount: number | null;
+  note: string | null;
+  clientId?: string;
 }
 
 export interface FeedbackInput extends Replayable {
@@ -243,30 +264,30 @@ export class WorkerService {
       this.db.shifts.listByWorker(workerId),
     ]);
     const now = new Date();
-    const periodStart = istMonthStart(now);
-    const periodEnd = istDateKey(now);
-    const shifts = allShifts.filter((s) => {
-      const day = istDateKey(s.checkIn);
-      return day >= periodStart && day <= periodEnd;
-    });
+    const period = { start: istMonthStart(now), end: istDateKey(now) };
     return calculatePayslip({
       worker: { basePay: worker.basePay, allowances: worker.allowances, payType: worker.payType },
-      shifts,
-      periodStart,
-      periodEnd,
-      policy: org?.policy,
+      shifts: shiftsInPeriod(allShifts, period),
+      periodStart: period.start,
+      periodEnd: period.end,
+      policy: policyForDate(org),
     });
   }
 
-  /** Stores a hazard report with an English summary. Anonymous reports keep no reporter id. */
+  /**
+   * Stores a hazard report with an English summary. Danger words raise the severity before the AI
+   * runs. An anonymous report keeps no reporter id, and its time only to the hour.
+   */
   async reportHazard(workerId: string, input: HazardInput): Promise<HazardReport> {
     const worker = await this.requireWorker(workerId);
     const site = await this.requireOwnSite(worker, input.siteId);
     const replay = findReplay(await this.db.hazards.listBySite(site.id), input.clientId);
     if (replay) return replay;
 
-    const reportedAt = resolveCapturedAt(input.capturedAt);
-    const ai = await summarizeHazard(input.category, input.description, input.severity);
+    const capturedAt = resolveCapturedAt(input.capturedAt);
+    const reportedAt = input.anonymous ? coarsenToHour(capturedAt) : capturedAt;
+    const severity = severityFloor(input.severity, input.description);
+    const ai = await summarizeHazard(input.category, input.description, severity);
 
     return this.db.hazards.create({
       id: newRecordId('hazard'),
@@ -275,7 +296,7 @@ export class WorkerService {
       reporterId: input.anonymous ? null : workerId,
       category: input.category,
       description: input.description,
-      severity: input.severity,
+      severity,
       status: 'reported',
       reportedAt,
       acknowledgedAt: null,
@@ -285,6 +306,90 @@ export class WorkerService {
       anonymous: input.anonymous,
       ...(input.clientId ? { clientId: input.clientId } : {}),
     });
+  }
+
+  /**
+   * The reporter's second key on a resolved report: "fixed" closes it, "not_fixed" reopens it as
+   * escalated. Someone else's report looks the same as a missing one.
+   */
+  async giveHazardVerdict(
+    workerId: string,
+    hazardId: string,
+    verdict: ReporterVerdict,
+  ): Promise<HazardReport> {
+    const hazard = await this.db.hazards.getById(hazardId);
+    if (!hazard || hazard.reporterId !== workerId) {
+      throw new AppError('not_found', 'Hazard not found');
+    }
+    if (!canGiveVerdict(hazard, workerId)) {
+      throw new AppError('verdict_not_allowed', 'This report is not waiting for your answer');
+    }
+    return this.db.hazards.update(applyReporterVerdict(hazard, verdict));
+  }
+
+  /**
+   * Raises a question about this month's pay. The payslip figure is taken from the payslip engine,
+   * never from the client. A second query for the same month and reason, while the first is still
+   * open, returns the first instead of opening a duplicate.
+   */
+  async raisePayQuery(
+    workerId: string,
+    input: PayQueryInput,
+    now: Date = new Date(),
+  ): Promise<{ query: PayQuery; already: boolean }> {
+    const worker = await this.requireWorker(workerId);
+    const mine = await this.db.payQueries.listByWorker(workerId);
+    const replay = findReplay(mine, input.clientId);
+    if (replay) return { query: replay, already: true };
+
+    const period = istDateKey(now).slice(0, 7);
+    const pending = mine.find(
+      (q) =>
+        q.period === period && q.reason === input.reason && payQueryState(q, now) !== 'settled',
+    );
+    if (pending) return { query: pending, already: true };
+
+    const payslip = await this.getMyPayslip(workerId);
+    const query = openPayQuery(
+      {
+        id: newRecordId('payq'),
+        orgId: worker.orgId,
+        siteId: worker.siteId,
+        workerId,
+        reason: input.reason,
+        period,
+        payslipNet: payslip.net,
+        receivedAmount: input.receivedAmount,
+        note: input.note,
+        ...(input.clientId ? { clientId: input.clientId } : {}),
+      },
+      now,
+    );
+    return { query: await this.db.payQueries.create(query), already: false };
+  }
+
+  async listMyPayQueries(workerId: string): Promise<PayQuery[]> {
+    return this.db.payQueries.listByWorker(workerId);
+  }
+
+  /** The worker's own query; anyone else's looks the same as a missing one. */
+  async getMyPayQuery(workerId: string, queryId: string): Promise<PayQuery | null> {
+    const query = await this.db.payQueries.getById(queryId);
+    return query && query.workerId === workerId ? query : null;
+  }
+
+  /** The worker's second key: "settled" closes the query, "not settled" sends it back. */
+  async givePayVerdict(
+    workerId: string,
+    queryId: string,
+    verdict: PayQueryVerdict,
+  ): Promise<PayQuery> {
+    const query = await this.getMyPayQuery(workerId, queryId);
+    if (!query) throw new AppError('not_found', 'Pay query not found');
+    if (!canGivePayVerdict(query, workerId)) {
+      throw new AppError('verdict_not_allowed', 'This pay query is not waiting for your answer');
+    }
+    return this.db.payQueries.update(applyPayVerdict(query, verdict));
   }
 
   /**
@@ -330,7 +435,7 @@ export class WorkerService {
     const shifts = allShifts.filter((s) => Date.parse(s.checkIn) >= now - 2 * WEEK_MS);
     // A monthly wage covers 26 working days of 8 hours (208 h).
     const hourlyRate = worker.payType === 'daily' ? worker.basePay / 8 : worker.basePay / 208;
-    const otSummary = calculateShiftsOvertime(shifts, hourlyRate, org?.policy);
+    const otSummary = calculateShiftsOvertime(shifts, hourlyRate, policyForDate(org));
     // Fatigue limits are defined per 7 days, so evaluate the same window as Home does.
     const fatigueFlags = evaluateFatigue({
       shifts,

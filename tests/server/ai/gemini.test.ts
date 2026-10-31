@@ -5,7 +5,8 @@ import {
   generateWeeklySafetySummary,
   summarizeHazard,
 } from '@/src/server/ai/gemini';
-import { suggestSeverityFromText, summarizeHazardFallback } from '@/src/server/ai/fallbacks';
+import { summarizeHazardFallback } from '@/src/server/ai/fallbacks';
+import { suggestSeverityFromText } from '@/src/server/domain/hazardSignals';
 import { higherSeverity } from '@/src/shared/severity';
 import type { PayslipResult } from '@/src/shared/types';
 import { fakeGemini } from './fakeGemini';

@@ -20,6 +20,9 @@ import {
   feedbackSchema,
   askSchema,
   hazardReportSchema,
+  hazardVerdictSchema,
+  payQueryRaiseSchema,
+  payQueryVerdictSchema,
   workerLoginSchema,
 } from '@/src/shared/schemas';
 import { askAsWorker } from '@/src/server/assistant/worker';
@@ -176,6 +179,55 @@ export async function reportHazardAction(input: HazardInput): Promise<HazardResu
     if (!parsed.success) return invalid(parsed.error.issues);
     const hazard = await workerService.reportHazard(ctx.worker.id, parsed.data);
     return { ok: true, id: hazard.id };
+  });
+}
+
+export type VerdictResult = { ok: true; reopened: boolean } | ActionFailure;
+
+/** The reporter answers "is it really fixed?" on a resolved report. */
+export async function hazardVerdictAction(
+  hazardId: string,
+  verdict: 'fixed' | 'not_fixed',
+): Promise<VerdictResult> {
+  return runWorkerAction('verdict', { max: 10, windowMs: MINUTE }, async (ctx) => {
+    const parsed = hazardVerdictSchema.safeParse({ hazardId, verdict });
+    if (!parsed.success) return invalid(parsed.error.issues);
+    await workerService.giveHazardVerdict(ctx.worker.id, parsed.data.hazardId, parsed.data.verdict);
+    return { ok: true, reopened: parsed.data.verdict === 'not_fixed' };
+  });
+}
+
+export type PayQueryRaiseInput = {
+  reason: 'short_pay' | 'unpaid_overtime' | 'wrong_deduction' | 'late_pay';
+  receivedAmount: number | null;
+  note: string | null;
+  clientId?: string;
+};
+export type PayQueryRaiseResult = { ok: true; id: string; already: boolean } | ActionFailure;
+
+/** Raise a question about this month's pay. The payslip figure is worked out on the server. */
+export async function raisePayQueryAction(input: PayQueryRaiseInput): Promise<PayQueryRaiseResult> {
+  return runWorkerAction('payquery', { max: 5, windowMs: 60 * MINUTE }, async (ctx) => {
+    const note = input.note?.trim() || null;
+    const parsed = payQueryRaiseSchema.safeParse({ ...input, note });
+    if (!parsed.success) return invalid(parsed.error.issues);
+    const { query, already } = await workerService.raisePayQuery(ctx.worker.id, parsed.data);
+    return { ok: true, id: query.id, already };
+  });
+}
+
+export type PayVerdictResult = { ok: true; reopened: boolean } | ActionFailure;
+
+/** The worker answers "is your pay now right?" on an answered query. */
+export async function payQueryVerdictAction(
+  queryId: string,
+  verdict: 'settled' | 'not_settled',
+): Promise<PayVerdictResult> {
+  return runWorkerAction('payverdict', { max: 10, windowMs: MINUTE }, async (ctx) => {
+    const parsed = payQueryVerdictSchema.safeParse({ queryId, verdict });
+    if (!parsed.success) return invalid(parsed.error.issues);
+    await workerService.givePayVerdict(ctx.worker.id, parsed.data.queryId, parsed.data.verdict);
+    return { ok: true, reopened: parsed.data.verdict === 'not_settled' };
   });
 }
 

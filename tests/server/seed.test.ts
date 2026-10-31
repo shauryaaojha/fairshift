@@ -17,7 +17,7 @@ describe('Seed Data Generator', () => {
     expect(data.sites).toHaveLength(2);
     expect(data.workers).toHaveLength(50);
     expect(data.admins).toHaveLength(3);
-    expect(data.hazards).toHaveLength(4);
+    expect(data.hazards).toHaveLength(5);
     expect(data.feedback).toHaveLength(9);
     expect(data.skills).toHaveLength(4);
     expect(data.shifts.length).toBeGreaterThan(500);
@@ -30,7 +30,13 @@ describe('Seed Data Generator', () => {
       'admin-campus',
       'admin-regional',
     ]);
-    expect(data.hazards.map((h) => h.id)).toEqual(['hazard-1', 'hazard-2', 'hazard-3', 'hazard-4']);
+    expect(data.hazards.map((h) => h.id)).toEqual([
+      'hazard-1',
+      'hazard-2',
+      'hazard-3',
+      'hazard-4',
+      'hazard-5',
+    ]);
 
     // Check specific worker IDs
     expect(data.workers[0].id).toBe('worker-ramesh');

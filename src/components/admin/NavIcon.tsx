@@ -7,6 +7,8 @@ import {
   FlameIcon,
   PinIcon,
   AskIcon,
+  RupeeNoteIcon,
+  BoltIcon,
 } from '@/src/components/icons';
 import type { NavIconKey } from './nav';
 
@@ -31,6 +33,10 @@ export function NavIcon({
       return <FlameIcon {...props} />;
     case 'ask':
       return <AskIcon {...props} />;
+    case 'pay':
+      return <RupeeNoteIcon {...props} />;
+    case 'plan':
+      return <BoltIcon {...props} />;
     case 'sites':
       return <PinIcon {...props} />;
   }

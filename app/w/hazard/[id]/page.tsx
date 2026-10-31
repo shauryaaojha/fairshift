@@ -1,5 +1,6 @@
 import { ButtonLink } from '@/src/components/ui/Button';
 import { Stamp } from '@/src/components/ui/Stamp';
+import { ConfirmFix } from '@/src/components/worker/ConfirmFix';
 import { HazardTimelineView } from '@/src/components/worker/HazardTimeline';
 import { Screen } from '@/src/components/worker/Screen';
 import { DEFAULT_LOCALE, t } from '@/src/i18n';
@@ -44,7 +45,10 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
     escalated: t(locale, 'hazard.status.escalated'),
     acknowledged: t(locale, 'hazard.status.acknowledged'),
     resolved: t(locale, 'hazard.status.resolved'),
+    reopened: t(locale, 'hazard.status.reopened'),
+    confirmed: t(locale, 'hazard.status.confirmed'),
   };
+  const askVerdict = tl.closure === 'awaiting_reporter' && hazard.reporterId === ctx.worker.id;
   const times: Partial<Record<string, string>> = {};
   for (const s of tl.steps) {
     if (s.at) times[s.key] = `${formatDay(s.at, locale)} ${formatClock(s.at)}`;
@@ -53,7 +57,10 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
   return (
     <Screen
       title={t(locale, 'hazard.statusTitle')}
-      speakText={t(locale, 'hazard.statusSpeak', { status: labels[hazard.status] })}
+      speakText={
+        t(locale, 'hazard.statusSpeak', { status: labels[hazard.status] }) +
+        (askVerdict ? ' ' + t(locale, 'hazard.verdict.ask') : '')
+      }
       backLabel={back}
       backHref="/w/hazard"
       action={
@@ -74,6 +81,7 @@ export default async function HazardStatusPage({ params }: { params: Promise<{ i
           <p className="text-small text-muted">{t(locale, 'hazard.anonNote')}</p>
         ) : null}
       </section>
+      {askVerdict ? <ConfirmFix hazardId={hazard.id} /> : null}
       <HazardTimelineView steps={tl.steps} labels={labels} times={times} />
     </Screen>
   );

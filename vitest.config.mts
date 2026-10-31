@@ -4,6 +4,9 @@ import path from 'path';
 
 const alias = { '@': path.resolve('.') };
 
+// No test reaches the network: weather tests stub fetch and clear this themselves.
+const env = { WEATHER_DISABLED: '1' };
+
 export default defineConfig({
   test: {
     // Two projects: logic runs in plain Node (fast), components and the IndexedDB outbox in jsdom.
@@ -13,6 +16,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
+          env,
           include: ['tests/**/*.test.ts'],
           exclude: ['tests/offline/**'],
         },
@@ -23,6 +27,7 @@ export default defineConfig({
         test: {
           name: 'dom',
           environment: 'jsdom',
+          env,
           globals: true,
           setupFiles: ['./tests/setup.ts'],
           include: ['tests/**/*.test.tsx', 'tests/offline/**/*.test.ts'],

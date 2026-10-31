@@ -30,6 +30,8 @@ export function HazardCard({ h }: { h: HazardRow }) {
         {h.slaLabel}
       </p>
 
+      <ClosureNote h={h} />
+
       {h.aiSummary && (
         <div className="ai-note">
           <p className="ai-label">Explained by AI · check with supervisor</p>
@@ -82,4 +84,31 @@ export function HazardCard({ h }: { h: HazardRow }) {
       )}
     </li>
   );
+}
+
+/** Where the two-key closure stands: the reporter's answer counts, not only the supervisor's. */
+function ClosureNote({ h }: { h: HazardRow }) {
+  if (h.reopenedAt && h.liveStatus !== 'resolved') {
+    const times = h.reopenCount && h.reopenCount > 1 ? ` (${h.reopenCount} times)` : '';
+    return (
+      <p className="closure" data-state="reopened">
+        Reopened by the reporter{times}: they say it is not fixed.
+      </p>
+    );
+  }
+  if (h.closure === 'awaiting_reporter') {
+    return (
+      <p className="closure" data-state="awaiting">
+        Waiting for the reporter to confirm the fix.
+      </p>
+    );
+  }
+  if (h.closure === 'confirmed') {
+    return (
+      <p className="closure" data-state="confirmed">
+        Reporter confirmed the fix.
+      </p>
+    );
+  }
+  return null;
 }

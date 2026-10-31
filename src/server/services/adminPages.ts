@@ -18,7 +18,18 @@ import type { HazardRow, HeatmapRow, RiskRow } from './adminRows';
 import { generateSiteQrCode } from '../domain/qrCode';
 import { computeHazardStatus } from '../domain/hazardSla';
 import { getSkillStatus } from '../domain/skills';
+import { istDateKey } from '../domain/time';
+import {
+  attendanceRegister,
+  monthPeriod,
+  toCsv,
+  wageRegister,
+  type RegisterKind,
+} from '../domain/registers';
+import { policyForDate } from '../domain/payRules';
 import { getDatabase } from '../repos';
+import { getSiteHeat } from '../weather';
+import type { HeatReading } from '../domain/heat';
 import { AppError } from '../../shared/errors';
 import { SEVERITY_RANK } from '../../shared/severity';
 import type {
@@ -39,16 +50,21 @@ export interface OverviewData {
   risk: RiskRow[];
   heatmap: HeatmapRow[];
   summary: { summary: string; isAi: boolean };
+  /** Heat stress at the site now; null when the weather service is unavailable. */
+  heat?: HeatReading | null;
 }
 
 export async function getOverviewData(sector: Sector): Promise<OverviewData> {
   const { orgId, siteId } = SECTORS[sector];
-  const [kpis, trend, queue, risk, feedback] = await Promise.all([
+  const [kpis, trend, queue, risk, feedback, heat] = await Promise.all([
     adminService.getOverviewKPIs(orgId, siteId),
     adminService.getAttendanceTrend(orgId, siteId, 14),
     adminService.getSafetyQueue(orgId, siteId),
     adminService.getWorkforceRisk(orgId, siteId),
     adminService.getFeedbackHeatmap(orgId, siteId),
+    getDatabase()
+      .sites.get(siteId)
+      .then((site) => (site ? getSiteHeat(site) : null)),
   ]);
   // The briefing reuses the KPIs above (live escalation count included) instead of recomputing.
   const summary = await adminService.getAiSummary(orgId, siteId, kpis);
@@ -60,6 +76,7 @@ export async function getOverviewData(sector: Sector): Promise<OverviewData> {
     risk: risk.slice(0, 8),
     heatmap: buildHeatmapRows(feedback),
     summary,
+    heat,
   };
 }
 
@@ -206,4 +223,42 @@ export async function getKioskView(
     color: { dark: '#1C1D1A', light: '#FFFFFF' },
   });
   return { site, code, validUntil, qrSvg, url };
+}
+
+// ── Statutory registers ─────────────────────────────────────
+
+export interface RegisterFile {
+  filename: string;
+  csv: string;
+}
+
+/**
+ * The attendance or wage register for the sector's site and one month (`YYYY-MM`, default this
+ * month), as CSV. A malformed or future month is a validation error.
+ */
+export async function getRegister(
+  sector: Sector,
+  kind: RegisterKind,
+  month?: string,
+  now: Date = new Date(),
+): Promise<RegisterFile> {
+  const wanted = month ?? istDateKey(now).slice(0, 7);
+  const period = monthPeriod(wanted, now);
+  if (!period) throw new AppError('validation', 'Pick this month or an earlier one');
+
+  const { orgId, siteId } = SECTORS[sector];
+  const db = getDatabase();
+  const [workers, shifts, org] = await Promise.all([
+    db.workers.listBySite(siteId),
+    db.shifts.listBySite(siteId),
+    db.orgs.get(orgId),
+  ]);
+  const build = kind === 'attendance' ? attendanceRegister : wageRegister;
+  const rows = build(
+    workers.filter((w) => w.active),
+    shifts,
+    period,
+    policyForDate(org),
+  );
+  return { filename: `fairshift-${kind}-register-${siteId}-${wanted}.csv`, csv: toCsv(rows) };
 }

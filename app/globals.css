@@ -230,6 +230,12 @@ body {
 .tile-skills {
   view-transition-name: tile-skills;
 }
+.tile-rights {
+  view-transition-name: tile-rights;
+}
+.tile-ask {
+  view-transition-name: tile-ask;
+}
 
 /* ── Utility: Card Surface ─────────────────────────────────── */
 .surface-card {

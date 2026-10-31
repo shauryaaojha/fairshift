@@ -3,6 +3,7 @@
  */
 import type { Org, Site } from '../../shared/types';
 import { deriveServerSecret } from '../auth/session';
+import { INITIAL_PAY_RULES } from './payQueries';
 
 export function generateOrgs(): Org[] {
   return [
@@ -20,6 +21,7 @@ export function generateOrgs(): Org[] {
         esiCeiling: 21000,
         anonymityK: 3,
       },
+      payRuleHistory: [INITIAL_PAY_RULES],
     },
     {
       id: 'org-college',
@@ -35,6 +37,7 @@ export function generateOrgs(): Org[] {
         esiCeiling: 21000,
         anonymityK: 3,
       },
+      payRuleHistory: [INITIAL_PAY_RULES],
     },
   ];
 }
